@@ -21,3 +21,4 @@ Create new agent skills and maintain existing ones through a six-stage process g
 | Authoring conventions | `shared/authoring-conventions.md` | What a good SKILL.md looks like (frontmatter, progressive disclosure, when to add scripts) |
 | Test log format | `shared/test-log-format.md` | Consistent shape for the ephemeral test trace produced in stage 04 |
 | Preferences | `shared/preferences.md` | Default publish destination and research depth, set once during setup |
+| Retention | `shared/retention.md` | How long stage outputs and the test log should stick around, and when to clear them |

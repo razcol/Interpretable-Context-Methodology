@@ -21,7 +21,8 @@ skill-factory/
     ├── skill-index.md          (registry of every skill this workspace has built)
     ├── authoring-conventions.md (what a good SKILL.md looks like)
     ├── test-log-format.md      (shape of the ephemeral test trace used in stage 04)
-    └── preferences.md          (default publish destination, research depth -- set during setup)
+    ├── preferences.md          (default publish destination, research depth -- set during setup)
+    └── retention.md            (how long stage outputs and the test log stick around, and when to clear them)
 ```
 
 ## Triggers
@@ -57,12 +58,12 @@ Pipeline Status: skill-factory
 
 | Task | Load These | Do NOT Load |
 |------|-----------|-------------|
-| Intake a request | `shared/skill-index.md` | Everything else -- intake is a routing decision only |
+| Intake a request | `shared/skill-index.md`; if an existing-skill lookup isn't found there, also search `_core/skills/*/SKILL.md` and every `workspaces/*/skills/*/SKILL.md` (skill-factory's own folder is not the only place skills live) | Everything else -- intake is a routing decision only |
 | Clarify requirements | `stages/01-intake/output/`, `stages/02-clarify/references/*` | `shared/authoring-conventions.md`, stages 03-06 |
 | Research approaches | `stages/02-clarify/output/` (or `stages/01-intake/output/` for existing-mode approach changes), `shared/authoring-conventions.md`, `shared/preferences.md` | stages 01-02 references, stages 04-06 |
 | Draft and test | `stages/03-research/output/` (or resolved skill folder for existing-mode), `shared/authoring-conventions.md`, `shared/test-log-format.md` | stages 01-03 references, stages 05-06 |
 | Approve and refine | `stages/04-draft-and-test/output/` | Everything upstream of stage 04 |
-| Publish | `stages/05-approval-and-refine/output/`, `shared/skill-index.md`, `shared/preferences.md` | Everything upstream of stage 05 |
+| Publish | `stages/05-approval-and-refine/output/`, `shared/skill-index.md`, `shared/preferences.md`, `shared/retention.md` | Everything upstream of stage 05 |
 
 ## Stage Handoffs
 
