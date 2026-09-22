@@ -13,6 +13,8 @@ model-workspace-protocol/
 │   ├── CONVENTIONS.md                 (source of truth for all patterns)
 │   ├── placeholder-syntax.md          (how {{VARIABLES}} work)
 │   └── templates/                     (blank starting points for new workspaces)
+├── skills/                             (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
+│   └── jira-research/                 (searching/extracting info from Jira -- experimental)
 └── workspaces/
     ├── script-to-animation/           (content idea -> animated video)
     ├── course-deck-production/        (unstructured material -> course PowerPoints)
@@ -26,6 +28,7 @@ model-workspace-protocol/
 | Create content with script-to-animation | `workspaces/script-to-animation/CLAUDE.md` |
 | Build course slide decks from source material | `workspaces/course-deck-production/CLAUDE.md` |
 | Build a new workspace for any domain | `workspaces/workspace-builder/CLAUDE.md` |
+| Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
 | Understand the placeholder system | `_core/placeholder-syntax.md` |
 | Use a template for a new workspace | `_core/templates/` |
