@@ -18,7 +18,8 @@ model-workspace-protocol/
 └── workspaces/
     ├── script-to-animation/           (content idea -> animated video)
     ├── course-deck-production/        (unstructured material -> course PowerPoints)
-    └── workspace-builder/             (builds new MWP workspaces)
+    ├── workspace-builder/             (builds new MWP workspaces)
+    └── skill-factory/                 (create and maintain agent skills, validated via real usage)
 ```
 
 ## Routing
@@ -28,6 +29,7 @@ model-workspace-protocol/
 | Create content with script-to-animation | `workspaces/script-to-animation/CLAUDE.md` |
 | Build course slide decks from source material | `workspaces/course-deck-production/CLAUDE.md` |
 | Build a new workspace for any domain | `workspaces/workspace-builder/CLAUDE.md` |
+| Create or maintain an agent skill | `workspaces/skill-factory/CLAUDE.md` |
 | Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
 | Understand the placeholder system | `_core/placeholder-syntax.md` |
