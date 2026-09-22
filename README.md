@@ -154,7 +154,7 @@ It is worth distinguishing ICM from Anthropic's Model Context Protocol (MCP). MC
 ## Getting Started
 
 1. Clone this repo
-2. `cd workspaces/script-to-animation` (or any workspace)
+2. `cd workspaces/course-deck-production` (or any workspace)
 3. Open [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 4. Type `setup`
 5. Answer the onboarding questions -- all at once, one pass
@@ -167,7 +167,6 @@ Each stage produces an output file. You can edit that file before moving on. The
 
 | Workspace | What it does | Stages |
 |-----------|-------------|--------|
-| [script-to-animation](workspaces/script-to-animation/) | Content idea through script writing, animation spec, and Remotion code | 3 |
 | [course-deck-production](workspaces/course-deck-production/) | Unstructured material (PDFs, papers, notes) into polished PowerPoint slide decks | 5 |
 | [workspace-builder](workspaces/workspace-builder/) | Build a new ICM workspace for any domain | 5 |
 
