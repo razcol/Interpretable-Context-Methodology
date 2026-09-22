@@ -24,7 +24,7 @@ The most important conventions for building a new workspace:
 
 - **Tool prerequisites**: If stages need system-level tools (Node.js, Python, LibreOffice), write setup guides in the relevant stage's references/ folder. See "Pattern 7: Tool Prerequisites" in `/_core/CONVENTIONS.md`.
 
-- **Bundled skills**: Copy relevant Claude Code skills into skills/ folder. Skills provide domain knowledge (APIs, best practices, code examples) and can replace custom reference docs. Discover local skills and search GitHub during Stage 01. See "Pattern 9: Bundled Skills" in `/_core/CONVENTIONS.md`.
+- **Bundled skills**: Copy relevant Claude Code skills into skills/ folder. Skills provide domain knowledge (APIs, best practices, code examples) and can replace custom reference docs. Discover local skills and search GitHub during Stage 01. A skill used by more than one workspace lives once in `/_core/skills/` and is referenced by pointer instead of copied. See "Pattern 9: Bundled Skills" in `/_core/CONVENTIONS.md`.
 
 - **Specs are contracts**: Specification stages define WHAT and WHEN, not HOW. No component names, frame numbers, or prop definitions in specs. The build stage has creative freedom within the quality floor. See "Pattern 10: Specs Are Contracts" in `/_core/CONVENTIONS.md`.
 

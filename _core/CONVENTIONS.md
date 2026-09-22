@@ -220,6 +220,43 @@ Skills replace custom reference docs when an official skill covers the same grou
 
 **When NOT to bundle:** Do not bundle skills that are purely about Claude Code itself (e.g., skill-creator, mcp-builder). Only bundle skills that provide domain knowledge the workspace's agents need at runtime.
 
+### Shared Skills (Core)
+
+A skill used by more than one workspace does not get copied into each workspace's `skills/` folder. It lives once in `_core/skills/` and every workspace that needs it references it by pointer.
+
+```
+_core/
+├── CONVENTIONS.md
+├── placeholder-syntax.md
+├── templates/
+└── skills/
+    └── [skill-name]/
+        ├── SKILL.md
+        ├── rules/
+        └── scripts/
+```
+
+This is Pattern 5 (Canonical Sources) applied to skills: one home, update once, every workspace picks up the change.
+
+**Referencing:** Stage CONTEXT.md files point into `_core/skills/` the same way they reference a bundled skill, just with a longer relative path:
+
+```
+| Skill | `../../../_core/skills/[name]/SKILL.md` | Index, then load rules as needed | [What it provides] |
+```
+
+This does not violate Pattern 3 (One-Way Cross-References). Workspaces may reference `_core/`, since `_core/` never references a workspace. Workspaces must still not reference each other's `skills/` folders directly.
+
+**Bundled vs. shared -- which to use:**
+
+| | Bundled (`workspace/skills/`) | Shared (`_core/skills/`) |
+|---|---|---|
+| Used by | One workspace | Two or more workspaces |
+| Copy | Duplicated per workspace | One canonical copy |
+| Updates | Drift independently, update per workspace | Update once, applies everywhere |
+| Self-contained | Yes | No, workspace depends on `_core/` |
+
+Default to bundling when a skill is specific to one workspace's domain. Move a skill to `_core/skills/` as soon as a second workspace needs the same one.
+
 ---
 
 ## Pattern 10: Specs Are Contracts
