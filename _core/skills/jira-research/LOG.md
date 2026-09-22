@@ -155,3 +155,42 @@ Do not put credentials or tokens in this file.
 - **Would reuse as-is?** Yes. Add a short "listing projects/boards" subsection to SKILL.md's reference section (separate from the `workitem` reference) so `project list` / `board search` don't need rediscovering via `--help` next time, and note the "no `--fields` on `project list`, expect a large raw dump" gotcha there.
 
 
+
+---
+
+### 2026-09-22 -- real use case: issues assigned to me, across all projects (skill-factory maintenance test)
+
+- **Goal:** first test of this skill run explicitly through the skill-factory maintenance workflow (stage 04-draft-and-test, existing mode). Real day-to-day use case supplied by the user: "what's assigned to me?" -- no project specified.
+- **Approach tried:** C (ACLI) only, settled approach run as-is.
+- **Details:**
+  - Confirmed auth still persisted: `acli jira auth status` -> authenticated, no re-login needed.
+  - `acli jira workitem search --jql "assignee = currentUser() ORDER BY updated DESC" --limit 20 --json` -> exactly 20 results, no in-band signal whether that was the full set.
+  - Re-ran with `--limit 100` -> 39 total results, split across **two** projects (`MAIN`: 12, `LUX`: 27) -- first time this skill's JQL omitted a `project = ...` clause entirely.
+  - Parsed with a short `python3` script (not eyeballed) to get a status breakdown ({Done: 36, In Progress: 1, To Do: 1, Backlog: 1}) and a 3-row "open issues" table.
+  - Exit-code/output-capture quirk reproduced again on every call this session, **including a bare `echo hello` with no ACLI involved**, run as a deliberate control test. Same workaround as documented (redirect to file, ignore reported exit code, read file back) worked 100% of the time.
+- **Result:** worked. Produced a correct, verified 3-issue "currently open, assigned to me" answer (MAIN-4246, MAIN-4251, MAIN-4283) out of 39 total assigned issues across 2 projects.
+- **Friction:**
+  - `--limit 20` silently returned a partial result set with zero indication it was partial -- genuinely easy to under-report "everything assigned to you" if you don't think to raise the limit. Documented in SKILL.md as a named gotcha.
+  - Cross-project JQL (no `project =` clause) was previously listed as untested in SKILL.md; it worked with no extra effort at all -- SKILL.md updated to reflect this as confirmed rather than open.
+  - Control test (`echo hello > file 2>&1`, checked separately) reproduced the exact same fake exit-code -1 / stray-prompt-fragment symptom as ACLI calls in this same session -- further confirms this is a property of this sandboxed shell wrapper, unrelated to ACLI or this skill. No new mitigation needed; existing file-redirect workaround holds.
+- **Would reuse as-is?** Yes. Two SKILL.md additions made from this session: (1) a named cross-project "my issues" example using `assignee = currentUser()`, and (2) an explicit warning that `workitem search --json` has no total/isLast indicator, so a full page of `--limit N` results is not proof that N is the true count.
+
+---
+
+### 2026-09-22 -- attachment metadata (new surface: `workitem attachment`, part of skill-factory maintenance test)
+
+- **Goal:** exercise attachments, one of the explicitly untested gaps called out in SKILL.md's status line. Real issue with an actual attachment, found via JQL rather than guessing: `assignee = currentUser() AND attachments is not EMPTY`.
+- **Approach tried:** C (ACLI) only.
+- **Details:**
+  - `attachments is not EMPTY` JQL clause worked first try, returned 20 of the user's issues that have at least one attachment (out of 39 total assigned).
+  - Picked `MAIN-4251` and pulled attachment data two ways:
+    1. `acli jira workitem view MAIN-4251 --fields summary,attachment --json` -> full attachment object: `id`, `filename`, `size`, `mimeType`, `author` (full user object), `created`, `content` URL, `thumbnail` URL, `self` URL.
+    2. `acli jira workitem attachment list --key MAIN-4251 --json` -> trimmed shape: only `id`, `name`, `size`. No author, no URLs, no mimeType.
+  - Checked `acli jira workitem attachment --help` before assuming a download command existed: only `list` and `delete` subcommands exist. **No content-download subcommand in ACLI.** To get actual file bytes, the `content` URL from the `view --fields attachment` response would need to be fetched via REST/curl with Basic Auth, same credentials as the REST fallback path -- not yet tried this session.
+  - `attachment list --key ...` follows the same `--key`-as-flag convention as `comment list`, not `view`'s positional-key convention -- consistent with the previously logged finding that flag shape isn't uniform across `workitem` subcommands.
+  - Exit-code/output-capture quirk again present on every call, including a case where a call's completion had to be re-verified by checking the log file directly after a session interruption -- file was already correctly populated (152 bytes, valid JSON) despite the interruption, reinforcing that the file write completes independently of whatever caused the interruption/exit-code noise.
+- **Result:** worked for metadata (both paths). Content download is a real, confirmed gap -- not attempted.
+- **Friction:**
+  - Two different ACLI paths return two different shapes for the same data (full object via `view --fields attachment` vs. trimmed `id`/`name`/`size` via `attachment list`) -- worth knowing which one to reach for depending on whether you need the download URL/author or just a quick listing.
+  - No native ACLI way to download attachment content -- would require falling back to REST/curl for that one operation even if ACLI is otherwise the primary method for everything else on the same issue.
+- **Would reuse as-is?** Yes, for metadata. Content download needs its own dedicated test (REST call against the `content` URL) before SKILL.md can claim attachments are fully covered -- currently only listing/metadata is confirmed, not retrieval of the actual file.

@@ -1,7 +1,7 @@
 ---
 name: jira-research
 description: "Searching, finding, and extracting information from Jira (issues, comments, attachments, links, history, epics/sprints). Use when a task requires pulling data out of Jira into a workspace."
-status: provisional (primary method chosen, not yet battle-tested across all use cases)
+status: provisional (primary method chosen, not yet battle-tested against attachments/bulk ops/writes)
 license: N/A (internal)
 ---
 
@@ -11,11 +11,12 @@ license: N/A (internal)
 
 A primary method has been chosen based on testing: **ACLI, with REST API as
 fallback.** This is provisional, not final -- confirmed so far for JQL
-search, single-issue view (incl. description/ADF), and comment listing, all
-single-project and read-only. It has not yet been exercised against
-attachments, bulk operations, writes, or multi-project queries. Treat it
-as the default to reach for, but keep logging results so it can be confirmed
-or revised as more of Jira's surface gets used.
+search (single-project and cross-project), single-issue view (incl.
+description/ADF), comment listing, project/board listing, and attachment
+*metadata* listing, all read-only. It has not yet been exercised against
+attachment *content download*, bulk operations, or writes. Treat it as the
+default to reach for, but keep logging results so it can be confirmed or
+revised as more of Jira's surface gets used.
 
 **Every time this skill is used, update `LOG.md`** (see [Working Log](#working-log)
 below) with what was attempted and the outcome, even if it succeeded. If the
@@ -104,9 +105,47 @@ Comments as their own call (this subcommand *does* take `--key`, unlike
 acli jira workitem comment list --key PROJ-123 --json
 ```
 
+Attachments (metadata only) -- confirmed working 2026-09-22, two ways:
+```bash
+# 1. Inline with other fields (full object per attachment: filename, size,
+#    mimeType, author, "content" URL, "thumbnail" URL):
+acli jira workitem view PROJ-123 --fields summary,attachment --json
+
+# 2. Dedicated subcommand (also takes --key, like `comment list`; trimmed
+#    shape -- only id/name/size, no author or URLs):
+acli jira workitem attachment list --key PROJ-123 --json
+```
+**ACLI has no attachment *content* download/get command** -- `workitem
+attachment --help` only exposes `list` and `delete`. To actually fetch a
+file's bytes, take the `content` URL from the `view --fields attachment`
+response and pass it to REST/curl with the same Basic Auth credentials used
+in the REST fallback section below. This specific step (downloading actual
+file content) is still untested -- only metadata listing is confirmed.
+
 Run `acli jira workitem --help` / `acli jira workitem <subcommand> --help`
 to see current flags -- don't assume flags shown here are exhaustive or
 stable across ACLI versions.
+
+**Cross-project queries (e.g. "my open issues") -- confirmed working
+2026-09-22:** omitting `project = ...` from the JQL clause works fine and
+searches across every project the account can see. Useful default:
+
+```bash
+acli jira workitem search --jql "assignee = currentUser() ORDER BY updated DESC" --limit 100 --json
+```
+
+`assignee = currentUser()` resolves to whoever is authenticated -- no need
+to look up an account ID. Filter further client-side (e.g. `status != Done`)
+if the CLI output doesn't already give you what you need.
+
+**Silent truncation risk with `--limit`:** the plain JSON array returned by
+`workitem search --json` has no `isLast`/`hasMore`/total-count indicator --
+if you ask for `--limit 20` and get exactly 20 results back, that does
+**not** mean there are only 20 matching issues. Use a deliberately high
+`--limit` for exploratory/"how many do I have" queries, or check whether
+`--paginate` (confirmed working on `project list` and `board search`, not
+yet tried on `workitem search`) is supported before trusting a single page
+as complete.
 
 ### Listing projects and boards (ACLI) -- confirmed working 2026-09-22
 
