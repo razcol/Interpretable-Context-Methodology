@@ -119,6 +119,8 @@ To search for specific emails:
 ./outlookctl-bridge.sh search --from "sender@example.com" --since 2025-01-01
 ```
 
+**Looking for a specific value or email?** Search the user's exact term first (same characters and punctuation, e.g. `--query "ת.ז"`), then narrow by topic and open the top hits with `get --include-body`. `--query` matches the body, but `--include-body-snippet` shows only about 200 characters, and `"ת.ז"`, `"תז"` and the full phrase give different results. Full procedure: `shared/email-lookup-guide.md` at the workspace root.
+
 To get full message content (only when user asks):
 ```bash
 ./outlookctl-bridge.sh get --id "<entry_id>" --store "<store_id>" --include-body

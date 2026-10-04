@@ -14,7 +14,7 @@ outlook-email-manager/
 ├── stages/
 │   ├── 01-triage/     (unread inbox to prioritized, categorized report)
 │   └── 02-draft-replies/  (needs-reply emails to real Outlook drafts)
-└── shared/            (priority rubric, category map, tone profile)
+└── shared/            (priority rubric, category map, tone profile, email lookup guide)
 ```
 
 ## Triggers
@@ -33,6 +33,7 @@ outlook-email-manager/
 | Triage unread email | `stages/01-triage/CONTEXT.md` |
 | Draft replies for flagged email | `stages/02-draft-replies/CONTEXT.md` |
 | Learn or refresh voice/tone | `tone-profile/CONTEXT.md` |
+| Find a specific email or value (ID, link, name) in the mailbox | `shared/email-lookup-guide.md` |
 
 ## What to Load
 
@@ -41,6 +42,7 @@ outlook-email-manager/
 | Triage | `stages/01-triage/CONTEXT.md`, `shared/priority-rubric.md`, `shared/category-map.md`, `skills/outlook-automation/SKILL.md` | `shared/tone-profile.md`, `stages/02-draft-replies/` |
 | Draft replies | `stages/02-draft-replies/CONTEXT.md`, `shared/tone-profile.md`, `stages/01-triage/output/triage-report.md`, `skills/outlook-automation/SKILL.md` | `shared/priority-rubric.md`, `shared/category-map.md` |
 | Tone profile setup | `tone-profile/CONTEXT.md`, `skills/outlook-automation/SKILL.md` | `stages/01-triage/`, `stages/02-draft-replies/` |
+| Ad-hoc email lookup | `shared/email-lookup-guide.md`, `skills/outlook-automation/SKILL.md` | `stages/`, `shared/tone-profile.md` |
 
 ## Stage Handoffs
 
