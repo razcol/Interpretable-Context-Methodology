@@ -38,6 +38,8 @@ The script (`outlookctl-bridge.sh`, next to this file):
 2. Runs `uv.exe` (by full path -- the `uv` installer does not always put it on Windows `PATH`) from that native path via `powershell.exe`.
 3. Decodes PowerShell's redirected output (UTF-16LE with BOM by default) back to UTF-8 and propagates the real exit code.
 
+**Run bridge commands one at a time.** Every call shares a single temp file (`_bridge_out.tmp`) on the Windows side. Two concurrent calls collide ("file is being used by another process"), and one of them fails. Also, when run from an agent shell, redirect output to a file (`> /tmp/x.out 2>&1`) and read that file, because terminal output is often empty or garbled.
+
 This is a locally patched copy of outlookctl (see "Local Patch: Categories" below). The tool source lives at `outlookctl-src/` next to this file, and is mirrored automatically by the bridge script -- you do not need to copy it manually.
 
 ## Quick Start

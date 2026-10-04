@@ -44,7 +44,17 @@ outlook-email-manager/
 
 ## Stage Handoffs
 
-Each stage writes its output to its own `output/` folder. The next stage reads from there. If you edit an output file, the next stage picks up your edits.
+Each stage writes its output to its own `output/` folder. The next stage reads from there for the **decisions** in it (needs-reply values, category choices, your edits and overrides). It never treats the email **facts** in it (existence, location, read state, categories, dates, IDs, thread contents) as current. See "Source of Truth" below. If you edit an output file, the next stage picks up your edited decisions.
+
+## Source of Truth: Live Outlook Only
+
+The live Outlook mailbox is the only source of truth for email data. You edit mail by hand at any time (read/unread, categories, moving, deleting, replying, drafts), so anything this workspace saved earlier may be out of date.
+
+1. **Fresh ingest every run.** `process my inbox` always starts from a live `list --unread-only` on the inbox. Never seed a run from a saved report, a prior run's row list, or "unchanged from last run" entries.
+2. **Saved files are records, not inputs.** `triage-report.md`, `drafts-created.md`, and `category-map.md` describe what a past run did or decided. They are never evidence of what is in Outlook now. A report from an earlier run, or one with an unresolved checkpoint, is not resumed. Re-derive everything from live Outlook. Overwrite it, do not reuse its rows or IDs.
+3. **Re-verify before acting.** Immediately before any side effect (apply category, create draft, mark read), re-fetch that message live and confirm it still exists, is still where expected, and still matches what the decision was based on. Entry IDs can change when you move a message, so a stale ID is a reason to stop and look up the message again, never to guess.
+4. **Respect your manual changes.** If the live state differs from the saved record (different category, already read, moved, deleted, already replied to, a newer message in the thread), the live state wins. Do not silently overwrite your manual choices. Report the difference and skip or ask.
+5. **Never state Outlook facts from memory or files.** Claims such as "the draft is in your Drafts" or "that email is unread" must come from a live check in the same turn.
 
 `tone-profile/` is not part of the per-run pipeline. It runs once, ahead of time, and its output (`shared/tone-profile.md`) is read by every `02-draft-replies` run afterward like any other shared file.
 

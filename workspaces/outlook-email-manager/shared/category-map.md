@@ -2,6 +2,8 @@
 
 Tracks approved matches between email types and existing Outlook categories. Updated by Stage 01-triage each run. Existing categories are always preferred; new ones are only added here after the user explicitly confirms a suggestion.
 
+This file records mapping decisions only. It is never evidence of which category a given message currently has. Read that live from Outlook, since you may have changed it by hand.
+
 Refreshed against Outlook's live category list (`outlookctl category list`) at the start of every triage run, so this file records mapping decisions, not a cache of Outlook's raw list.
 
 | Email Pattern | Outlook Category | Approved | Notes |
@@ -12,5 +14,6 @@ Refreshed against Outlook's live category list (`outlookctl category list`) at t
 
 ## Manual Adjustments
 
+- **2026-09-24 run:** No new category patterns this run. `category list` reconfirmed all three custom categories present (`Work/Projects`=blue, `Automated/Newsletter`=yellow, `FYI/Distribution`=steel). Applied `Work/Projects` to the one new message this run (Roni Tennenbaum's 2026-09-23 reply in the "שירותים לפי מסך" thread) -- same pattern as the rest of that thread, no new mapping needed.
 - **2026-09-23 fix:** `outlookctl category set` previously only wrote the category name onto each message's `Categories` string property, without registering new names in the mailbox's Category Master List (`Namespace.Categories`). This meant `category list` and Outlook's category picker only ever showed `Work/Projects`, even though `Automated/Newsletter` and `FYI/Distribution` were correctly set on messages. Patched `outlookctl-src` (`ensure_categories_registered` in `outlook_com.py`, wired through `set_message_categories`, `cmd_category_set`, and a new `--color` CLI flag) so `category set` now auto-registers any new category name into the master list, with an optional color. Re-ran `category set` on the 7 already-categorized messages using `Automated/Newsletter` and `FYI/Distribution` to backfill them into the master list (yellow and steel respectively).
 - **2026-09-23 follow-up:** After the fix above, the user reported Outlook's category picker was still missing `Work/Projects`. Re-checked `category list` and confirmed it -- `Work/Projects` had disappeared from the master list entirely (it was never durably registered via `Categories.Add()`; whatever earlier state made it appear in `category list` at the very start of this workspace's use was not a real master-list registration, likely a stale/cached read from before the mailbox session refreshed). Re-ran `category set --color blue` on all 8 messages carrying `Work/Projects` (the 4 "שירותים לפי מסך" thread messages, the 2 Teams notifications, and the GW-test-environment notice) to backfill it too. Confirmed via `outlookctl category list`: all three custom categories (`Work/Projects`=blue, `Automated/Newsletter`=yellow, `FYI/Distribution`=steel) are now present alongside the six Outlook defaults, and this now matches what's visible in Outlook's own category picker.
