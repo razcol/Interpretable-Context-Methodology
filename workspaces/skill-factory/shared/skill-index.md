@@ -4,7 +4,7 @@ Registry of every skill this workspace has built or maintains. Updated by `stage
 
 | Name | Location | Purpose | Status |
 |------|----------|---------|--------|
-| _(none yet)_ | | | |
+| session-handoff | `_core/skills/session-handoff/` | On request, writes a self-contained handoff document (11 fixed sections) from the current session so unfinished work can be continued in a session without the conversation. Helper scripts gather system facts and check structure and secrets | active (tested once: one task, fresh-reader check; non-code task not yet tested) |
 
 ## Status values
 
