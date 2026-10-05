@@ -1,0 +1,15 @@
+{
+  "name": "browser-cdp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic CDP browser scripts for agents (puppeteer-core, Node)",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pixelmatch": "7.2.0",
+    "pngjs": "7.0.0",
+    "puppeteer-core": "24.43.1"
+  }
+}

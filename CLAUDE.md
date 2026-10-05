@@ -9,12 +9,13 @@ model-workspace-protocol/
 ├── CLAUDE.md                          (you are here)
 ├── README.md                          (project overview)
 ├── LICENSE
-├── _core/                             (shared conventions and templates)
+├── _core/                             (shared conventions, templates and skills)
 │   ├── CONVENTIONS.md                 (source of truth for all patterns)
 │   ├── placeholder-syntax.md          (how {{VARIABLES}} work)
-│   └── templates/                     (blank starting points for new workspaces)
-├── skills/                             (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
-│   └── jira-research/                 (searching/extracting info from Jira -- experimental)
+│   ├── templates/                     (blank starting points for new workspaces)
+│   └── skills/                        (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
+│       ├── jira-research/             (searching/extracting info from Jira -- experimental)
+│       └── browser-cdp/               (drive Chrome via CDP scripts: screenshots, diffs, DOM, console, interaction -- provisional)
 └── workspaces/
     ├── course-deck-production/        (unstructured material -> course PowerPoints)
     ├── workspace-builder/             (builds new MWP workspaces)
@@ -29,6 +30,7 @@ model-workspace-protocol/
 | Build a new workspace for any domain | `workspaces/workspace-builder/CLAUDE.md` |
 | Create or maintain an agent skill | `workspaces/skill-factory/CLAUDE.md` |
 | Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
+| Drive a browser (screenshots, visual diffs, page data, console errors, interaction) | `_core/skills/browser-cdp/SKILL.md` |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
 | Understand the placeholder system | `_core/placeholder-syntax.md` |
 | Use a template for a new workspace | `_core/templates/` |

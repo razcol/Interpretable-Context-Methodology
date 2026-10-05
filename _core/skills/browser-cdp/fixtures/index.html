@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; margin: 24px; }
+    h1 { color: #2563eb; }
+    .pulse { width: 40px; height: 40px; background: #16a34a; animation: pulse 1s infinite alternate; }
+    @keyframes pulse { from { opacity: 0.2; } to { opacity: 1; } }
+    #result { margin-top: 12px; font-weight: bold; }
+    form { display: grid; gap: 8px; max-width: 320px; }
+    @media (max-width: 500px) { h1 { font-size: 18px; } }
+  </style>
+</head>
+<body>
+  <h1>Fixture Page</h1>
+  <div class="pulse" aria-hidden="true"></div>
+  <img src="/missing.png" alt="missing image">
+  <form id="form" aria-label="Sign in form">
+    <label for="name">Name</label>
+    <input id="name" name="name" placeholder="Your name">
+    <label for="plan">Plan</label>
+    <select id="plan" name="plan"><option value="free">Free</option><option value="pro">Pro</option></select>
+    <button id="submit" type="submit">Submit</button>
+  </form>
+  <div id="result" role="status"></div>
+  <script>
+    console.error('fixture console error on load');
+    console.warn('fixture warning');
+    localStorage.setItem('fixture_token', 'local-secret-value');
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const n = document.getElementById('name').value;
+      const p = document.getElementById('plan').value;
+      document.getElementById('result').textContent = `Hello ${n} (${p})`;
+    });
+    setTimeout(() => { throw new Error('fixture uncaught error'); }, 50);
+  </script>
+</body>
+</html>
