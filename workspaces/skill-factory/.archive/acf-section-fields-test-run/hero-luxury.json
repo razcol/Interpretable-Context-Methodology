@@ -1,0 +1,135 @@
+{
+  "sections": [
+    {
+      "section": "HeroBanner",
+      "repo": "/home/dev/colmobil-luxury-trade/code",
+      "frontend_contract": "found",
+      "gql_file": "/home/dev/colmobil-luxury-trade/code/app/components/Sections/HeroBanner/HeroBanner.gql",
+      "flexible": {
+        "group": "fields",
+        "field": "flexible",
+        "post_types": [
+          "page",
+          "article",
+          "center"
+        ]
+      },
+      "wp_status": "Unknown. Field groups are not in git. Confirm this layout on the target environment.",
+      "action": "confirm",
+      "component_props": [],
+      "ignored_props": [],
+      "props_not_in_contract": [],
+      "contract_fields": [
+        "layout",
+        "layout.marginBottom",
+        "layout.marginBottom.desktop",
+        "layout.marginBottom.mobile",
+        "bannerCards",
+        "bannerCards.heroBannerSubtitle",
+        "bannerCards.heroBannerTitle",
+        "bannerCards.heroBannerMedia",
+        "bannerCards.heroBannerMedia.type",
+        "bannerCards.heroBannerMedia.videoFields",
+        "bannerCards.heroBannerMedia.videoFields.desktop",
+        "bannerCards.heroBannerMedia.videoFields.desktop.node",
+        "bannerCards.heroBannerMedia.videoFields.desktop.node.src",
+        "bannerCards.heroBannerMedia.videoFields.desktop.node.alt",
+        "bannerCards.heroBannerMedia.videoFields.mobile",
+        "bannerCards.heroBannerMedia.videoFields.mobile.node",
+        "bannerCards.heroBannerMedia.videoFields.mobile.node.src",
+        "bannerCards.heroBannerMedia.videoFields.mobile.node.alt",
+        "bannerCards.heroBannerMedia.imageFields",
+        "bannerCards.heroBannerMedia.imageFields.desktop",
+        "bannerCards.heroBannerMedia.imageFields.desktop.node",
+        "bannerCards.heroBannerMedia.imageFields.desktop.node.src",
+        "bannerCards.heroBannerMedia.imageFields.desktop.node.alt",
+        "bannerCards.heroBannerMedia.imageFields.mobile",
+        "bannerCards.heroBannerMedia.imageFields.mobile.node",
+        "bannerCards.heroBannerMedia.imageFields.mobile.node.src",
+        "bannerCards.heroBannerMedia.imageFields.mobile.node.alt"
+      ],
+      "spec_fields": [
+        {
+          "name": "layout",
+          "label": "Layout",
+          "reuse": true,
+          "reuse_fragment": "Layout",
+          "type": "clone"
+        },
+        {
+          "name": "bannerCards",
+          "label": "Banner Cards",
+          "reuse": false,
+          "type": "repeater",
+          "sub_fields": [
+            {
+              "name": "heroBannerSubtitle",
+              "label": "Hero Banner Subtitle",
+              "reuse": false,
+              "type": "text"
+            },
+            {
+              "name": "heroBannerTitle",
+              "label": "Hero Banner Title",
+              "reuse": false,
+              "type": "text"
+            },
+            {
+              "name": "heroBannerMedia",
+              "label": "Hero Banner Media",
+              "reuse": true,
+              "reuse_fragment": "ResponsiveFullMediaItem",
+              "type": "clone"
+            }
+          ]
+        }
+      ],
+      "sibling_warning": "`/home/dev/jaecoo-next/code` also has `HeroBanner`, with different fields. Only there: additionalButtonFields, additionalButtonFields.dataEventName, additionalButtonFields.dataText, additionalButtonFields.displayIcon, additionalButtonFields.exteriorUrl, additionalButtonFields.functionName, additionalButtonFields.interiorUrl, additionalButtonFields.interiorUrl.nodes, additionalButtonFields.interiorUrl.nodes.id, additionalButtonFields.interiorUrl.nodes.slug, additionalButtonFields.interiorUrl.nodes.uri, additionalButtonFields.isNewWindow, additionalButtonFields.label, additionalButtonFields.labelMobile, additionalButtonFields.model, additionalButtonFields.model.nodes, additionalButtonFields.model.nodes.id, additionalButtonFields.model.nodes.modelListCodes, additionalButtonFields.model.nodes.modelListCodes.modelFamily, additionalButtonFields.sectionId, additionalButtonFields.type, additionalButtonFields.variant, buttonFields, buttonFields.dataEventName, buttonFields.dataText, buttonFields.displayIcon, buttonFields.exteriorUrl, buttonFields.functionName, buttonFields.interiorUrl, buttonFields.interiorUrl.nodes, buttonFields.interiorUrl.nodes.id, buttonFields.interiorUrl.nodes.slug, buttonFields.interiorUrl.nodes.uri, buttonFields.isNewWindow, buttonFields.label, buttonFields.labelMobile, buttonFields.model, buttonFields.model.nodes, buttonFields.model.nodes.id, buttonFields.model.nodes.modelListCodes, buttonFields.model.nodes.modelListCodes.modelFamily, buttonFields.sectionId, buttonFields.type, buttonFields.variant, imageFields, imageFields.desktop, imageFields.desktop.node, imageFields.desktop.node.alt, imageFields.desktop.node.sizes, imageFields.desktop.node.sizes.height, imageFields.desktop.node.sizes.width, imageFields.desktop.node.src, imageFields.mobile, imageFields.mobile.node, imageFields.mobile.node.alt, imageFields.mobile.node.sizes, imageFields.mobile.node.sizes.height, imageFields.mobile.node.sizes.width, imageFields.mobile.node.src, modelFamily, showStars, subtitle, subtitleBottom, title, type, videoFields, videoFields.desktop, videoFields.desktop.node, videoFields.desktop.node.alt, videoFields.desktop.node.sizes, videoFields.desktop.node.sizes.height, videoFields.desktop.node.sizes.width, videoFields.desktop.node.src, videoFields.mobile, videoFields.mobile.node, videoFields.mobile.node.alt, videoFields.mobile.node.sizes, videoFields.mobile.node.sizes.height, videoFields.mobile.node.sizes.width, videoFields.mobile.node.src. Only here: bannerCards, bannerCards.heroBannerMedia, bannerCards.heroBannerMedia.imageFields, bannerCards.heroBannerMedia.imageFields.desktop, bannerCards.heroBannerMedia.imageFields.desktop.node, bannerCards.heroBannerMedia.imageFields.desktop.node.alt, bannerCards.heroBannerMedia.imageFields.desktop.node.src, bannerCards.heroBannerMedia.imageFields.mobile, bannerCards.heroBannerMedia.imageFields.mobile.node, bannerCards.heroBannerMedia.imageFields.mobile.node.alt, bannerCards.heroBannerMedia.imageFields.mobile.node.src, bannerCards.heroBannerMedia.type, bannerCards.heroBannerMedia.videoFields, bannerCards.heroBannerMedia.videoFields.desktop, bannerCards.heroBannerMedia.videoFields.desktop.node, bannerCards.heroBannerMedia.videoFields.desktop.node.alt, bannerCards.heroBannerMedia.videoFields.desktop.node.src, bannerCards.heroBannerMedia.videoFields.mobile, bannerCards.heroBannerMedia.videoFields.mobile.node, bannerCards.heroBannerMedia.videoFields.mobile.node.alt, bannerCards.heroBannerMedia.videoFields.mobile.node.src, bannerCards.heroBannerSubtitle, bannerCards.heroBannerTitle.",
+      "inferred": false,
+      "fragment_snippet": "fragment HeroBanner on FieldsFlexibleHeroBannerLayout {\n  ...Layout\n  bannerCards {\n    heroBannerSubtitle\n    heroBannerTitle\n    heroBannerMedia {\n      ...ResponsiveFullMediaItem\n    }\n  }\n}",
+      "spec": {
+        "action": "confirm",
+        "layout_name": "HeroBanner",
+        "layout_label": "Hero Banner",
+        "graphql_group": "fields",
+        "flexible_field": "flexible",
+        "fields": [
+          {
+            "name": "layout",
+            "label": "Layout",
+            "reuse": true,
+            "reuse_fragment": "Layout",
+            "type": "clone"
+          },
+          {
+            "name": "bannerCards",
+            "label": "Banner Cards",
+            "reuse": false,
+            "type": "repeater",
+            "sub_fields": [
+              {
+                "name": "heroBannerSubtitle",
+                "label": "Hero Banner Subtitle",
+                "reuse": false,
+                "type": "text"
+              },
+              {
+                "name": "heroBannerTitle",
+                "label": "Hero Banner Title",
+                "reuse": false,
+                "type": "text"
+              },
+              {
+                "name": "heroBannerMedia",
+                "label": "Hero Banner Media",
+                "reuse": true,
+                "reuse_fragment": "ResponsiveFullMediaItem",
+                "type": "clone"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

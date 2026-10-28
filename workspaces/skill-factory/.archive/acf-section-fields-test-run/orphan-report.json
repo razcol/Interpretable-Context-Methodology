@@ -1,0 +1,14 @@
+{
+  "group_key": "group_existing",
+  "group_title": "Page fields",
+  "layout_name": "Orphan",
+  "folder_name": "Orphan",
+  "action": "create-layout",
+  "warning": null,
+  "wrote": null,
+  "manual_fields": [
+    "notARealClone"
+  ],
+  "status": "incomplete-not-written",
+  "message": "A reused field has no sibling of the same name in this export, so no import file was written. Add those fields from an existing layout in the admin, or export a group that already contains them."
+}

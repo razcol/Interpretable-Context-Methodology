@@ -1,0 +1,165 @@
+{
+  "sections": [
+    {
+      "section": "PromoStrip",
+      "repo": "/home/dev/jaecoo-next/code",
+      "frontend_contract": "missing",
+      "gql_file": null,
+      "flexible": {
+        "group": "fields",
+        "field": "flexible",
+        "post_types": [
+          "model",
+          "page",
+          "article",
+          "serviceCenter",
+          "showRoom"
+        ]
+      },
+      "wp_status": "Unknown. Field groups are not in git. Confirm this layout on the target environment.",
+      "action": "create-layout",
+      "component_props": [],
+      "ignored_props": [],
+      "props_not_in_contract": [],
+      "contract_fields": [],
+      "spec_fields": [
+        {
+          "name": "layout",
+          "label": "Layout",
+          "type": "group",
+          "reuse": true,
+          "reuse_fragment": "Layout",
+          "inferred": true
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "reuse": false,
+          "inferred": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "wysiwyg",
+          "reuse": false,
+          "inferred": true
+        },
+        {
+          "name": "imageFields",
+          "label": "Image Fields",
+          "type": "group",
+          "reuse": true,
+          "reuse_fragment": "ResponsiveMediaItem",
+          "inferred": true
+        },
+        {
+          "name": "buttonFields",
+          "label": "Button Fields",
+          "type": "group",
+          "reuse": true,
+          "reuse_fragment": "ButtonItem",
+          "inferred": true
+        },
+        {
+          "name": "items",
+          "label": "Items",
+          "type": "repeater",
+          "reuse": false,
+          "inferred": true,
+          "sub_fields": [
+            {
+              "name": "title",
+              "label": "Title",
+              "type": "text",
+              "reuse": false,
+              "inferred": true
+            },
+            {
+              "name": "icon",
+              "label": "Icon",
+              "type": "image",
+              "reuse": false,
+              "reuse_fragment": "MediaItem",
+              "inferred": true
+            }
+          ]
+        }
+      ],
+      "sibling_warning": null,
+      "inferred": true,
+      "fragment_snippet": "fragment PromoStrip on FieldsFlexiblePromoStripLayout {\n  ...Layout\n  title\n  description\n  imageFields {\n    ...ResponsiveMediaItem\n  }\n  buttonFields {\n    ...ButtonItem\n  }\n  items {\n    title\n    icon {\n      ...MediaItem\n    }\n  }\n}",
+      "spec": {
+        "action": "create-layout",
+        "layout_name": "PromoStrip",
+        "layout_label": "Promo Strip",
+        "graphql_group": "fields",
+        "flexible_field": "flexible",
+        "fields": [
+          {
+            "name": "layout",
+            "label": "Layout",
+            "type": "group",
+            "reuse": true,
+            "reuse_fragment": "Layout",
+            "inferred": true
+          },
+          {
+            "name": "title",
+            "label": "Title",
+            "type": "text",
+            "reuse": false,
+            "inferred": true
+          },
+          {
+            "name": "description",
+            "label": "Description",
+            "type": "wysiwyg",
+            "reuse": false,
+            "inferred": true
+          },
+          {
+            "name": "imageFields",
+            "label": "Image Fields",
+            "type": "group",
+            "reuse": true,
+            "reuse_fragment": "ResponsiveMediaItem",
+            "inferred": true
+          },
+          {
+            "name": "buttonFields",
+            "label": "Button Fields",
+            "type": "group",
+            "reuse": true,
+            "reuse_fragment": "ButtonItem",
+            "inferred": true
+          },
+          {
+            "name": "items",
+            "label": "Items",
+            "type": "repeater",
+            "reuse": false,
+            "inferred": true,
+            "sub_fields": [
+              {
+                "name": "title",
+                "label": "Title",
+                "type": "text",
+                "reuse": false,
+                "inferred": true
+              },
+              {
+                "name": "icon",
+                "label": "Icon",
+                "type": "image",
+                "reuse": false,
+                "reuse_fragment": "MediaItem",
+                "inferred": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

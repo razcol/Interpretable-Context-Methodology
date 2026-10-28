@@ -1,0 +1,208 @@
+{
+  "sections": [
+    {
+      "section": "IconsWithInfo",
+      "repo": "/home/dev/jaecoo-next/code",
+      "frontend_contract": "found",
+      "gql_file": "/home/dev/jaecoo-next/code/app/components/Sections/IconsWithInfo/IconsWithInfo.gql",
+      "flexible": {
+        "group": "fields",
+        "field": "flexible",
+        "post_types": [
+          "model",
+          "page",
+          "article",
+          "serviceCenter",
+          "showRoom"
+        ]
+      },
+      "wp_status": "Unknown. Field groups are not in git. Confirm this layout on the target environment.",
+      "action": "confirm",
+      "component_props": [
+        "order",
+        "layout",
+        "title",
+        "description",
+        "iconList",
+        "buttonFields",
+        "comment"
+      ],
+      "ignored_props": [
+        "order"
+      ],
+      "props_not_in_contract": [],
+      "contract_fields": [
+        "title",
+        "description",
+        "iconList",
+        "iconList.icon",
+        "iconList.icon.node",
+        "iconList.icon.node.src",
+        "iconList.icon.node.alt",
+        "iconList.icon.node.sizes",
+        "iconList.icon.node.sizes.width",
+        "iconList.icon.node.sizes.height",
+        "iconList.description",
+        "buttonFields",
+        "buttonFields.label",
+        "buttonFields.labelMobile",
+        "buttonFields.isNewWindow",
+        "buttonFields.displayIcon",
+        "buttonFields.sectionId",
+        "buttonFields.type",
+        "buttonFields.functionName",
+        "buttonFields.variant",
+        "buttonFields.dataEventName",
+        "buttonFields.dataText",
+        "buttonFields.exteriorUrl",
+        "buttonFields.interiorUrl",
+        "buttonFields.interiorUrl.nodes",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.model",
+        "buttonFields.model.nodes",
+        "buttonFields.model.nodes.id",
+        "buttonFields.model.nodes.modelListCodes",
+        "buttonFields.model.nodes.modelListCodes.modelFamily",
+        "comment",
+        "layout",
+        "layout.marginBottom",
+        "layout.marginBottom.desktop",
+        "layout.marginBottom.mobile"
+      ],
+      "spec_fields": [
+        {
+          "name": "title",
+          "label": "Title",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "reuse": false,
+          "type": "wysiwyg or text"
+        },
+        {
+          "name": "iconList",
+          "label": "Icon List",
+          "reuse": false,
+          "type": "repeater",
+          "sub_fields": [
+            {
+              "name": "icon",
+              "label": "Icon",
+              "reuse": true,
+              "reuse_fragment": "MediaItem",
+              "type": "clone"
+            },
+            {
+              "name": "description",
+              "label": "Description",
+              "reuse": false,
+              "type": "wysiwyg or text"
+            }
+          ]
+        },
+        {
+          "name": "buttonFields",
+          "label": "Button Fields",
+          "reuse": true,
+          "reuse_fragment": "ButtonItem",
+          "type": "clone"
+        },
+        {
+          "name": "comment",
+          "label": "Comment",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "layout",
+          "label": "Layout",
+          "reuse": true,
+          "reuse_fragment": "Layout",
+          "type": "clone"
+        }
+      ],
+      "sibling_warning": null,
+      "inferred": false,
+      "fragment_snippet": "fragment IconsWithInfo on FieldsFlexibleIconsWithInfoLayout {\n  title\n  description\n  iconList {\n    icon {\n      ...MediaItem\n    }\n    description\n  }\n  buttonFields {\n    ...ButtonItem\n  }\n  comment\n  ...Layout\n}",
+      "spec": {
+        "action": "confirm",
+        "layout_name": "IconsWithInfo",
+        "layout_label": "Icons With Info",
+        "graphql_group": "fields",
+        "flexible_field": "flexible",
+        "fields": [
+          {
+            "name": "title",
+            "label": "Title",
+            "reuse": false,
+            "type": "text"
+          },
+          {
+            "name": "description",
+            "label": "Description",
+            "reuse": false,
+            "type": "wysiwyg or text"
+          },
+          {
+            "name": "iconList",
+            "label": "Icon List",
+            "reuse": false,
+            "type": "repeater",
+            "sub_fields": [
+              {
+                "name": "icon",
+                "label": "Icon",
+                "reuse": true,
+                "reuse_fragment": "MediaItem",
+                "type": "clone"
+              },
+              {
+                "name": "description",
+                "label": "Description",
+                "reuse": false,
+                "type": "wysiwyg or text"
+              }
+            ]
+          },
+          {
+            "name": "buttonFields",
+            "label": "Button Fields",
+            "reuse": true,
+            "reuse_fragment": "ButtonItem",
+            "type": "clone"
+          },
+          {
+            "name": "comment",
+            "label": "Comment",
+            "reuse": false,
+            "type": "text"
+          },
+          {
+            "name": "layout",
+            "label": "Layout",
+            "reuse": true,
+            "reuse_fragment": "Layout",
+            "type": "clone"
+          }
+        ]
+      }
+    }
+  ]
+}

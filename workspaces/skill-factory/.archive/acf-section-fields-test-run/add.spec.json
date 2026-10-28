@@ -1,0 +1,1 @@
+{"action": "add-fields", "layout_name": "HeroBanner", "graphql_group": "fields", "flexible_field": "flexible", "fields": [{"name": "title", "label": "Title", "type": "text", "reuse": false}, {"name": "buttonFields", "reuse": true}]}

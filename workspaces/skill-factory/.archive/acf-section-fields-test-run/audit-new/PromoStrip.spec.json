@@ -1,0 +1,71 @@
+{
+  "action": "create-layout",
+  "layout_name": "PromoStrip",
+  "layout_label": "Promo Strip",
+  "graphql_group": "fields",
+  "flexible_field": "flexible",
+  "fields": [
+    {
+      "name": "layout",
+      "label": "Layout",
+      "type": "group",
+      "reuse": true,
+      "reuse_fragment": "Layout",
+      "inferred": true
+    },
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "text",
+      "reuse": false,
+      "inferred": true
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "wysiwyg",
+      "reuse": false,
+      "inferred": true
+    },
+    {
+      "name": "imageFields",
+      "label": "Image Fields",
+      "type": "group",
+      "reuse": true,
+      "reuse_fragment": "ResponsiveMediaItem",
+      "inferred": true
+    },
+    {
+      "name": "buttonFields",
+      "label": "Button Fields",
+      "type": "group",
+      "reuse": true,
+      "reuse_fragment": "ButtonItem",
+      "inferred": true
+    },
+    {
+      "name": "items",
+      "label": "Items",
+      "type": "repeater",
+      "reuse": false,
+      "inferred": true,
+      "sub_fields": [
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "reuse": false,
+          "inferred": true
+        },
+        {
+          "name": "icon",
+          "label": "Icon",
+          "type": "image",
+          "reuse": false,
+          "reuse_fragment": "MediaItem",
+          "inferred": true
+        }
+      ]
+    }
+  ]
+}

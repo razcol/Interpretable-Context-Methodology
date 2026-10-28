@@ -1,0 +1,62 @@
+{
+  "action": "confirm",
+  "layout_name": "IconsWithInfo",
+  "layout_label": "Icons With Info",
+  "graphql_group": "fields",
+  "flexible_field": "flexible",
+  "fields": [
+    {
+      "name": "title",
+      "label": "Title",
+      "reuse": false,
+      "type": "text"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "reuse": false,
+      "type": "wysiwyg or text"
+    },
+    {
+      "name": "iconList",
+      "label": "Icon List",
+      "reuse": false,
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "icon",
+          "label": "Icon",
+          "reuse": true,
+          "reuse_fragment": "MediaItem",
+          "type": "clone"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "reuse": false,
+          "type": "wysiwyg or text"
+        }
+      ]
+    },
+    {
+      "name": "buttonFields",
+      "label": "Button Fields",
+      "reuse": true,
+      "reuse_fragment": "ButtonItem",
+      "type": "clone"
+    },
+    {
+      "name": "comment",
+      "label": "Comment",
+      "reuse": false,
+      "type": "text"
+    },
+    {
+      "name": "layout",
+      "label": "Layout",
+      "reuse": true,
+      "reuse_fragment": "Layout",
+      "type": "clone"
+    }
+  ]
+}

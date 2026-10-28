@@ -1,0 +1,43 @@
+{
+  "action": "confirm",
+  "layout_name": "HeroBanner",
+  "layout_label": "Hero Banner",
+  "graphql_group": "fields",
+  "flexible_field": "flexible",
+  "fields": [
+    {
+      "name": "layout",
+      "label": "Layout",
+      "reuse": true,
+      "reuse_fragment": "Layout",
+      "type": "clone"
+    },
+    {
+      "name": "bannerCards",
+      "label": "Banner Cards",
+      "reuse": false,
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "heroBannerSubtitle",
+          "label": "Hero Banner Subtitle",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "heroBannerTitle",
+          "label": "Hero Banner Title",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "heroBannerMedia",
+          "label": "Hero Banner Media",
+          "reuse": true,
+          "reuse_fragment": "ResponsiveFullMediaItem",
+          "type": "clone"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "key": "group_existing",
+  "title": "Page fields",
+  "graphql_field_name": "fields",
+  "show_in_graphql": 1,
+  "modified": 1793177110,
+  "fields": [
+    {
+      "key": "field_flex",
+      "label": "Flexible",
+      "name": "flexible",
+      "type": "flexible_content",
+      "layouts": {
+        "layout_hero": {
+          "key": "layout_hero",
+          "name": "HeroBanner",
+          "label": "Hero Banner",
+          "display": "block",
+          "sub_fields": [
+            {
+              "key": "field_button_old",
+              "label": "Button",
+              "name": "buttonFields",
+              "type": "clone",
+              "clone": [
+                "field_shared_button"
+              ],
+              "parent_layout": "layout_hero",
+              "display": "seamless",
+              "ID": 99
+            },
+            {
+              "key": "field_layout_old",
+              "label": "Layout",
+              "name": "layout",
+              "type": "clone",
+              "clone": [
+                "field_shared_layout"
+              ],
+              "parent_layout": "layout_hero"
+            },
+            {
+              "key": "field_image_old",
+              "label": "Image",
+              "name": "imageFields",
+              "type": "group",
+              "parent_layout": "layout_hero",
+              "sub_fields": [
+                {
+                  "key": "field_desktop_old",
+                  "label": "Desktop",
+                  "name": "desktop",
+                  "type": "image",
+                  "return_format": "array"
+                }
+              ]
+            },
+            {
+              "key": "field_e1250eceb0b2",
+              "label": "Title",
+              "name": "title",
+              "aria-label": "",
+              "type": "text",
+              "instructions": "",
+              "required": 0,
+              "conditional_logic": 0,
+              "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+              },
+              "show_in_graphql": 1,
+              "default_value": "",
+              "parent_layout": "layout_hero"
+            }
+          ],
+          "min": "",
+          "max": ""
+        }
+      }
+    }
+  ]
+}

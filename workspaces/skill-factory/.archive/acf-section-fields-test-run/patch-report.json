@@ -1,0 +1,19 @@
+{
+  "group_key": "group_existing",
+  "group_title": "Page fields",
+  "layout_name": "PromoStrip",
+  "folder_name": "PromoStrip",
+  "action": "create-layout",
+  "warning": null,
+  "wrote": "/home/dev/ai-system/workspaces/skill-factory/stages/04-draft-and-test/output/test-run/export.patched.json",
+  "manual_fields": [],
+  "status": "patched",
+  "added_fields": [
+    "layout",
+    "title",
+    "description",
+    "imageFields",
+    "buttonFields",
+    "items"
+  ]
+}

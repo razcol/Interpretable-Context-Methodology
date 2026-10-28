@@ -1,0 +1,680 @@
+{
+  "sections": [
+    {
+      "section": "HeroBanner",
+      "repo": "/home/dev/jaecoo-next/code",
+      "frontend_contract": "found",
+      "gql_file": "/home/dev/jaecoo-next/code/app/components/Sections/HeroBanner/HeroBanner.gql",
+      "flexible": {
+        "group": "fields",
+        "field": "flexible",
+        "post_types": [
+          "model",
+          "page",
+          "article",
+          "serviceCenter",
+          "showRoom"
+        ]
+      },
+      "wp_status": "Unknown. Field groups are not in git. Confirm this layout on the target environment.",
+      "action": "confirm",
+      "component_props": [],
+      "ignored_props": [],
+      "props_not_in_contract": [],
+      "contract_fields": [
+        "layout",
+        "layout.marginBottom",
+        "layout.marginBottom.desktop",
+        "layout.marginBottom.mobile",
+        "title",
+        "subtitle",
+        "subtitleBottom",
+        "showStars",
+        "type",
+        "videoFields",
+        "videoFields.desktop",
+        "videoFields.desktop.node",
+        "videoFields.desktop.node.src",
+        "videoFields.desktop.node.alt",
+        "videoFields.desktop.node.sizes",
+        "videoFields.desktop.node.sizes.width",
+        "videoFields.desktop.node.sizes.height",
+        "videoFields.mobile",
+        "videoFields.mobile.node",
+        "videoFields.mobile.node.src",
+        "videoFields.mobile.node.alt",
+        "videoFields.mobile.node.sizes",
+        "videoFields.mobile.node.sizes.width",
+        "videoFields.mobile.node.sizes.height",
+        "imageFields",
+        "imageFields.desktop",
+        "imageFields.desktop.node",
+        "imageFields.desktop.node.src",
+        "imageFields.desktop.node.alt",
+        "imageFields.desktop.node.sizes",
+        "imageFields.desktop.node.sizes.width",
+        "imageFields.desktop.node.sizes.height",
+        "imageFields.mobile",
+        "imageFields.mobile.node",
+        "imageFields.mobile.node.src",
+        "imageFields.mobile.node.alt",
+        "imageFields.mobile.node.sizes",
+        "imageFields.mobile.node.sizes.width",
+        "imageFields.mobile.node.sizes.height",
+        "buttonFields",
+        "buttonFields.label",
+        "buttonFields.labelMobile",
+        "buttonFields.isNewWindow",
+        "buttonFields.displayIcon",
+        "buttonFields.sectionId",
+        "buttonFields.type",
+        "buttonFields.functionName",
+        "buttonFields.variant",
+        "buttonFields.dataEventName",
+        "buttonFields.dataText",
+        "buttonFields.exteriorUrl",
+        "buttonFields.interiorUrl",
+        "buttonFields.interiorUrl.nodes",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.interiorUrl.nodes.id",
+        "buttonFields.interiorUrl.nodes.uri",
+        "buttonFields.interiorUrl.nodes.slug",
+        "buttonFields.model",
+        "buttonFields.model.nodes",
+        "buttonFields.model.nodes.id",
+        "buttonFields.model.nodes.modelListCodes",
+        "buttonFields.model.nodes.modelListCodes.modelFamily",
+        "additionalButtonFields",
+        "additionalButtonFields.label",
+        "additionalButtonFields.labelMobile",
+        "additionalButtonFields.isNewWindow",
+        "additionalButtonFields.displayIcon",
+        "additionalButtonFields.sectionId",
+        "additionalButtonFields.type",
+        "additionalButtonFields.functionName",
+        "additionalButtonFields.variant",
+        "additionalButtonFields.dataEventName",
+        "additionalButtonFields.dataText",
+        "additionalButtonFields.exteriorUrl",
+        "additionalButtonFields.interiorUrl",
+        "additionalButtonFields.interiorUrl.nodes",
+        "additionalButtonFields.interiorUrl.nodes.id",
+        "additionalButtonFields.interiorUrl.nodes.uri",
+        "additionalButtonFields.interiorUrl.nodes.slug",
+        "additionalButtonFields.interiorUrl.nodes.id",
+        "additionalButtonFields.interiorUrl.nodes.uri",
+        "additionalButtonFields.interiorUrl.nodes.slug",
+        "additionalButtonFields.interiorUrl.nodes.id",
+        "additionalButtonFields.interiorUrl.nodes.uri",
+        "additionalButtonFields.interiorUrl.nodes.slug",
+        "additionalButtonFields.interiorUrl.nodes.id",
+        "additionalButtonFields.interiorUrl.nodes.uri",
+        "additionalButtonFields.interiorUrl.nodes.slug",
+        "additionalButtonFields.interiorUrl.nodes.id",
+        "additionalButtonFields.interiorUrl.nodes.uri",
+        "additionalButtonFields.interiorUrl.nodes.slug",
+        "additionalButtonFields.model",
+        "additionalButtonFields.model.nodes",
+        "additionalButtonFields.model.nodes.id",
+        "additionalButtonFields.model.nodes.modelListCodes",
+        "additionalButtonFields.model.nodes.modelListCodes.modelFamily",
+        "modelFamily"
+      ],
+      "spec_fields": [
+        {
+          "name": "layout",
+          "label": "Layout",
+          "reuse": true,
+          "reuse_fragment": "Layout",
+          "type": "clone"
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "subtitle",
+          "label": "Subtitle",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "subtitleBottom",
+          "label": "Subtitle Bottom",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "showStars",
+          "label": "Show Stars",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "type",
+          "label": "Type",
+          "reuse": false,
+          "type": "text"
+        },
+        {
+          "name": "videoFields",
+          "label": "Video Fields",
+          "reuse": false,
+          "type": "repeater",
+          "sub_fields": [
+            {
+              "name": "desktop",
+              "label": "Desktop",
+              "reuse": false,
+              "type": "group",
+              "sub_fields": [
+                {
+                  "name": "node",
+                  "label": "Node",
+                  "reuse": false,
+                  "type": "group",
+                  "sub_fields": [
+                    {
+                      "name": "src",
+                      "label": "Src",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "alt",
+                      "label": "Alt",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "sizes",
+                      "label": "Sizes",
+                      "reuse": false,
+                      "type": "repeater",
+                      "sub_fields": [
+                        {
+                          "name": "width",
+                          "label": "Width",
+                          "reuse": false,
+                          "type": "text"
+                        },
+                        {
+                          "name": "height",
+                          "label": "Height",
+                          "reuse": false,
+                          "type": "text"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "mobile",
+              "label": "Mobile",
+              "reuse": false,
+              "type": "group",
+              "sub_fields": [
+                {
+                  "name": "node",
+                  "label": "Node",
+                  "reuse": false,
+                  "type": "group",
+                  "sub_fields": [
+                    {
+                      "name": "src",
+                      "label": "Src",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "alt",
+                      "label": "Alt",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "sizes",
+                      "label": "Sizes",
+                      "reuse": false,
+                      "type": "repeater",
+                      "sub_fields": [
+                        {
+                          "name": "width",
+                          "label": "Width",
+                          "reuse": false,
+                          "type": "text"
+                        },
+                        {
+                          "name": "height",
+                          "label": "Height",
+                          "reuse": false,
+                          "type": "text"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "imageFields",
+          "label": "Image Fields",
+          "reuse": false,
+          "type": "repeater",
+          "sub_fields": [
+            {
+              "name": "desktop",
+              "label": "Desktop",
+              "reuse": false,
+              "type": "group",
+              "sub_fields": [
+                {
+                  "name": "node",
+                  "label": "Node",
+                  "reuse": false,
+                  "type": "group",
+                  "sub_fields": [
+                    {
+                      "name": "src",
+                      "label": "Src",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "alt",
+                      "label": "Alt",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "sizes",
+                      "label": "Sizes",
+                      "reuse": false,
+                      "type": "repeater",
+                      "sub_fields": [
+                        {
+                          "name": "width",
+                          "label": "Width",
+                          "reuse": false,
+                          "type": "text"
+                        },
+                        {
+                          "name": "height",
+                          "label": "Height",
+                          "reuse": false,
+                          "type": "text"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "mobile",
+              "label": "Mobile",
+              "reuse": false,
+              "type": "group",
+              "sub_fields": [
+                {
+                  "name": "node",
+                  "label": "Node",
+                  "reuse": false,
+                  "type": "group",
+                  "sub_fields": [
+                    {
+                      "name": "src",
+                      "label": "Src",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "alt",
+                      "label": "Alt",
+                      "reuse": false,
+                      "type": "text"
+                    },
+                    {
+                      "name": "sizes",
+                      "label": "Sizes",
+                      "reuse": false,
+                      "type": "repeater",
+                      "sub_fields": [
+                        {
+                          "name": "width",
+                          "label": "Width",
+                          "reuse": false,
+                          "type": "text"
+                        },
+                        {
+                          "name": "height",
+                          "label": "Height",
+                          "reuse": false,
+                          "type": "text"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "buttonFields",
+          "label": "Button Fields",
+          "reuse": true,
+          "reuse_fragment": "ButtonItem",
+          "type": "clone"
+        },
+        {
+          "name": "additionalButtonFields",
+          "label": "Additional Button Fields",
+          "reuse": true,
+          "reuse_fragment": "ButtonItem",
+          "type": "clone"
+        },
+        {
+          "name": "modelFamily",
+          "label": "Model Family",
+          "reuse": false,
+          "type": "text"
+        }
+      ],
+      "sibling_warning": "`/home/dev/colmobil-luxury-trade/code` also has `HeroBanner`, with different fields. Only there: bannerCards, bannerCards.heroBannerMedia, bannerCards.heroBannerMedia.imageFields, bannerCards.heroBannerMedia.imageFields.desktop, bannerCards.heroBannerMedia.imageFields.desktop.node, bannerCards.heroBannerMedia.imageFields.desktop.node.alt, bannerCards.heroBannerMedia.imageFields.desktop.node.src, bannerCards.heroBannerMedia.imageFields.mobile, bannerCards.heroBannerMedia.imageFields.mobile.node, bannerCards.heroBannerMedia.imageFields.mobile.node.alt, bannerCards.heroBannerMedia.imageFields.mobile.node.src, bannerCards.heroBannerMedia.type, bannerCards.heroBannerMedia.videoFields, bannerCards.heroBannerMedia.videoFields.desktop, bannerCards.heroBannerMedia.videoFields.desktop.node, bannerCards.heroBannerMedia.videoFields.desktop.node.alt, bannerCards.heroBannerMedia.videoFields.desktop.node.src, bannerCards.heroBannerMedia.videoFields.mobile, bannerCards.heroBannerMedia.videoFields.mobile.node, bannerCards.heroBannerMedia.videoFields.mobile.node.alt, bannerCards.heroBannerMedia.videoFields.mobile.node.src, bannerCards.heroBannerSubtitle, bannerCards.heroBannerTitle. Only here: additionalButtonFields, additionalButtonFields.dataEventName, additionalButtonFields.dataText, additionalButtonFields.displayIcon, additionalButtonFields.exteriorUrl, additionalButtonFields.functionName, additionalButtonFields.interiorUrl, additionalButtonFields.interiorUrl.nodes, additionalButtonFields.interiorUrl.nodes.id, additionalButtonFields.interiorUrl.nodes.slug, additionalButtonFields.interiorUrl.nodes.uri, additionalButtonFields.isNewWindow, additionalButtonFields.label, additionalButtonFields.labelMobile, additionalButtonFields.model, additionalButtonFields.model.nodes, additionalButtonFields.model.nodes.id, additionalButtonFields.model.nodes.modelListCodes, additionalButtonFields.model.nodes.modelListCodes.modelFamily, additionalButtonFields.sectionId, additionalButtonFields.type, additionalButtonFields.variant, buttonFields, buttonFields.dataEventName, buttonFields.dataText, buttonFields.displayIcon, buttonFields.exteriorUrl, buttonFields.functionName, buttonFields.interiorUrl, buttonFields.interiorUrl.nodes, buttonFields.interiorUrl.nodes.id, buttonFields.interiorUrl.nodes.slug, buttonFields.interiorUrl.nodes.uri, buttonFields.isNewWindow, buttonFields.label, buttonFields.labelMobile, buttonFields.model, buttonFields.model.nodes, buttonFields.model.nodes.id, buttonFields.model.nodes.modelListCodes, buttonFields.model.nodes.modelListCodes.modelFamily, buttonFields.sectionId, buttonFields.type, buttonFields.variant, imageFields, imageFields.desktop, imageFields.desktop.node, imageFields.desktop.node.alt, imageFields.desktop.node.sizes, imageFields.desktop.node.sizes.height, imageFields.desktop.node.sizes.width, imageFields.desktop.node.src, imageFields.mobile, imageFields.mobile.node, imageFields.mobile.node.alt, imageFields.mobile.node.sizes, imageFields.mobile.node.sizes.height, imageFields.mobile.node.sizes.width, imageFields.mobile.node.src, modelFamily, showStars, subtitle, subtitleBottom, title, type, videoFields, videoFields.desktop, videoFields.desktop.node, videoFields.desktop.node.alt, videoFields.desktop.node.sizes, videoFields.desktop.node.sizes.height, videoFields.desktop.node.sizes.width, videoFields.desktop.node.src, videoFields.mobile, videoFields.mobile.node, videoFields.mobile.node.alt, videoFields.mobile.node.sizes, videoFields.mobile.node.sizes.height, videoFields.mobile.node.sizes.width, videoFields.mobile.node.src.",
+      "inferred": false,
+      "fragment_snippet": "fragment HeroBanner on FieldsFlexibleHeroBannerLayout {\n  ...Layout\n  title\n  subtitle\n  subtitleBottom\n  showStars\n  type\n  videoFields {\n    desktop {\n      node {\n        src\n        alt\n        sizes {\n          width\n          height\n        }\n      }\n    }\n    mobile {\n      node {\n        src\n        alt\n        sizes {\n          width\n          height\n        }\n      }\n    }\n  }\n  imageFields {\n    desktop {\n      node {\n        src\n        alt\n        sizes {\n          width\n          height\n        }\n      }\n    }\n    mobile {\n      node {\n        src\n        alt\n        sizes {\n          width\n          height\n        }\n      }\n    }\n  }\n  buttonFields {\n    ...ButtonItem\n  }\n  additionalButtonFields {\n    ...ButtonItem\n  }\n  modelFamily\n}",
+      "spec": {
+        "action": "confirm",
+        "layout_name": "HeroBanner",
+        "layout_label": "Hero Banner",
+        "graphql_group": "fields",
+        "flexible_field": "flexible",
+        "fields": [
+          {
+            "name": "layout",
+            "label": "Layout",
+            "reuse": true,
+            "reuse_fragment": "Layout",
+            "type": "clone"
+          },
+          {
+            "name": "title",
+            "label": "Title",
+            "reuse": false,
+            "type": "text"
+          },
+          {
+            "name": "subtitle",
+            "label": "Subtitle",
+            "reuse": false,
+            "type": "text"
+          },
+          {
+            "name": "subtitleBottom",
+            "label": "Subtitle Bottom",
+            "reuse": false,
+            "type": "text"
+          },
+          {
+            "name": "showStars",
+            "label": "Show Stars",
+            "reuse": false,
+            "type": "text"
+          },
+          {
+            "name": "type",
+            "label": "Type",
+            "reuse": false,
+            "type": "text"
+          },
+          {
+            "name": "videoFields",
+            "label": "Video Fields",
+            "reuse": false,
+            "type": "repeater",
+            "sub_fields": [
+              {
+                "name": "desktop",
+                "label": "Desktop",
+                "reuse": false,
+                "type": "group",
+                "sub_fields": [
+                  {
+                    "name": "node",
+                    "label": "Node",
+                    "reuse": false,
+                    "type": "group",
+                    "sub_fields": [
+                      {
+                        "name": "src",
+                        "label": "Src",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "alt",
+                        "label": "Alt",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "sizes",
+                        "label": "Sizes",
+                        "reuse": false,
+                        "type": "repeater",
+                        "sub_fields": [
+                          {
+                            "name": "width",
+                            "label": "Width",
+                            "reuse": false,
+                            "type": "text"
+                          },
+                          {
+                            "name": "height",
+                            "label": "Height",
+                            "reuse": false,
+                            "type": "text"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "mobile",
+                "label": "Mobile",
+                "reuse": false,
+                "type": "group",
+                "sub_fields": [
+                  {
+                    "name": "node",
+                    "label": "Node",
+                    "reuse": false,
+                    "type": "group",
+                    "sub_fields": [
+                      {
+                        "name": "src",
+                        "label": "Src",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "alt",
+                        "label": "Alt",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "sizes",
+                        "label": "Sizes",
+                        "reuse": false,
+                        "type": "repeater",
+                        "sub_fields": [
+                          {
+                            "name": "width",
+                            "label": "Width",
+                            "reuse": false,
+                            "type": "text"
+                          },
+                          {
+                            "name": "height",
+                            "label": "Height",
+                            "reuse": false,
+                            "type": "text"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "imageFields",
+            "label": "Image Fields",
+            "reuse": false,
+            "type": "repeater",
+            "sub_fields": [
+              {
+                "name": "desktop",
+                "label": "Desktop",
+                "reuse": false,
+                "type": "group",
+                "sub_fields": [
+                  {
+                    "name": "node",
+                    "label": "Node",
+                    "reuse": false,
+                    "type": "group",
+                    "sub_fields": [
+                      {
+                        "name": "src",
+                        "label": "Src",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "alt",
+                        "label": "Alt",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "sizes",
+                        "label": "Sizes",
+                        "reuse": false,
+                        "type": "repeater",
+                        "sub_fields": [
+                          {
+                            "name": "width",
+                            "label": "Width",
+                            "reuse": false,
+                            "type": "text"
+                          },
+                          {
+                            "name": "height",
+                            "label": "Height",
+                            "reuse": false,
+                            "type": "text"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "mobile",
+                "label": "Mobile",
+                "reuse": false,
+                "type": "group",
+                "sub_fields": [
+                  {
+                    "name": "node",
+                    "label": "Node",
+                    "reuse": false,
+                    "type": "group",
+                    "sub_fields": [
+                      {
+                        "name": "src",
+                        "label": "Src",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "alt",
+                        "label": "Alt",
+                        "reuse": false,
+                        "type": "text"
+                      },
+                      {
+                        "name": "sizes",
+                        "label": "Sizes",
+                        "reuse": false,
+                        "type": "repeater",
+                        "sub_fields": [
+                          {
+                            "name": "width",
+                            "label": "Width",
+                            "reuse": false,
+                            "type": "text"
+                          },
+                          {
+                            "name": "height",
+                            "label": "Height",
+                            "reuse": false,
+                            "type": "text"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "buttonFields",
+            "label": "Button Fields",
+            "reuse": true,
+            "reuse_fragment": "ButtonItem",
+            "type": "clone"
+          },
+          {
+            "name": "additionalButtonFields",
+            "label": "Additional Button Fields",
+            "reuse": true,
+            "reuse_fragment": "ButtonItem",
+            "type": "clone"
+          },
+          {
+            "name": "modelFamily",
+            "label": "Model Family",
+            "reuse": false,
+            "type": "text"
+          }
+        ]
+      }
+    }
+  ]
+}

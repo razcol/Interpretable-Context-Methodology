@@ -1,0 +1,223 @@
+{
+  "key": "group_existing",
+  "title": "Page fields",
+  "graphql_field_name": "fields",
+  "show_in_graphql": 1,
+  "modified": 1793177168,
+  "fields": [
+    {
+      "key": "field_flex",
+      "label": "Flexible",
+      "name": "flexible",
+      "type": "flexible_content",
+      "layouts": {
+        "layout_hero": {
+          "key": "layout_hero",
+          "name": "HeroBanner",
+          "label": "Hero Banner",
+          "display": "block",
+          "sub_fields": [
+            {
+              "key": "field_button_old",
+              "label": "Button",
+              "name": "buttonFields",
+              "type": "clone",
+              "clone": [
+                "field_shared_button"
+              ],
+              "parent_layout": "layout_hero",
+              "display": "seamless",
+              "ID": 99
+            },
+            {
+              "key": "field_layout_old",
+              "label": "Layout",
+              "name": "layout",
+              "type": "clone",
+              "clone": [
+                "field_shared_layout"
+              ],
+              "parent_layout": "layout_hero"
+            },
+            {
+              "key": "field_image_old",
+              "label": "Image",
+              "name": "imageFields",
+              "type": "group",
+              "parent_layout": "layout_hero",
+              "sub_fields": [
+                {
+                  "key": "field_desktop_old",
+                  "label": "Desktop",
+                  "name": "desktop",
+                  "type": "image",
+                  "return_format": "array"
+                }
+              ]
+            }
+          ],
+          "min": "",
+          "max": ""
+        },
+        "layout_d60643b2a1c1": {
+          "key": "layout_d60643b2a1c1",
+          "name": "PromoStrip",
+          "label": "Promo Strip",
+          "display": "block",
+          "sub_fields": [
+            {
+              "key": "field_b49305f786f9",
+              "label": "Layout",
+              "name": "layout",
+              "type": "clone",
+              "clone": [
+                "field_shared_layout"
+              ],
+              "parent_layout": "layout_d60643b2a1c1"
+            },
+            {
+              "key": "field_0dea4b7d9e6f",
+              "label": "Title",
+              "name": "title",
+              "aria-label": "",
+              "type": "text",
+              "instructions": "",
+              "required": 0,
+              "conditional_logic": 0,
+              "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+              },
+              "show_in_graphql": 1,
+              "default_value": "",
+              "parent_layout": "layout_d60643b2a1c1"
+            },
+            {
+              "key": "field_448230c2ddbe",
+              "label": "Description",
+              "name": "description",
+              "aria-label": "",
+              "type": "wysiwyg",
+              "instructions": "",
+              "required": 0,
+              "conditional_logic": 0,
+              "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+              },
+              "show_in_graphql": 1,
+              "default_value": "",
+              "tabs": "all",
+              "toolbar": "full",
+              "media_upload": 1,
+              "delay": 0,
+              "parent_layout": "layout_d60643b2a1c1"
+            },
+            {
+              "key": "field_41d0b4d9fe76",
+              "label": "Image",
+              "name": "imageFields",
+              "type": "group",
+              "parent_layout": "layout_d60643b2a1c1",
+              "sub_fields": [
+                {
+                  "key": "field_5006918b6e93",
+                  "label": "Desktop",
+                  "name": "desktop",
+                  "type": "image",
+                  "return_format": "array"
+                }
+              ]
+            },
+            {
+              "key": "field_7115af741fd1",
+              "label": "Button",
+              "name": "buttonFields",
+              "type": "clone",
+              "clone": [
+                "field_shared_button"
+              ],
+              "parent_layout": "layout_d60643b2a1c1",
+              "display": "seamless"
+            },
+            {
+              "key": "field_321f79ab5839",
+              "label": "Items",
+              "name": "items",
+              "aria-label": "",
+              "type": "repeater",
+              "instructions": "",
+              "required": 0,
+              "conditional_logic": 0,
+              "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+              },
+              "show_in_graphql": 1,
+              "default_value": "",
+              "layout": "block",
+              "pagination": 0,
+              "min": 0,
+              "max": 0,
+              "collapsed": "",
+              "button_label": "Add Row",
+              "rows_per_page": 20,
+              "sub_fields": [
+                {
+                  "key": "field_87c7f203f51a",
+                  "label": "Title",
+                  "name": "title",
+                  "aria-label": "",
+                  "type": "text",
+                  "instructions": "",
+                  "required": 0,
+                  "conditional_logic": 0,
+                  "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                  },
+                  "show_in_graphql": 1,
+                  "default_value": ""
+                },
+                {
+                  "key": "field_327e46a20c0e",
+                  "label": "Icon",
+                  "name": "icon",
+                  "aria-label": "",
+                  "type": "image",
+                  "instructions": "",
+                  "required": 0,
+                  "conditional_logic": 0,
+                  "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                  },
+                  "show_in_graphql": 1,
+                  "default_value": "",
+                  "return_format": "array",
+                  "library": "all",
+                  "preview_size": "medium",
+                  "min_width": "",
+                  "min_height": "",
+                  "min_size": "",
+                  "max_width": "",
+                  "max_height": "",
+                  "max_size": "",
+                  "mime_types": ""
+                }
+              ],
+              "parent_layout": "layout_d60643b2a1c1"
+            }
+          ],
+          "min": "",
+          "max": ""
+        }
+      }
+    }
+  ]
+}
