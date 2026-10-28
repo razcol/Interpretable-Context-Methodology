@@ -20,7 +20,8 @@ model-workspace-protocol/
 └── workspaces/
     ├── course-deck-production/        (unstructured material -> course PowerPoints)
     ├── workspace-builder/             (builds new MWP workspaces)
-    └── skill-factory/                 (create and maintain agent skills, validated via real usage)
+    ├── skill-factory/                 (create and maintain agent skills, validated via real usage)
+    └── figma-section-fields/          (Figma layer to React section, GraphQL fragment, and bound fields)
 ```
 
 ## Routing
@@ -30,6 +31,7 @@ model-workspace-protocol/
 | Build course slide decks from source material | `workspaces/course-deck-production/CLAUDE.md` |
 | Build a new workspace for any domain | `workspaces/workspace-builder/CLAUDE.md` |
 | Create or maintain an agent skill | `workspaces/skill-factory/CLAUDE.md` |
+| Export a Figma layer into a section with a GraphQL fragment | `workspaces/figma-section-fields/CLAUDE.md` |
 | Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
 | Drive a browser (screenshots, visual diffs, page data, console errors, interaction) | `_core/skills/browser-cdp/SKILL.md` |
 | Generate a planned Excalidraw flowchart of an idea or system | `_core/skills/system-flowcharts/SKILL.md` |
