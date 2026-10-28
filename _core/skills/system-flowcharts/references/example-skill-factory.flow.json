@@ -1,0 +1,51 @@
+{
+  "title": "Skill factory pipeline",
+  "direction": "DOWN",
+  "nodes": [
+    { "id": "start", "label": "User asks for a skill", "kind": "start" },
+    { "id": "intake", "label": "Scope the request", "kind": "process" },
+    { "id": "isNew", "label": "New skill?", "kind": "decision" },
+    { "id": "clarify", "label": "Clarify requirements", "kind": "process" },
+    { "id": "load", "label": "Load the current skill", "kind": "process" },
+    { "id": "change", "label": "Change the approach?", "kind": "decision" },
+    { "id": "research", "label": "Compare approaches", "kind": "process" },
+    { "id": "draft", "label": "Draft and test", "kind": "process" },
+    { "id": "approved", "label": "User approves?", "kind": "decision" },
+    { "id": "revise", "label": "Revise the draft", "kind": "process" },
+    { "id": "publish", "label": "Publish the skill", "kind": "process" },
+    { "id": "done", "label": "Skill is in its home", "kind": "end" }
+  ],
+  "edges": [
+    { "from": "start", "to": "intake" },
+    { "from": "intake", "to": "isNew" },
+    { "from": "isNew", "to": "clarify", "label": "Yes" },
+    { "from": "isNew", "to": "load", "label": "No" },
+    { "from": "clarify", "to": "research" },
+    { "from": "load", "to": "change" },
+    { "from": "change", "to": "research", "label": "Yes" },
+    { "from": "change", "to": "draft", "label": "No" },
+    { "from": "research", "to": "draft" },
+    { "from": "draft", "to": "approved" },
+    { "from": "approved", "to": "revise", "label": "No" },
+    { "from": "revise", "to": "draft" },
+    { "from": "approved", "to": "publish", "label": "Yes" },
+    { "from": "publish", "to": "done" }
+  ],
+  "groups": [
+    {
+      "id": "scope",
+      "label": "Scope",
+      "nodeIds": ["intake", "isNew", "clarify", "load", "change", "research"]
+    },
+    {
+      "id": "validate",
+      "label": "Validate",
+      "nodeIds": ["draft", "approved"]
+    },
+    {
+      "id": "release",
+      "label": "Release",
+      "nodeIds": ["publish", "done"]
+    }
+  ]
+}

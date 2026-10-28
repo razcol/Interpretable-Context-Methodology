@@ -1,0 +1,33 @@
+flowchart TD
+  start([User asks for a skill]) --> intake[Scope the request]
+  intake --> isNew{New skill?}
+  isNew -->|Yes| clarify[Clarify requirements]
+  isNew -->|No| load[Load the current skill]
+  clarify --> research[Compare approaches]
+  load --> change{Change the approach?}
+  change -->|Yes| research
+  change -->|No| draft
+  research --> draft[Draft and test]
+  draft --> approved{User approves?}
+  approved -->|No| revise[Revise the draft]
+  revise --> draft
+  approved -->|Yes| publish[Publish the skill]
+  publish --> done([Skill is in its home])
+
+  subgraph scope [Scope]
+    intake
+    isNew
+    clarify
+    load
+    change
+    research
+  end
+  subgraph validate [Validate]
+    draft
+    approved
+    revise
+  end
+  subgraph release [Release]
+    publish
+    done
+  end

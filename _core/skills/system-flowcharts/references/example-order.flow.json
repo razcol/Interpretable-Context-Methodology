@@ -1,0 +1,23 @@
+{
+  "title": "Ship an order",
+  "direction": "DOWN",
+  "nodes": [
+    { "id": "start", "label": "Order arrives", "kind": "start" },
+    { "id": "read", "label": "Read the order form", "kind": "io" },
+    { "id": "stock", "label": "In stock?", "kind": "decision" },
+    { "id": "pack", "label": "Pack the order", "kind": "process" },
+    { "id": "count", "label": "Update the stock count", "kind": "storage" },
+    { "id": "ship", "label": "Hand off to carrier", "kind": "subprocess" },
+    { "id": "done", "label": "Order is shipped", "kind": "end" },
+    { "id": "reject", "label": "Reject the order", "kind": "error" }
+  ],
+  "edges": [
+    { "from": "start", "to": "read" },
+    { "from": "read", "to": "stock" },
+    { "from": "stock", "to": "pack", "label": "Yes" },
+    { "from": "stock", "to": "reject", "label": "No" },
+    { "from": "pack", "to": "count" },
+    { "from": "count", "to": "ship" },
+    { "from": "ship", "to": "done" }
+  ]
+}
