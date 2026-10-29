@@ -2,6 +2,9 @@
 **/stages/*/output/*
 !**/stages/*/output/.gitkeep
 
+# Local flowchart read of a workspace (generated diagram, not the workspace definition)
+workspaces/figma-section-fields/flowchart/
+
 # Workspace-builder stage outputs (intermediate build artifacts)
 workspaces/workspace-builder/stages/*/output/*
 !workspaces/workspace-builder/stages/*/output/.gitkeep
