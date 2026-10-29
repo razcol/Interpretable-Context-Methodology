@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { installDomShim } from "./dom-shim.mjs";
@@ -16,22 +16,33 @@ const LINE_HEIGHT = 1.25;
 const MAX_NODES = 36;
 const ID_RE = /^[A-Za-z][A-Za-z0-9_-]{0,40}$/;
 
+const ARROW_COLOR = "#495057";
+const TEXT_COLOR = "#1e1e1e";
+const FRAME_STROKE = "#ced4da";
+const COLUMN_GAP = 120;
+const FRAME_PAD_X = 36;
+const FRAME_PAD_TOP = 56;
+const FRAME_PAD_BOTTOM = 32;
+const FRAME_GAP = 48;
+
 const KINDS = {
-  start: { type: "ellipse", backgroundColor: "#b2f2bb", roundness: { type: 2 } },
-  end: { type: "ellipse", backgroundColor: "#b2f2bb", roundness: { type: 2 } },
-  error: { type: "ellipse", backgroundColor: "#ffc9c9", roundness: { type: 2 } },
-  process: { type: "rectangle", backgroundColor: "#a5d8ff", roundness: { type: 3 } },
-  decision: { type: "diamond", backgroundColor: "#ffec99", roundness: null },
-  io: { type: "rectangle", backgroundColor: "#ffd8a8", roundness: null },
+  start: { type: "ellipse", backgroundColor: "#d3f9d8", strokeColor: "#2b8a3e", roundness: { type: 2 } },
+  end: { type: "ellipse", backgroundColor: "#d3f9d8", strokeColor: "#2b8a3e", roundness: { type: 2 } },
+  error: { type: "ellipse", backgroundColor: "#ffe3e3", strokeColor: "#c92a2a", roundness: { type: 2 } },
+  process: { type: "rectangle", backgroundColor: "#d0ebff", strokeColor: "#1971c2", roundness: { type: 3 } },
+  decision: { type: "diamond", backgroundColor: "#fff3bf", strokeColor: "#e67700", roundness: null },
+  io: { type: "rectangle", backgroundColor: "#ffe8cc", strokeColor: "#d9480f", roundness: null },
   storage: {
     type: "rectangle",
-    backgroundColor: "#d0bfff",
+    backgroundColor: "#e5dbff",
+    strokeColor: "#6741d9",
     roundness: { type: 3 },
     strokeStyle: "dashed",
   },
   subprocess: {
     type: "rectangle",
-    backgroundColor: "#d0ebff",
+    backgroundColor: "#e7f5ff",
+    strokeColor: "#1864ab",
     roundness: { type: 3 },
     strokeWidth: 4,
   },
@@ -55,7 +66,7 @@ function usage() {
     "  node scripts/build-flowchart.mjs <spec.json> --out <file.excalidraw>",
     "  node scripts/build-flowchart.mjs --mermaid <file.mmd> --out <file.excalidraw>",
     "",
-    "Writes the .excalidraw file and a sibling .svg. Prints one JSON object.",
+    "Writes the .excalidraw file and a sibling .png. Prints one JSON object.",
   ].join("\n");
 }
 
@@ -108,27 +119,27 @@ function ellipseBox(textW, textH) {
   const pad = 10;
   const innerW = (width) => Math.round((width / 2) * Math.SQRT2) - pad;
   const innerH = (height) => Math.round((height / 2) * Math.SQRT2) - pad;
-  let width = Math.max(180, Math.ceil((textW + pad) * Math.SQRT2));
-  let height = Math.max(68, Math.ceil((textH + pad) * Math.SQRT2));
+  let width = Math.max(168, Math.ceil((textW + pad) * Math.SQRT2));
+  let height = Math.max(60, Math.ceil((textH + pad) * Math.SQRT2));
   while (innerW(width) < textW) width += 1;
   while (innerH(height) < textH) height += 1;
   return { width, height };
 }
 
 function sizeNode(node) {
-  const maxChars = node.kind === "decision" ? 16 : 22;
+  const maxChars = node.kind === "decision" ? 18 : 28;
   const lines = wrapLabel(node.label, maxChars);
   const { textW, textH } = measure(lines);
   let width;
   let height;
   if (node.kind === "decision") {
-    width = Math.max(210, Math.ceil(textW * 2.2));
-    height = Math.max(140, Math.ceil(textH * 2.6));
+    width = Math.max(180, Math.ceil(textW * 2.2));
+    height = Math.max(110, Math.ceil(textH * 2.6));
   } else if (node.kind === "start" || node.kind === "end" || node.kind === "error") {
     ({ width, height } = ellipseBox(textW, textH));
   } else {
-    width = Math.max(190, Math.ceil(textW + 56));
-    height = Math.max(76, Math.ceil(textH + 40));
+    width = Math.max(200, Math.ceil(textW + 48));
+    height = Math.max(64, Math.ceil(textH + 32));
   }
   return { text: lines.join("\n"), width, height };
 }
@@ -217,6 +228,270 @@ function elkNode(node, sized) {
   return { id: node.id, width: sized.width, height: sized.height };
 }
 
+function layersByCenter(boxes) {
+  const sorted = [...boxes].sort((a, b) => a.y + a.height / 2 - (b.y + b.height / 2));
+  const layerOf = new Map();
+  let layer = 0;
+  let anchor = null;
+  for (const box of sorted) {
+    const center = box.y + box.height / 2;
+    if (anchor !== null && center - anchor > 70) {
+      layer += 1;
+      anchor = center;
+    } else if (anchor === null) anchor = center;
+    layerOf.set(box.id, layer);
+  }
+  return { layerOf, layerCount: sorted.length ? layer + 1 : 0 };
+}
+
+function shiftSection(section, deltaX, deltaY) {
+  const move = (point) => {
+    if (!point) return;
+    point.x += deltaX;
+    point.y += deltaY;
+  };
+  move(section.startPoint);
+  move(section.endPoint);
+  for (const bend of section.bendPoints || []) move(bend);
+}
+
+function shiftLaidEdge(laid, mode, dx, dy) {
+  const sections = laid.sections || [];
+  if (!sections.length || (dx === 0 && dy === 0)) return;
+  if (mode === "both") {
+    for (const section of sections) shiftSection(section, dx, dy);
+    return;
+  }
+  const section = mode === "end" ? sections[sections.length - 1] : sections[0];
+  const bends = section.bendPoints || [];
+  if (mode === "end" && section.endPoint) {
+    const prev = bends.at(-1) || section.startPoint;
+    if (prev) {
+      const vertical = Math.abs(section.endPoint.x - prev.x) <= Math.abs(section.endPoint.y - prev.y);
+      if (vertical) prev.x += dx;
+      else prev.y += dy;
+    }
+    section.endPoint.x += dx;
+    section.endPoint.y += dy;
+    return;
+  }
+  if (mode === "start" && section.startPoint) {
+    const next = bends[0] || section.endPoint;
+    if (next) {
+      const vertical = Math.abs(next.x - section.startPoint.x) <= Math.abs(next.y - section.startPoint.y);
+      if (vertical) next.x += dx;
+      else next.y += dy;
+    }
+    section.startPoint.x += dx;
+    section.startPoint.y += dy;
+  }
+}
+
+function contentRect(nodeIds, byId) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const id of nodeIds) {
+    const node = byId.get(id);
+    if (!node) continue;
+    const x = node.x || 0;
+    const y = node.y || 0;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + node.width);
+    maxY = Math.max(maxY, y + node.height);
+  }
+  if (!Number.isFinite(minX)) return null;
+  return { x: minX, y: minY, r: maxX, b: maxY };
+}
+
+function paddedRect(rect) {
+  return {
+    x: rect.x - FRAME_PAD_X,
+    y: rect.y - FRAME_PAD_TOP,
+    r: rect.r + FRAME_PAD_X,
+    b: rect.b + FRAME_PAD_BOTTOM,
+  };
+}
+
+function separateOverlappingGroups(spec, layout) {
+  const groups = spec.groups || [];
+  if (groups.length < 2) return;
+  const nodes = layout.laidOut.children || [];
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const laidEdges = new Map((layout.laidOut.edges || []).map((edge) => [edge.id, edge]));
+
+  const shiftNodes = (ids, dx, dy) => {
+    const moving = new Set(ids);
+    for (const id of moving) {
+      const node = byId.get(id);
+      if (!node) continue;
+      node.x = (node.x || 0) + dx;
+      node.y = (node.y || 0) + dy;
+    }
+    spec.edges.forEach((edge, index) => {
+      const laid = laidEdges.get(`${edge.from}__${edge.to}__${index}`);
+      if (!laid) return;
+      const fromIn = moving.has(edge.from);
+      const toIn = moving.has(edge.to);
+      if (!fromIn && !toIn) return;
+      if (fromIn && toIn) shiftLaidEdge(laid, "both", dx, dy);
+      else if (toIn) shiftLaidEdge(laid, "end", dx, dy);
+      else shiftLaidEdge(laid, "start", dx, dy);
+    });
+  };
+
+  for (let pass = 0; pass < groups.length * 4; pass += 1) {
+    const frames = groups
+      .map((group) => {
+        const content = contentRect(group.nodeIds, byId);
+        return content ? { group, content, pad: paddedRect(content) } : null;
+      })
+      .filter(Boolean);
+    let moved = false;
+    for (let i = 0; i < frames.length && !moved; i += 1) {
+      for (let j = i + 1; j < frames.length && !moved; j += 1) {
+        const a = frames[i];
+        const b = frames[j];
+        const overlapX = Math.min(a.pad.r, b.pad.r) - Math.max(a.pad.x, b.pad.x);
+        const overlapY = Math.min(a.pad.b, b.pad.b) - Math.max(a.pad.y, b.pad.y);
+        if (overlapX <= 1 || overlapY <= 1) continue;
+        const vertical = overlapY <= overlapX;
+        const later = vertical
+          ? (a.content.y + a.content.b) / 2 >= (b.content.y + b.content.b) / 2
+            ? a
+            : b
+          : (a.content.x + a.content.r) / 2 >= (b.content.x + b.content.r) / 2
+            ? a
+            : b;
+        const ids = nodes
+          .filter((node) => {
+            const x = node.x || 0;
+            const y = node.y || 0;
+            if (vertical) {
+              const sameColumn = x < later.content.r + 8 && x + node.width > later.content.x - 8;
+              return sameColumn && y + 0.5 >= later.content.y;
+            }
+            const sameBand = y < later.content.b + 8 && y + node.height > later.content.y - 8;
+            return sameBand && x + 0.5 >= later.content.x;
+          })
+          .map((node) => node.id);
+        if (!ids.length) continue;
+        if (vertical) shiftNodes(ids, 0, overlapY + FRAME_GAP);
+        else shiftNodes(ids, overlapX + FRAME_GAP, 0);
+        moved = true;
+      }
+    }
+    if (!moved) return;
+  }
+}
+
+function routeContinuation(laid, source, target, upperMaxX, upperMaxY, upperMinY) {
+  const src = { x: source.x || 0, y: source.y || 0, width: source.width, height: source.height };
+  const tgt = { x: target.x || 0, y: target.y || 0, width: target.width, height: target.height };
+  const floorY = upperMaxY + 48;
+  const ceilingY = upperMinY - 40;
+  const gutterX = upperMaxX + COLUMN_GAP / 2;
+  const start = { x: src.x + src.width / 2, y: src.y + src.height };
+  const end = { x: tgt.x + tgt.width / 2, y: tgt.y };
+  laid.sections = [
+    {
+      startPoint: start,
+      endPoint: end,
+      bendPoints: [
+        { x: start.x, y: floorY },
+        { x: gutterX, y: floorY },
+        { x: gutterX, y: ceilingY },
+        { x: end.x, y: ceilingY },
+      ],
+    },
+  ];
+}
+
+function foldTallLayout(spec, layout) {
+  if (layout.direction !== "DOWN") return;
+  const nodes = layout.laidOut.children || [];
+  if (nodes.length < 8) return;
+
+  const boxes = nodes.map((node) => ({
+    id: node.id,
+    x: node.x || 0,
+    y: node.y || 0,
+    width: node.width,
+    height: node.height,
+  }));
+  const { layerOf, layerCount } = layersByCenter(boxes);
+  if (layerCount < 6) return;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const box of boxes) {
+    minX = Math.min(minX, box.x);
+    minY = Math.min(minY, box.y);
+    maxX = Math.max(maxX, box.x + box.width);
+    maxY = Math.max(maxY, box.y + box.height);
+  }
+  if (maxY - minY <= (maxX - minX) * 1.8) return;
+
+  const mid = Math.floor((layerCount - 1) / 2);
+  let chosen = null;
+  for (let distance = 0; distance <= 2 && !chosen; distance += 1) {
+    const cuts = distance === 0 ? [mid] : [mid - distance, mid + distance];
+    for (const cutAfter of cuts) {
+      if (chosen || cutAfter < 2 || cutAfter > layerCount - 4) continue;
+      const upper = new Set(boxes.filter((box) => layerOf.get(box.id) <= cutAfter).map((box) => box.id));
+      const lower = new Set(boxes.filter((box) => layerOf.get(box.id) > cutAfter).map((box) => box.id));
+      const forward = [];
+      let back = 0;
+      for (const edge of spec.edges) {
+        const fromUpper = upper.has(edge.from);
+        const toUpper = upper.has(edge.to);
+        if (fromUpper && !toUpper) forward.push(edge);
+        else if (!fromUpper && toUpper) back += 1;
+      }
+      if (back !== 0 || forward.length !== 1) continue;
+      const [edge] = forward;
+      if (layerOf.get(edge.from) !== cutAfter || layerOf.get(edge.to) !== cutAfter + 1) continue;
+      chosen = { upper, lower, edge };
+    }
+  }
+  if (!chosen) return;
+
+  const upperBoxes = boxes.filter((box) => chosen.upper.has(box.id));
+  const lowerBoxes = boxes.filter((box) => chosen.lower.has(box.id));
+  const upperMaxX = Math.max(...upperBoxes.map((box) => box.x + box.width));
+  const upperMaxY = Math.max(...upperBoxes.map((box) => box.y + box.height));
+  const upperMinY = Math.min(...upperBoxes.map((box) => box.y));
+  const lowerMinX = Math.min(...lowerBoxes.map((box) => box.x));
+  const lowerMinY = Math.min(...lowerBoxes.map((box) => box.y));
+  const deltaX = upperMaxX + COLUMN_GAP - lowerMinX;
+  const deltaY = upperMinY - lowerMinY;
+
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  for (const id of chosen.lower) {
+    const node = byId.get(id);
+    node.x = (node.x || 0) + deltaX;
+    node.y = (node.y || 0) + deltaY;
+  }
+
+  const laidEdges = new Map((layout.laidOut.edges || []).map((edge) => [edge.id, edge]));
+  spec.edges.forEach((edge, index) => {
+    const laid = laidEdges.get(`${edge.from}__${edge.to}__${index}`);
+    if (!laid) return;
+    if (edge === chosen.edge) {
+      layout.foldEdgeIds.add(laid.id);
+      routeContinuation(laid, byId.get(edge.from), byId.get(edge.to), upperMaxX, upperMaxY, upperMinY);
+      return;
+    }
+    if (chosen.lower.has(edge.from) && chosen.lower.has(edge.to)) {
+      for (const section of laid.sections || []) shiftSection(section, deltaX, deltaY);
+    }
+  });
+}
+
 async function layoutSpec(spec) {
   const direction = directionOf(spec);
   const sized = new Map(spec.nodes.map((node) => [node.id, sizeNode(node)]));
@@ -228,13 +503,13 @@ async function layoutSpec(spec) {
       "elk.algorithm": "layered",
       "elk.direction": direction,
       "elk.edgeRouting": "ORTHOGONAL",
-      "elk.spacing.nodeNode": "64",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "110",
-      "elk.spacing.edgeNode": "40",
-      "elk.layered.spacing.edgeNodeBetweenLayers": "40",
-      "elk.spacing.edgeEdge": "28",
+      "elk.spacing.nodeNode": "56",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "64",
+      "elk.spacing.edgeNode": "32",
+      "elk.layered.spacing.edgeNodeBetweenLayers": "24",
+      "elk.spacing.edgeEdge": "20",
       "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
-      "elk.padding": "[top=32,left=32,bottom=32,right=32]",
+      "elk.padding": "[top=24,left=24,bottom=24,right=24]",
       "elk.layered.cycleBreaking.strategy": "MODEL_ORDER",
       "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
       "elk.separateConnectedComponents": "false",
@@ -249,7 +524,10 @@ async function layoutSpec(spec) {
 
   const elk = new ELK();
   const laidOut = await elk.layout(graph);
-  return { laidOut, sized, direction };
+  const layout = { laidOut, sized, direction, foldEdgeIds: new Set() };
+  foldTallLayout(spec, layout);
+  separateOverlappingGroups(spec, layout);
+  return layout;
 }
 
 function absoluteNodes(layout) {
@@ -301,7 +579,7 @@ function skeletonsFromSpec(spec, layout) {
       width: box.width,
       height: box.height,
       backgroundColor: kind.backgroundColor,
-      strokeColor: "#1e1e1e",
+      strokeColor: kind.strokeColor,
       fillStyle: "solid",
       strokeWidth: kind.strokeWidth || 2,
       strokeStyle: kind.strokeStyle || "solid",
@@ -312,7 +590,7 @@ function skeletonsFromSpec(spec, layout) {
         text: box.text,
         fontSize: FONT_SIZE,
         fontFamily: FONT_FAMILY,
-        strokeColor: "#1e1e1e",
+        strokeColor: TEXT_COLOR,
       },
     });
   }
@@ -324,7 +602,7 @@ function skeletonsFromSpec(spec, layout) {
     const arrow = {
       id,
       type: "arrow",
-      strokeColor: "#1e1e1e",
+      strokeColor: ARROW_COLOR,
       strokeWidth: 2,
       roughness: 0,
       endArrowhead: "arrow",
@@ -343,7 +621,7 @@ function skeletonsFromSpec(spec, layout) {
         text: String(edge.label).trim(),
         fontSize: 16,
         fontFamily: FONT_FAMILY,
-        strokeColor: "#1e1e1e",
+        strokeColor: ARROW_COLOR,
       };
     }
     return arrow;
@@ -362,18 +640,18 @@ function skeletonsFromSpec(spec, layout) {
       maxX = Math.max(maxX, place.absX + box.width);
       maxY = Math.max(maxY, place.absY + box.height);
     }
-    const padX = 36;
-    const padTop = 56;
-    const padBottom = 32;
     return {
       id: group.id,
       type: "frame",
       name: group.label,
-      x: minX - padX,
-      y: minY - padTop,
-      width: maxX - minX + padX * 2,
-      height: maxY - minY + padTop + padBottom,
+      x: minX - FRAME_PAD_X,
+      y: minY - FRAME_PAD_TOP,
+      width: maxX - minX + FRAME_PAD_X * 2,
+      height: maxY - minY + FRAME_PAD_TOP + FRAME_PAD_BOTTOM,
       children: group.nodeIds,
+      strokeColor: FRAME_STROKE,
+      strokeWidth: 2,
+      roughness: 0,
     };
   });
 
@@ -416,6 +694,7 @@ function recolorByLabel(elements, kinds) {
       container.roundness = { type: 2 };
     }
     container.backgroundColor = kind.backgroundColor;
+    container.strokeColor = kind.strokeColor;
     container.fillStyle = "solid";
     container.roughness = 0;
     container.strokeStyle = kind.strokeStyle || "solid";
@@ -480,21 +759,28 @@ function applyRoutes(elements, spec, layout) {
     arrow.height = Math.max(...ys) - Math.min(...ys);
     arrow.elbowed = false;
   });
-  placeArrowLabels(elements);
+  placeArrowLabels(elements, layout.foldEdgeIds || new Set());
 }
 
-function placeArrowLabels(elements) {
+function placeArrowLabels(elements, foldEdgeIds) {
   const byId = new Map(elements.map((element) => [element.id, element]));
   for (const element of elements) {
     if (element.type !== "text" || !element.containerId) continue;
     const arrow = byId.get(element.containerId);
     if (!arrow || arrow.type !== "arrow" || !Array.isArray(arrow.points) || arrow.points.length < 2) continue;
+    const fold = foldEdgeIds.has(arrow.id);
     let best = null;
     for (let index = 0; index < arrow.points.length - 1; index += 1) {
       const [x1, y1] = arrow.points[index];
       const [x2, y2] = arrow.points[index + 1];
       const len = Math.hypot(x2 - x1, y2 - y1);
-      if (!best || len > best.len) best = { len, x1, y1, x2, y2 };
+      const horizontal = Math.abs(x2 - x1) >= Math.abs(y2 - y1);
+      const midY = (y1 + y2) / 2;
+      if (fold && horizontal) {
+        if (!best || midY > best.midY) best = { len, x1, y1, x2, y2, midY };
+        continue;
+      }
+      if (!fold && (!best || len > best.len)) best = { len, x1, y1, x2, y2, midY };
     }
     if (!best || best.len < 20) continue;
     const midX = arrow.x + (best.x1 + best.x2) / 2;
@@ -506,6 +792,21 @@ function placeArrowLabels(elements) {
     } else {
       element.x = midX - element.width / 2;
       element.y = midY - element.height - 8;
+    }
+  }
+}
+
+function paintTheme(elements) {
+  const byId = new Map(elements.map((element) => [element.id, element]));
+  for (const element of elements) {
+    if (element.type === "arrow") element.strokeColor = ARROW_COLOR;
+    if (element.type === "frame") {
+      element.strokeColor = FRAME_STROKE;
+      element.strokeWidth = 2;
+      element.roughness = 0;
+    }
+    if (element.type === "text" && element.containerId && byId.get(element.containerId)?.type === "arrow") {
+      element.strokeColor = ARROW_COLOR;
     }
   }
 }
@@ -558,6 +859,20 @@ function checkElements(elements) {
     if (!separated) problems.push(`Nodes ${a.id} and ${b.id} overlap`);
     }
   }
+
+  const frames = elements.filter((element) => element.type === "frame" && !element.isDeleted);
+  for (let i = 0; i < frames.length; i += 1) {
+    for (let j = i + 1; j < frames.length; j += 1) {
+      const a = frames[i];
+      const b = frames[j];
+      const separated =
+        a.x + a.width <= b.x + 1 ||
+        b.x + b.width <= a.x + 1 ||
+        a.y + a.height <= b.y + 1 ||
+        b.y + b.height <= a.y + 1;
+      if (!separated) problems.push(`Frames ${a.name || a.id} and ${b.name || b.id} overlap`);
+    }
+  }
   return problems;
 }
 
@@ -571,10 +886,21 @@ async function loadExcalidraw() {
   return import(bundlePath);
 }
 
+function pngFit(svg) {
+  const number = (name) => Number.parseFloat(String(svg.getAttribute(name) || "").replace(/px$/i, "")) || 0;
+  const width = number("width");
+  const height = number("height");
+  if (!width || !height) return { mode: "width", value: 1600 };
+  if (height * (1600 / width) >= 400) return { mode: "width", value: 1600 };
+  if (width * (640 / height) <= 3200) return { mode: "height", value: 640 };
+  return { mode: "width", value: 3200 };
+}
+
 async function writeDiagram(elements, outFile, warnings) {
   const excalidraw = await loadExcalidraw();
   unclipConnectors(elements);
   const stabilized = stabilize(elements);
+  paintTheme(stabilized);
   const problems = checkElements(stabilized);
   const appState = {
     viewBackgroundColor: "#ffffff",
@@ -588,7 +914,6 @@ async function writeDiagram(elements, outFile, warnings) {
   await mkdir(path.dirname(outFile), { recursive: true });
   await writeFile(outFile, `${json}\n`);
 
-  const svgFile = outFile.replace(/\.excalidraw$/i, "") + ".svg";
   const svg = await excalidraw.exportToSvg({
     elements: stabilized.filter((element) => !element.isDeleted),
     appState,
@@ -596,20 +921,21 @@ async function writeDiagram(elements, outFile, warnings) {
     exportPadding: 24,
     skipInliningFonts: true,
   });
-  await writeFile(svgFile, svg.outerHTML);
+  const staleSvg = outFile.replace(/\.excalidraw$/i, "") + ".svg";
+  await unlink(staleSvg).catch(() => {});
 
   let pngFile = null;
   try {
     const { Resvg } = await import("@resvg/resvg-js");
-    pngFile = svgFile.replace(/\.svg$/i, ".png");
-    const rendered = new Resvg(svg.outerHTML, { fitTo: { mode: "width", value: 1600 } });
+    pngFile = outFile.replace(/\.excalidraw$/i, "") + ".png";
+    const rendered = new Resvg(svg.outerHTML, { fitTo: pngFit(svg) });
     await writeFile(pngFile, rendered.render().asPng());
   } catch (error) {
     warnings.push(`PNG preview was not written: ${error.message}`);
   }
 
-  if (problems.length) fail(4, "Diagram failed the quality check", { problems, out: outFile, svg: svgFile, png: pngFile });
-  return { out: outFile, svg: svgFile, png: pngFile, warnings, elements: stabilized.length };
+  if (problems.length) fail(4, "Diagram failed the quality check", { problems, out: outFile, png: pngFile });
+  return { out: outFile, png: pngFile, warnings, elements: stabilized.length };
 }
 
 async function fromSpec(specPath, outFile) {
