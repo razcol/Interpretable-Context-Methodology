@@ -101,6 +101,20 @@ function measure(lines) {
   };
 }
 
+function ellipseBox(textW, textH) {
+  // Excalidraw keeps bound text inside the inscribed box (width/height ÷ √2,
+  // minus padding) and grows the ellipse if a line wraps again. Size to that
+  // box so a later arrow still meets the border.
+  const pad = 10;
+  const innerW = (width) => Math.round((width / 2) * Math.SQRT2) - pad;
+  const innerH = (height) => Math.round((height / 2) * Math.SQRT2) - pad;
+  let width = Math.max(180, Math.ceil((textW + pad) * Math.SQRT2));
+  let height = Math.max(68, Math.ceil((textH + pad) * Math.SQRT2));
+  while (innerW(width) < textW) width += 1;
+  while (innerH(height) < textH) height += 1;
+  return { width, height };
+}
+
 function sizeNode(node) {
   const maxChars = node.kind === "decision" ? 16 : 22;
   const lines = wrapLabel(node.label, maxChars);
@@ -111,8 +125,7 @@ function sizeNode(node) {
     width = Math.max(210, Math.ceil(textW * 2.2));
     height = Math.max(140, Math.ceil(textH * 2.6));
   } else if (node.kind === "start" || node.kind === "end" || node.kind === "error") {
-    width = Math.max(180, Math.ceil(textW + 64));
-    height = Math.max(68, Math.ceil(textH + 36));
+    ({ width, height } = ellipseBox(textW, textH));
   } else {
     width = Math.max(190, Math.ceil(textW + 56));
     height = Math.max(76, Math.ceil(textH + 40));
