@@ -111,6 +111,184 @@ function parseAccessToken(raw) {
     message: "FIGMA_ACCESS_TOKEN is missing or invalid."
   });
 }
+var CLIP_SLOP = 0.5;
+function condenseScene(root, states) {
+  const kept = /* @__PURE__ */ new Set();
+  const trees = [root, ...states.values()];
+  const byId = indexNodes(trees);
+  for (const tree of trees) keepScrollTargets(tree, byId, kept);
+  for (const tree of trees) bindChanges(tree, states, kept);
+  const nextStates = /* @__PURE__ */ new Map();
+  for (const [id, state] of states) nextStates.set(id, rebuildNode(state, true, kept));
+  return { root: rebuildNode(root, true, kept), states: nextStates };
+}
+function indexNodes(trees) {
+  const byId = /* @__PURE__ */ new Map();
+  function walk(node) {
+    if (!byId.has(node.id)) byId.set(node.id, node);
+    if (node.kind === "box") for (const child of node.children) walk(child);
+  }
+  for (const tree of trees) walk(tree);
+  return byId;
+}
+function keepScrollTargets(node, byId, kept) {
+  for (const reaction of node.reactions) {
+    for (const action of reaction.actions) {
+      if (action.kind !== "scroll") continue;
+      const target = byId.get(action.target);
+      if (target?.kind === "box") kept.add(target);
+    }
+  }
+  if (node.kind === "box") for (const child of node.children) keepScrollTargets(child, byId, kept);
+}
+function bindChanges(node, states, kept) {
+  for (const reaction of node.reactions) {
+    for (const action of reaction.actions) {
+      if (action.kind !== "change") continue;
+      const dest = states.get(action.target);
+      if (dest !== void 0) reconcilePair(node, dest, kept);
+    }
+  }
+  if (node.kind === "box") for (const child of node.children) bindChanges(child, states, kept);
+}
+function reconcilePair(src, dst, kept) {
+  if (src.kind !== "box" || dst.kind !== "box") return;
+  const used = /* @__PURE__ */ new Set();
+  const sourceOnly = [];
+  for (const child of src.children) {
+    const index = dst.children.findIndex((other, i) => !used.has(i) && other.name === child.name);
+    if (index === -1) {
+      sourceOnly.push(child);
+      continue;
+    }
+    used.add(index);
+    const match = dst.children[index];
+    if (match === void 0) continue;
+    const dropSrc = child.kind === "box" && canDrop(child);
+    const dropDst = match.kind === "box" && canDrop(match);
+    if (dropSrc && !dropDst) kept.add(child);
+    if (dropDst && !dropSrc && match.kind === "box") kept.add(match);
+    reconcilePair(child, match, kept);
+  }
+  for (const only of sourceOnly) {
+    if (only.kind === "box" && canDrop(only)) kept.add(only);
+  }
+  for (const [index, only] of dst.children.entries()) {
+    if (used.has(index)) continue;
+    if (only.kind === "box" && canDrop(only)) kept.add(only);
+  }
+}
+function canDrop(node) {
+  return !clipsVisually(node) && node.paints.length === 0 && node.stroke === null && node.effects.length === 0 && node.opacity === 1 && node.blend === "pass-through" && node.reactions.length === 0;
+}
+function clipsVisually(node) {
+  if (!node.clips) return false;
+  if (node.radius.kind !== "square") return true;
+  return descendantsExceed(node, node.box);
+}
+function descendantsExceed(node, clip) {
+  for (const child of node.children) {
+    if (child.kind === "text" && child.paintsOutside) return true;
+    if (!contained(paintedBounds(child), clip)) return true;
+    if (child.kind === "box" && !clipsVisually(child) && descendantsExceed(child, clip)) return true;
+  }
+  return false;
+}
+function contained(bounds, clip) {
+  return bounds.left >= clip.x - CLIP_SLOP && bounds.top >= clip.y - CLIP_SLOP && bounds.right <= clip.x + clip.width + CLIP_SLOP && bounds.bottom <= clip.y + clip.height + CLIP_SLOP;
+}
+function paintedBounds(node) {
+  let left = node.box.x;
+  let top = node.box.y;
+  let right = node.box.x + node.box.width;
+  let bottom = node.box.y + node.box.height;
+  if (node.kind === "raster") {
+    left -= node.bleed.left;
+    top -= node.bleed.top;
+    right += node.bleed.right;
+    bottom += node.bleed.bottom;
+  }
+  const stroke = node.kind === "raster" ? null : node.stroke;
+  if (stroke !== null) {
+    const outset = strokeOutset(stroke, node.kind === "text");
+    left -= outset.left;
+    top -= outset.top;
+    right += outset.right;
+    bottom += outset.bottom;
+  }
+  const effects = node.kind === "raster" ? [] : node.effects;
+  const shadow = effectOutset(effects);
+  return {
+    left: left - shadow.left,
+    top: top - shadow.top,
+    right: right + shadow.right,
+    bottom: bottom + shadow.bottom
+  };
+}
+function strokeOutset(stroke, text) {
+  const weights = strokeWeights(stroke.weight);
+  if (text) {
+    const width = Math.max(weights.top, weights.right, weights.bottom, weights.left);
+    return { top: width, right: width, bottom: width, left: width };
+  }
+  const factor = stroke.align === "outside" ? 1 : stroke.align === "center" ? 0.5 : 0;
+  return {
+    top: weights.top * factor,
+    right: weights.right * factor,
+    bottom: weights.bottom * factor,
+    left: weights.left * factor
+  };
+}
+function strokeWeights(weight) {
+  if (weight.kind === "uniform") {
+    return { top: weight.px, right: weight.px, bottom: weight.px, left: weight.px };
+  }
+  return { top: weight.top, right: weight.right, bottom: weight.bottom, left: weight.left };
+}
+function effectOutset(effects) {
+  let top = 0;
+  let right = 0;
+  let bottom = 0;
+  let left = 0;
+  for (const effect of effects) {
+    if (effect.kind === "inner-shadow" || effect.kind === "background-blur") continue;
+    if (effect.kind === "layer-blur") {
+      const radius = Math.max(0, effect.radius);
+      top = Math.max(top, radius);
+      right = Math.max(right, radius);
+      bottom = Math.max(bottom, radius);
+      left = Math.max(left, radius);
+      continue;
+    }
+    const extra = Math.max(0, effect.blur) + Math.max(0, effect.spread);
+    top = Math.max(top, extra + Math.max(0, -effect.y));
+    right = Math.max(right, extra + Math.max(0, effect.x));
+    bottom = Math.max(bottom, extra + Math.max(0, effect.y));
+    left = Math.max(left, extra + Math.max(0, -effect.x));
+  }
+  return { top, right, bottom, left };
+}
+function isNodeList(value) {
+  return Array.isArray(value);
+}
+function rebuildNode(node, isRoot, kept) {
+  const built = rebuild(node, isRoot, kept);
+  return isNodeList(built) ? node : built;
+}
+function rebuild(node, isRoot, kept) {
+  if (node.kind !== "box") return node;
+  const children = [];
+  for (const child of node.children) {
+    const built = rebuild(child, false, kept);
+    if (isNodeList(built)) children.push(...built);
+    else children.push(built);
+  }
+  const clips = clipsVisually(node);
+  if (!isRoot && !kept.has(node) && canDrop(node)) return children;
+  const sameChildren = children.length === node.children.length && children.every((child, index) => child === node.children[index]);
+  if (clips === node.clips && sameChildren) return node;
+  return { ...node, clips, children };
+}
 
 // src/figma-api.ts
 var FIGMA_ORIGIN = "https://api.figma.com";
@@ -5869,22 +6047,24 @@ function renderDocument(input) {
   const states = input.states ?? /* @__PURE__ */ new Map();
   assertStates(input.scene.root, states);
   for (const state of states.values()) assertStates(state, states);
-  const pointer = planHtmlPointer(input.scene.root, states, input.assets);
+  const condensed = condenseScene(input.scene.root, states);
+  rememberStyles();
+  const pointer = planHtmlPointer(condensed.root, condensed.states, input.assets);
   const reactions = /* @__PURE__ */ new Map();
   collectReactionMap(input.scene.root, reactions);
   for (const state of states.values()) collectReactionMap(state, reactions);
   const played = playbackReactions(reactions);
   const playedTargets = playbackTargets(played);
-  const families = collectFamilies(input.scene.root);
+  const families = collectFamilies(condensed.root);
   for (const id of playedTargets) {
-    const state = states.get(id);
+    const state = condensed.states.get(id);
     if (state !== void 0) families.push(...collectFamilies(state));
   }
   for (const extras of pointer.insertions.values()) {
     for (const extra of extras) families.push(...collectFamilies(extra.node));
   }
   const fontLink = googleFontLink(families);
-  const body = renderNode(input.scene.root, null, input.assets, true, pointer);
+  const body = renderNode(condensed.root, null, input.assets, true, pointer, EMPTY_CASCADE);
   const lines = [
     "<!DOCTYPE html>",
     "<html>",
@@ -5906,9 +6086,9 @@ function renderDocument(input) {
   );
   if (played.size > 0) {
     for (const id of playedTargets) {
-      const state = states.get(id);
+      const state = condensed.states.get(id);
       if (state === void 0) continue;
-      const placed = renderNode(state, { x: state.box.x, y: state.box.y }, input.assets, false, emptyHtmlPlan());
+      const placed = renderNode(state, { x: state.box.x, y: state.box.y }, input.assets, false, emptyHtmlPlan(), EMPTY_CASCADE);
       lines.push(`<template data-state="${escapeAttr(id)}">${placed}</template>`);
     }
     lines.push(`<script type="application/json" id="figma-reactions">${reactionJson(played)}</script>`);
@@ -5917,26 +6097,28 @@ function renderDocument(input) {
   lines.push("</body>", "</html>", "");
   return lines.join("\n");
 }
-function renderNode(node, parent, assets, screen, plan) {
+function renderNode(node, parent, assets, screen, plan, cascade) {
   const place = placement(node, parent);
   switch (node.kind) {
     case "box":
-      return renderBox(node, place, assets, screen, plan);
+      return renderBox(node, place, assets, screen, plan, cascade);
     case "text":
-      return renderText(node, place, screen, plan);
+      return renderText(node, place, screen, plan, cascade);
     case "raster":
-      return renderRaster(node, place, assets, screen, plan);
+      return renderRaster(node, place, assets, screen, plan, cascade);
     default: {
       const _exhaustive = node;
       return _exhaustive;
     }
   }
 }
-function renderBox(node, place, assets, screen, plan) {
+function renderBox(node, place, assets, screen, plan, cascade) {
+  const flow = inheritedDecls(agreedStyle(node) ?? EMPTY_CASCADE, cascade);
+  const cursor = cursorDecl(node, flow.next);
   const extras = plan.insertions.get(node) ?? [];
   const children = [
-    ...node.children.map((child) => renderNode(child, node.box, assets, false, plan)),
-    ...extras.map((extra) => renderNode(extra.node, extra.origin, assets, false, plan))
+    ...node.children.map((child) => renderNode(child, node.box, assets, false, plan, cursor.next)),
+    ...extras.map((extra) => renderNode(extra.node, extra.origin, assets, false, plan, cursor.next))
   ].join("");
   const style = styledDecls(node, [
     ...placementDecls(place),
@@ -5946,39 +6128,42 @@ function renderBox(node, place, assets, screen, plan) {
     ...effectDecls(node.effects),
     ...compositeDecls(node.opacity, node.blend),
     ...node.stroke ? strokeDecls(node.stroke, node.radius, assets) : [],
-    node.reactions.length > 0 ? "cursor: pointer" : null
+    ...flow.decls,
+    cursor.decl
   ], plan);
   const strokeAttr = node.stroke || plan.forceStroke.has(node) ? ' data-stroke=""' : "";
   return `${openDiv(node, style, `${strokeAttr}${anchorAttrs(node)}${hotAttrs(node, screen)}`)}${children}</div>`;
 }
-function renderText(node, place, screen, plan) {
+function renderText(node, place, screen, plan, cascade) {
   const rendered = renderRuns(node.runs);
+  const flow = inheritedDecls(textStyleMap(node), cascade);
+  const cursor = cursorDecl(node, flow.next);
   const style = styledDecls(node, [
     ...placementDecls(place),
-    ...runDecls(rendered.first, false),
-    `text-align: ${node.alignX}`,
-    "display: flex",
-    "flex-direction: column",
-    `justify-content: ${justifyContent(node.alignY)}`,
-    `direction: ${node.direction}`,
-    node.wrap ? "white-space: pre-wrap" : "white-space: pre",
+    ...flow.decls,
+    `color: ${rendered.first.color}`,
+    ...alignDecls(node.alignY),
     textClips(node) ? "overflow: hidden" : null,
     ...effectDecls(node.effects),
     ...compositeDecls(node.opacity, node.blend),
     textStrokeDecl(node.stroke),
-    node.reactions.length > 0 ? "cursor: pointer" : null
+    cursor.decl
   ], plan);
-  const item = `<span style="${escapeAttr(declList(["width: 100%", "min-width: 0px"]))}">${rendered.inner}</span>`;
-  return `${openDiv(node, style, hotAttrs(node, screen))}${item}</div>`;
+  const inner = node.alignY === "top" ? rendered.inner : `<span style="${escapeAttr(declList(["width: 100%", "min-width: 0px"]))}">${rendered.inner}</span>`;
+  return `${openDiv(node, style, hotAttrs(node, screen))}${inner}</div>`;
 }
-function renderRaster(node, place, assets, screen, plan) {
+function renderRaster(node, place, assets, screen, plan, cascade) {
   const src = assets.rasters.get(node.id);
   if (src === void 0) throw new ExportError({ kind: "missing-asset", id: node.id });
+  const cursor = cursorDecl(node, cascade);
   const style = styledDecls(node, [
     ...placementDecls(place),
     ...blendDecls(node.blend),
-    node.reactions.length > 0 ? "cursor: pointer" : null
+    cursor.decl
   ], plan);
+  if (!rasterBleeds(node)) {
+    return `<img${hotAttrs(node, screen)} data-node-id="${escapeAttr(node.id)}" data-node-name="${escapeAttr(node.name)}" alt="${escapeAttr(node.name)}" src="${escapeAttr(src)}" style="${escapeAttr(style)}">`;
+  }
   const imgStyle = declList([
     "position: absolute",
     `left: ${px(-node.bleed.left)}`,
@@ -5987,6 +6172,9 @@ function renderRaster(node, place, assets, screen, plan) {
     `height: ${px(node.box.height + node.bleed.top + node.bleed.bottom)}`
   ]);
   return `${openDiv(node, style, hotAttrs(node, screen))}<img alt="${escapeAttr(node.name)}" src="${escapeAttr(src)}" style="${escapeAttr(imgStyle)}"></div>`;
+}
+function rasterBleeds(node) {
+  return node.bleed.left !== 0 || node.bleed.top !== 0 || node.bleed.right !== 0 || node.bleed.bottom !== 0;
 }
 function anchorAttrs(node) {
   const parts = [];
@@ -6482,13 +6670,11 @@ function openDiv(node, style, extra) {
   return `<div${extra} data-node-id="${escapeAttr(node.id)}" data-node-name="${escapeAttr(node.name)}" style="${escapeAttr(style)}">`;
 }
 function placementDecls(place) {
-  return [
-    `position: ${place.position}`,
-    `left: ${px(place.leftPx)}`,
-    `top: ${px(place.topPx)}`,
-    `width: ${px(place.widthPx)}`,
-    `height: ${px(place.heightPx)}`
-  ];
+  const decls = [`position: ${place.position}`];
+  if (place.position === "absolute" || place.leftPx !== 0) decls.push(`left: ${px(place.leftPx)}`);
+  if (place.position === "absolute" || place.topPx !== 0) decls.push(`top: ${px(place.topPx)}`);
+  decls.push(`width: ${px(place.widthPx)}`, `height: ${px(place.heightPx)}`);
+  return decls;
 }
 function backgroundDecl(paints, assets) {
   if (paints.length === 0) return null;
@@ -6740,64 +6926,163 @@ function renderRuns(runs) {
   if (first === void 0) {
     throw new ExportError({ kind: "invalid-document", message: "A text node has no runs." });
   }
+  const base = runStyleMap(first);
   const inner = groups.map((group, index) => {
     const text = escapeText(group.map((run) => run.text).join(""));
     const sample = group[0];
     if (index === 0 || sample === void 0) return text;
-    return `<span style="${escapeAttr(declList(runDecls(sample, true)))}">${text}</span>`;
+    const overrides = inheritedDecls(runStyleMap(sample), base).decls;
+    if (overrides.length === 0) return text;
+    return `<span style="${escapeAttr(declList(overrides))}">${text}</span>`;
   }).join("");
   return { first, inner };
 }
 function sameRunStyle(left, right) {
   return left.fontFamily === right.fontFamily && left.fontStyle === right.fontStyle && left.fontSizePx === right.fontSizePx && left.fontWeight === right.fontWeight && left.lineHeightPx === right.lineHeightPx && left.letterSpacingPx === right.letterSpacingPx && left.textCase === right.textCase && left.decoration === right.decoration && left.color === right.color;
 }
-function runDecls(run, reset) {
-  const decls = [
-    `font-family: ${fontFamily(run.fontFamily)}`,
-    `font-size: ${px(run.fontSizePx)}`,
-    `font-weight: ${formatNumber(run.fontWeight)}`,
-    `font-style: ${run.fontStyle}`,
-    `letter-spacing: ${px(run.letterSpacingPx)}`,
-    `color: ${run.color}`
-  ];
-  if (run.lineHeightPx !== null) decls.push(`line-height: ${px(run.lineHeightPx)}`);
-  else if (reset) decls.push("line-height: normal");
-  decls.push(...caseDecls(run.textCase, reset));
-  const decoration = decorationDecl(run.decoration, reset);
-  if (decoration !== null) decls.push(decoration);
-  return decls;
+var EMPTY_CASCADE = /* @__PURE__ */ new Map();
+var STYLE_PROPS = [
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "line-height",
+  "letter-spacing",
+  "color",
+  "text-align",
+  "direction",
+  "white-space",
+  "text-transform",
+  "font-variant",
+  "text-decoration"
+];
+var styleMemo = /* @__PURE__ */ new WeakMap();
+function rememberStyles() {
+  styleMemo = /* @__PURE__ */ new WeakMap();
 }
-function caseDecls(textCase, reset) {
+function agreedStyle(node) {
+  if (styleMemo.has(node)) return styleMemo.get(node) ?? null;
+  let result = null;
+  if (node.kind === "text") result = textStyleMap(node);
+  else if (node.kind === "box") {
+    for (const child of node.children) {
+      const sub = agreedStyle(child);
+      if (sub === null) continue;
+      if (result === null) {
+        result = new Map(sub);
+        continue;
+      }
+      for (const key of result.keys()) {
+        if (result.get(key) !== sub.get(key)) result.delete(key);
+      }
+    }
+  }
+  styleMemo.set(node, result);
+  return result;
+}
+function textStyleMap(node) {
+  const first = node.runs[0];
+  const map = runStyleMap(first);
+  map.delete("color");
+  map.set("text-align", node.alignX);
+  map.set("direction", node.direction);
+  map.set("white-space", node.wrap ? "pre-wrap" : "pre");
+  return map;
+}
+function runStyleMap(run) {
+  const face = caseStyle(run.textCase);
+  return /* @__PURE__ */ new Map([
+    ["font-family", fontFamily(run.fontFamily)],
+    ["font-size", px(run.fontSizePx)],
+    ["font-weight", formatNumber(run.fontWeight)],
+    ["font-style", run.fontStyle],
+    ["line-height", run.lineHeightPx === null ? "normal" : px(run.lineHeightPx)],
+    ["letter-spacing", px(run.letterSpacingPx)],
+    ["color", run.color],
+    ["text-transform", face.transform],
+    ["font-variant", face.variant],
+    ["text-decoration", decorationValue(run.decoration)]
+  ]);
+}
+function caseStyle(textCase) {
   switch (textCase) {
-    case "original":
-      return reset ? ["text-transform: none", "font-variant: normal"] : [];
     case "upper":
-      return ["text-transform: uppercase"];
+      return { transform: "uppercase", variant: "normal" };
     case "lower":
-      return ["text-transform: lowercase"];
+      return { transform: "lowercase", variant: "normal" };
     case "title":
-      return ["text-transform: capitalize"];
+      return { transform: "capitalize", variant: "normal" };
     case "small-caps":
-      return ["font-variant: small-caps"];
+      return { transform: "none", variant: "small-caps" };
+    case "original":
+      return { transform: "none", variant: "normal" };
     default: {
       const _exhaustive = textCase;
       return _exhaustive;
     }
   }
 }
-function decorationDecl(decoration, reset) {
+function decorationValue(decoration) {
   switch (decoration) {
     case "none":
-      return reset ? "text-decoration: none" : null;
+      return "none";
     case "underline":
-      return "text-decoration: underline";
+      return "underline";
     case "line-through":
-      return "text-decoration: line-through";
+      return "line-through";
     default: {
       const _exhaustive = decoration;
       return _exhaustive;
     }
   }
+}
+function inheritedDecls(wanted, cascade) {
+  const next = new Map(cascade);
+  const decls = [];
+  const direction = wanted.get("direction") ?? cascade.get("direction") ?? "ltr";
+  for (const prop of STYLE_PROPS) {
+    const value = wanted.get(prop);
+    if (value === void 0) continue;
+    next.set(prop, value);
+    if (cascade.get(prop) === value) continue;
+    if (cascade.get(prop) === void 0 && isInitialStyle(prop, value, direction)) continue;
+    decls.push(`${prop}: ${value}`);
+  }
+  return { decls, next };
+}
+function isInitialStyle(prop, value, direction) {
+  switch (prop) {
+    case "font-weight":
+      return value === "400";
+    case "font-style":
+      return value === "normal";
+    case "line-height":
+      return value === "normal";
+    case "letter-spacing":
+      return value === "0px";
+    case "direction":
+      return value === "ltr";
+    case "text-align":
+      return value === (direction === "rtl" ? "right" : "left");
+    case "text-transform":
+      return value === "none";
+    case "font-variant":
+      return value === "normal";
+    case "text-decoration":
+      return value === "none";
+    default:
+      return false;
+  }
+}
+function alignDecls(align) {
+  if (align === "top") return [];
+  return ["display: flex", "flex-direction: column", `justify-content: ${justifyContent(align)}`];
+}
+function cursorDecl(node, cascade) {
+  if (node.reactions.length === 0 || cascade.get("cursor") === "pointer") return { decl: null, next: cascade };
+  const next = new Map(cascade);
+  next.set("cursor", "pointer");
+  return { decl: "cursor: pointer", next };
 }
 function textClips(node) {
   if (!node.wrap || node.paintsOutside) return false;
@@ -6909,15 +7194,18 @@ function componentNameFrom(name) {
   return result;
 }
 function renderReactComponent(input) {
-  const componentName = componentNameFrom(input.scene.root.name);
+  const states = input.states ?? /* @__PURE__ */ new Map();
+  const condensed = condenseScene(input.scene.root, states);
+  rememberStyles2();
+  const componentName = componentNameFrom(condensed.root.name);
   const usedClasses = /* @__PURE__ */ new Set();
-  assignClasses(input.scene.root, usedClasses);
-  const plan = planPointerCss(input.scene.root, input.states ?? /* @__PURE__ */ new Map(), input.assets, usedClasses);
+  assignClasses(condensed.root, usedClasses);
+  const plan = planPointerCss(condensed.root, condensed.states, input.assets, usedClasses);
   activePlan = plan;
-  const hasBoxStroke = treeHasBoxStroke(input.scene.root) || plan.forceStroke.size > 0;
-  const { jsxLines, cssNest } = emitNode(input.scene.root, null, input.assets, true, 2);
+  const hasBoxStroke = treeHasBoxStroke(condensed.root) || plan.forceStroke.size > 0;
+  const { jsxLines, cssNest } = emitNode(condensed.root, null, input.assets, true, 2, EMPTY_CASCADE2);
   applyPointerCss(plan);
-  const rootStroke = plan.forceStroke.has(input.scene.root) || input.scene.root.kind === "box" && input.scene.root.stroke !== null;
+  const rootStroke = plan.forceStroke.has(condensed.root) || condensed.root.kind === "box" && condensed.root.stroke !== null;
   const styledContents = formatStyledFile(componentName, cssNest, hasBoxStroke);
   const componentContents = formatComponentFile(componentName, jsxLines, rootStroke);
   const indexContents = `import ${componentName} from './${componentName}';
@@ -6936,13 +7224,13 @@ function assignClasses(node, used) {
   const className = classNameFrom(node.name, used);
   classByNode.set(node, className);
   if (node.kind === "text") {
-    reserveClass(`${className}-line`, used);
+    if (node.alignY !== "top") reserveClass(`${className}-line`, used);
     const groups = groupRuns(node.runs);
     for (let index = 1; index < groups.length; index++) {
       reserveClass(`${className}-run-${index + 1}`, used);
     }
   } else if (node.kind === "raster") {
-    reserveClass(`${className}-image`, used);
+    if (rasterBleeds2(node)) reserveClass(`${className}-image`, used);
   } else {
     for (const child of node.children) assignClasses(child, used);
   }
@@ -6952,36 +7240,37 @@ function classNameOf(node) {
   if (className === void 0) throw new Error("missing class for node");
   return className;
 }
-function emitNode(node, parent, assets, isRoot, jsxIndent) {
+function emitNode(node, parent, assets, isRoot, jsxIndent, cascade) {
   const place = placement2(node, parent);
   const className = classNameOf(node);
   switch (node.kind) {
     case "box":
-      return emitBox(node, place, assets, isRoot, jsxIndent, className);
+      return emitBox(node, place, assets, isRoot, jsxIndent, className, cascade);
     case "text":
-      return emitText(node, place, isRoot, jsxIndent, className);
+      return emitText(node, place, isRoot, jsxIndent, className, cascade);
     case "raster":
-      return emitRaster(node, place, assets, isRoot, jsxIndent, className);
+      return emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade);
     default: {
       const _exhaustive = node;
       return _exhaustive;
     }
   }
 }
-function emitBox(node, place, assets, isRoot, jsxIndent, className) {
-  const declLines = boxDeclLines(node, place, assets);
+function emitBox(node, place, assets, isRoot, jsxIndent, className, cascade) {
+  const built = boxDeclLines(node, place, assets, cascade);
+  const declLines = built.lines;
   const childCss = [];
   const childJsx = [];
   for (const child of node.children) {
-    const built = emitNode(child, node.box, assets, false, jsxIndent + 1);
-    childJsx.push(...built.jsxLines);
-    childCss.push(built.cssNest);
+    const childBuilt = emitNode(child, node.box, assets, false, jsxIndent + 1, built.next);
+    childJsx.push(...childBuilt.jsxLines);
+    childCss.push(childBuilt.cssNest);
   }
   const extras = activePlan?.insertions.get(node) ?? [];
   for (const extra of extras) {
-    const built = emitNode(extra.node, extra.origin, assets, false, jsxIndent + 1);
-    childJsx.push(...built.jsxLines);
-    childCss.push(built.cssNest);
+    const extraBuilt = emitNode(extra.node, extra.origin, assets, false, jsxIndent + 1, built.next);
+    childJsx.push(...extraBuilt.jsxLines);
+    childCss.push(extraBuilt.cssNest);
   }
   const strokeAttr = node.stroke || activePlan?.forceStroke.has(node) ? ' data-stroke=""' : "";
   const pad = indent(jsxIndent);
@@ -6994,44 +7283,50 @@ function emitBox(node, place, assets, isRoot, jsxIndent, className) {
   nestByNode.set(node, cssNest);
   return { jsxLines, cssNest };
 }
-function emitText(node, place, isRoot, jsxIndent, className) {
+function emitText(node, place, isRoot, jsxIndent, className, cascade) {
   const groups = groupRuns(node.runs);
   const first = groups[0]?.[0];
   if (first === void 0) {
     throw new ExportError({ kind: "invalid-document", message: "A text node has no runs." });
   }
-  const declLines = textDeclLines(node, place, first);
+  const declLines = textDeclLines(node, place, first, cascade);
+  const needsLine = node.alignY !== "top";
   const lineClass = `${className}-line`;
-  const runCssChildren = [
-    {
+  const base = runStyleMap2(first);
+  const runCssChildren = [];
+  if (needsLine) {
+    runCssChildren.push({
       selector: `.${lineClass}`,
       declLines: ["width: 100%;", "min-width: 0px;"],
       children: []
-    }
-  ];
+    });
+  }
   for (let index = 1; index < groups.length; index++) {
-    const sample = groups[index][0];
+    const sample = groups[index]?.[0];
     if (sample === void 0) continue;
+    const overrides = inheritedDecls2(runStyleMap2(sample), base).decls.map((decl) => `${decl};`);
+    if (overrides.length === 0) continue;
     runCssChildren.push({
       selector: `.${className}-run-${index + 1}`,
-      declLines: runDecls2(sample, true).map((decl) => `${decl};`),
+      declLines: overrides,
       children: []
     });
   }
   const innerParts = [];
   for (let index = 0; index < groups.length; index++) {
-    const text = groups[index].map((run) => run.text).join("");
+    const group = groups[index];
+    if (group === void 0) continue;
+    const text = group.map((run) => run.text).join("");
     const expr = `{${JSON.stringify(text)}}`;
-    if (index === 0) innerParts.push(expr);
+    const sample = group[0];
+    const overrides = sample === void 0 ? [] : inheritedDecls2(runStyleMap2(sample), base).decls;
+    if (index === 0 || overrides.length === 0) innerParts.push(expr);
     else innerParts.push(`<span className="${className}-run-${index + 1}">${expr}</span>`);
   }
   const pad = indent(jsxIndent);
   const linePad = indent(jsxIndent + 1);
-  const jsxLines = isRoot ? [`${linePad}<span className="${lineClass}">${innerParts.join("")}</span>`] : [
-    `${pad}<div className="${className}">`,
-    `${linePad}<span className="${lineClass}">${innerParts.join("")}</span>`,
-    `${pad}</div>`
-  ];
+  const content = needsLine ? `${linePad}<span className="${lineClass}">${innerParts.join("")}</span>` : `${linePad}${innerParts.join("")}`;
+  const jsxLines = isRoot ? [content] : [`${pad}<div className="${className}">`, content, `${pad}</div>`];
   const cssNest = {
     selector: isRoot ? "" : `.${className}`,
     declLines,
@@ -7040,13 +7335,26 @@ function emitText(node, place, isRoot, jsxIndent, className) {
   nestByNode.set(node, cssNest);
   return { jsxLines, cssNest };
 }
-function emitRaster(node, place, assets, isRoot, jsxIndent, className) {
+function emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade) {
   const src = assets.rasters.get(node.id);
   if (src === void 0) throw new ExportError({ kind: "missing-asset", id: node.id });
-  const imageClass = `${className}-image`;
-  const declLines = rasterWrapperDeclLines(node, place);
+  const cursor = cursorDecl2(node, cascade);
+  const declLines = cssDeclLines([
+    ...placementDecls2(place).map((decl) => `${decl};`),
+    ...blendDecls2(node.blend).map((decl) => `${decl};`),
+    cursor.decl === null ? null : `${cursor.decl};`
+  ]);
   const pad = indent(jsxIndent);
   const innerPad = indent(jsxIndent + 1);
+  if (!rasterBleeds2(node) && !isRoot) {
+    const jsxLines2 = [
+      `${pad}<img className="${className}" alt={${JSON.stringify(node.name)}} src={${JSON.stringify(src)}} />`
+    ];
+    const cssNest2 = { selector: `.${className}`, declLines, children: [] };
+    nestByNode.set(node, cssNest2);
+    return { jsxLines: jsxLines2, cssNest: cssNest2 };
+  }
+  const imageClass = `${className}-image`;
   const imgLine = `${innerPad}<img className="${imageClass}" alt={${JSON.stringify(node.name)}} src={${JSON.stringify(src)}} />`;
   const jsxLines = isRoot ? [imgLine] : [`${pad}<div className="${className}">`, imgLine, `${pad}</div>`];
   const cssNest = {
@@ -7069,43 +7377,37 @@ function emitRaster(node, place, assets, isRoot, jsxIndent, className) {
   nestByNode.set(node, cssNest);
   return { jsxLines, cssNest };
 }
-function boxDeclLines(node, place, assets) {
-  return cssDeclLines([
-    "box-sizing: border-box;",
-    ...placementDecls2(place).map((decl) => `${decl};`),
-    withSemi(backgroundDecl2(node.paints, assets)),
-    withSemi(radiusDecl2(node.radius)),
-    node.clips ? "overflow: hidden;" : null,
-    ...effectDecls2(node.effects).map((decl) => `${decl};`),
-    ...compositeDecls2(node.opacity, node.blend).map((decl) => `${decl};`),
-    ...node.stroke ? strokeDecls2(node.stroke, node.radius, assets) : [],
-    node.reactions.length > 0 ? "cursor: pointer;" : null
-  ]);
+function boxDeclLines(node, place, assets, cascade) {
+  const flow = inheritedDecls2(agreedStyle2(node) ?? EMPTY_CASCADE2, cascade);
+  const cursor = cursorDecl2(node, flow.next);
+  return {
+    lines: cssDeclLines([
+      ...placementDecls2(place).map((decl) => `${decl};`),
+      withSemi(backgroundDecl2(node.paints, assets)),
+      withSemi(radiusDecl2(node.radius)),
+      node.clips ? "overflow: hidden;" : null,
+      ...effectDecls2(node.effects).map((decl) => `${decl};`),
+      ...compositeDecls2(node.opacity, node.blend).map((decl) => `${decl};`),
+      ...node.stroke ? strokeDecls2(node.stroke, node.radius, assets) : [],
+      ...flow.decls.map((decl) => `${decl};`),
+      cursor.decl === null ? null : `${cursor.decl};`
+    ]),
+    next: cursor.next
+  };
 }
-function textDeclLines(node, place, first) {
+function textDeclLines(node, place, first, cascade) {
+  const flow = inheritedDecls2(textStyleMap2(node), cascade);
+  const cursor = cursorDecl2(node, flow.next);
   return cssDeclLines([
-    "box-sizing: border-box;",
     ...placementDecls2(place).map((decl) => `${decl};`),
-    ...runDecls2(first, false).map((decl) => `${decl};`),
-    `text-align: ${node.alignX};`,
-    "display: flex;",
-    "flex-direction: column;",
-    `justify-content: ${justifyContent2(node.alignY)};`,
-    `direction: ${node.direction};`,
-    node.wrap ? "white-space: pre-wrap;" : "white-space: pre;",
+    ...flow.decls.map((decl) => `${decl};`),
+    `color: ${first.color};`,
+    ...alignDecls2(node.alignY).map((decl) => `${decl};`),
     textClips2(node) ? "overflow: hidden;" : null,
     ...effectDecls2(node.effects).map((decl) => `${decl};`),
     ...compositeDecls2(node.opacity, node.blend).map((decl) => `${decl};`),
     withSemi(textStrokeDecl2(node.stroke)),
-    node.reactions.length > 0 ? "cursor: pointer;" : null
-  ]);
-}
-function rasterWrapperDeclLines(node, place) {
-  return cssDeclLines([
-    "box-sizing: border-box;",
-    ...placementDecls2(place).map((decl) => `${decl};`),
-    ...blendDecls2(node.blend).map((decl) => `${decl};`),
-    node.reactions.length > 0 ? "cursor: pointer;" : null
+    cursor.decl === null ? null : `${cursor.decl};`
   ]);
 }
 var TWEEN_PROPS2 = /* @__PURE__ */ new Set([
@@ -7495,7 +7797,15 @@ function formatComponentFile(componentName, bodyLines, rootStroke) {
   ].join("\n");
 }
 function formatStyledFile(componentName, rootNest, hasBoxStroke) {
-  const cssLines = flattenCssNest(rootNest, 1);
+  const cssLines = [
+    "  box-sizing: border-box;",
+    "  *,",
+    "  *::before,",
+    "  *::after {",
+    "    box-sizing: border-box;",
+    "  }",
+    ...flattenCssNest(rootNest, 1)
+  ];
   if (hasBoxStroke) {
     cssLines.push(...STROKE_RING_LINES.map((line) => line.startsWith("  ") || line.startsWith("[") ? `  ${line}` : `  ${line}`));
   }
@@ -7519,6 +7829,7 @@ function flattenCssNest(nest, depth) {
     for (const child of nest.children) lines.push(...flattenCssNest(child, depth));
     return lines;
   }
+  if (nest.declLines.length === 0 && nest.children.length === 0) return [];
   lines.push(`${pad}${nest.selector} {`);
   for (const decl of nest.declLines) lines.push(`${pad}  ${decl}`);
   for (const child of nest.children) lines.push(...flattenCssNest(child, depth + 1));
@@ -7595,13 +7906,14 @@ function placement2(node, parent) {
   };
 }
 function placementDecls2(place) {
-  return [
-    `position: ${place.position}`,
-    `left: ${px2(place.leftPx)}`,
-    `top: ${px2(place.topPx)}`,
-    `width: ${px2(place.widthPx)}`,
-    `height: ${px2(place.heightPx)}`
-  ];
+  const decls = [`position: ${place.position}`];
+  if (place.position === "absolute" || place.leftPx !== 0) decls.push(`left: ${px2(place.leftPx)}`);
+  if (place.position === "absolute" || place.topPx !== 0) decls.push(`top: ${px2(place.topPx)}`);
+  decls.push(`width: ${px2(place.widthPx)}`, `height: ${px2(place.heightPx)}`);
+  return decls;
+}
+function rasterBleeds2(node) {
+  return node.bleed.left !== 0 || node.bleed.top !== 0 || node.bleed.right !== 0 || node.bleed.bottom !== 0;
 }
 function backgroundDecl2(paints, assets) {
   if (paints.length === 0) return null;
@@ -7841,53 +8153,149 @@ function paintColor2(paint) {
     }
   }
 }
-function runDecls2(run, reset) {
-  const decls = [
-    `font-family: ${fontFamily2(run.fontFamily)}`,
-    `font-size: ${px2(run.fontSizePx)}`,
-    `font-weight: ${formatNumber2(run.fontWeight)}`,
-    `font-style: ${run.fontStyle}`,
-    `letter-spacing: ${px2(run.letterSpacingPx)}`,
-    `color: ${run.color}`
-  ];
-  if (run.lineHeightPx !== null) decls.push(`line-height: ${px2(run.lineHeightPx)}`);
-  else if (reset) decls.push("line-height: normal");
-  decls.push(...caseDecls2(run.textCase, reset));
-  const decoration = decorationDecl2(run.decoration, reset);
-  if (decoration !== null) decls.push(decoration);
-  return decls;
+var EMPTY_CASCADE2 = /* @__PURE__ */ new Map();
+var STYLE_PROPS2 = [
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "line-height",
+  "letter-spacing",
+  "color",
+  "text-align",
+  "direction",
+  "white-space",
+  "text-transform",
+  "font-variant",
+  "text-decoration"
+];
+var styleMemo2 = /* @__PURE__ */ new WeakMap();
+function rememberStyles2() {
+  styleMemo2 = /* @__PURE__ */ new WeakMap();
 }
-function caseDecls2(textCase, reset) {
+function agreedStyle2(node) {
+  if (styleMemo2.has(node)) return styleMemo2.get(node) ?? null;
+  let result = null;
+  if (node.kind === "text") result = textStyleMap2(node);
+  else if (node.kind === "box") {
+    for (const child of node.children) {
+      const sub = agreedStyle2(child);
+      if (sub === null) continue;
+      if (result === null) {
+        result = new Map(sub);
+        continue;
+      }
+      for (const key of result.keys()) {
+        if (result.get(key) !== sub.get(key)) result.delete(key);
+      }
+    }
+  }
+  styleMemo2.set(node, result);
+  return result;
+}
+function textStyleMap2(node) {
+  const first = node.runs[0];
+  const map = runStyleMap2(first);
+  map.delete("color");
+  map.set("text-align", node.alignX);
+  map.set("direction", node.direction);
+  map.set("white-space", node.wrap ? "pre-wrap" : "pre");
+  return map;
+}
+function runStyleMap2(run) {
+  const face = caseStyle2(run.textCase);
+  return /* @__PURE__ */ new Map([
+    ["font-family", fontFamily2(run.fontFamily)],
+    ["font-size", px2(run.fontSizePx)],
+    ["font-weight", formatNumber2(run.fontWeight)],
+    ["font-style", run.fontStyle],
+    ["line-height", run.lineHeightPx === null ? "normal" : px2(run.lineHeightPx)],
+    ["letter-spacing", px2(run.letterSpacingPx)],
+    ["color", run.color],
+    ["text-transform", face.transform],
+    ["font-variant", face.variant],
+    ["text-decoration", decorationValue2(run.decoration)]
+  ]);
+}
+function caseStyle2(textCase) {
   switch (textCase) {
-    case "original":
-      return reset ? ["text-transform: none", "font-variant: normal"] : [];
     case "upper":
-      return ["text-transform: uppercase"];
+      return { transform: "uppercase", variant: "normal" };
     case "lower":
-      return ["text-transform: lowercase"];
+      return { transform: "lowercase", variant: "normal" };
     case "title":
-      return ["text-transform: capitalize"];
+      return { transform: "capitalize", variant: "normal" };
     case "small-caps":
-      return ["font-variant: small-caps"];
+      return { transform: "none", variant: "small-caps" };
+    case "original":
+      return { transform: "none", variant: "normal" };
     default: {
       const _exhaustive = textCase;
       return _exhaustive;
     }
   }
 }
-function decorationDecl2(decoration, reset) {
+function decorationValue2(decoration) {
   switch (decoration) {
     case "none":
-      return reset ? "text-decoration: none" : null;
+      return "none";
     case "underline":
-      return "text-decoration: underline";
+      return "underline";
     case "line-through":
-      return "text-decoration: line-through";
+      return "line-through";
     default: {
       const _exhaustive = decoration;
       return _exhaustive;
     }
   }
+}
+function inheritedDecls2(wanted, cascade) {
+  const next = new Map(cascade);
+  const decls = [];
+  const direction = wanted.get("direction") ?? cascade.get("direction") ?? "ltr";
+  for (const prop of STYLE_PROPS2) {
+    const value = wanted.get(prop);
+    if (value === void 0) continue;
+    next.set(prop, value);
+    if (cascade.get(prop) === value) continue;
+    if (cascade.get(prop) === void 0 && isInitialStyle2(prop, value, direction)) continue;
+    decls.push(`${prop}: ${value}`);
+  }
+  return { decls, next };
+}
+function isInitialStyle2(prop, value, direction) {
+  switch (prop) {
+    case "font-weight":
+      return value === "400";
+    case "font-style":
+      return value === "normal";
+    case "line-height":
+      return value === "normal";
+    case "letter-spacing":
+      return value === "0px";
+    case "direction":
+      return value === "ltr";
+    case "text-align":
+      return value === (direction === "rtl" ? "right" : "left");
+    case "text-transform":
+      return value === "none";
+    case "font-variant":
+      return value === "normal";
+    case "text-decoration":
+      return value === "none";
+    default:
+      return false;
+  }
+}
+function alignDecls2(align) {
+  if (align === "top") return [];
+  return ["display: flex", "flex-direction: column", `justify-content: ${justifyContent2(align)}`];
+}
+function cursorDecl2(node, cascade) {
+  if (node.reactions.length === 0 || cascade.get("cursor") === "pointer") return { decl: null, next: cascade };
+  const next = new Map(cascade);
+  next.set("cursor", "pointer");
+  return { decl: "cursor: pointer", next };
 }
 function textClips2(node) {
   if (!node.wrap || node.paintsOutside) return false;
