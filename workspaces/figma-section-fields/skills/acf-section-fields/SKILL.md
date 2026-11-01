@@ -7,7 +7,7 @@ description: Reads React, Next.js, or HTML section files and audits them against
 
 Use this for Jaecoo and luxury-trade sections. The Next apps do not contain ACF field groups. They read one flexible field over WPGraphQL: group `fields`, field `flexible`, layout type `FieldsFlexible<Folder>Layout`. Details and shared fragments are in [references/field-patterns.md](references/field-patterns.md).
 
-In the figma-section-fields workspace, stage 02 writes `<Folder>.gql` and `field-report.md` in the section folder. The human adds the layout in the WordPress dashboard from that report. Follow `stages/02-section-graphql/CONTEXT.md` for that run.
+In the figma-section-fields workspace, stage 02 writes the `.gql` from the live schema. Follow `stages/02-section-graphql/CONTEXT.md` for that run. The shapes below are Jaecoo and luxury-trade. Do not apply them to another repo.
 
 ## Process
 

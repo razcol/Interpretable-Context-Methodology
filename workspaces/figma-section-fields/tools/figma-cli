@@ -44,6 +44,9 @@ var import_node_crypto = require("node:crypto");
 var import_promises = require("node:fs/promises");
 var import_node_path = __toESM(require("node:path"), 1);
 
+// src/figma-api.ts
+var import_node_dns = require("node:dns");
+
 // src/scene.ts
 var ExportError = class extends Error {
   failure;
@@ -75,6 +78,23 @@ function parseFileArg(raw) {
     kind: "usage",
     message: "Expected a Figma file key or a figma.com file URL."
   });
+}
+function parseExportTarget(raw) {
+  const trimmed = raw.trim();
+  const fileKey = parseFileArg(trimmed);
+  if (!trimmed.includes("://")) return { fileKey, nodeId: null };
+  let url;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new ExportError({
+      kind: "usage",
+      message: "Expected a Figma file key or a figma.com file URL."
+    });
+  }
+  const query = url.searchParams.get("node-id");
+  if (query === null || query.trim() === "") return { fileKey, nodeId: null };
+  return { fileKey, nodeId: parseNodeId(query) };
 }
 function fileKeyCandidate(raw) {
   if (raw.length === 0) return null;
@@ -111,13 +131,57 @@ function parseAccessToken(raw) {
     message: "FIGMA_ACCESS_TOKEN is missing or invalid."
   });
 }
+function changeHost(node, target, sets, ancestors) {
+  const destSet = sets.get(target);
+  if (destSet === void 0) return node;
+  for (const candidate of [node, ...ancestors]) {
+    const componentId = componentKey(candidate, sets);
+    if (componentId !== null && sets.get(componentId) === destSet) return candidate;
+  }
+  if (node.kind === "box" && node.component !== null) {
+    for (const candidate of ancestors) {
+      if (candidate.kind === "box" && candidate.component !== null) return candidate;
+    }
+  }
+  return node;
+}
+function componentKey(candidate, sets) {
+  if (candidate.kind !== "box") return null;
+  if (candidate.component !== null) return candidate.component;
+  if (sets.has(candidate.id)) return candidate.id;
+  return null;
+}
+function variantScale(instance, master) {
+  return {
+    x: master.width === 0 ? 1 : instance.width / master.width,
+    y: master.height === 0 ? 1 : instance.height / master.height
+  };
+}
+function variantSize(instance, master, dest, scale) {
+  return {
+    width: instance.width + (dest.width - master.width) * scale.x,
+    height: instance.height + (dest.height - master.height) * scale.y
+  };
+}
+function variantOffset(instance, master, dest, instanceParent, masterParent, destParent, scale) {
+  const size = variantSize(instance, master, dest, scale);
+  const dLeft = dest.x - destParent.x - (master.x - masterParent.x);
+  const dTop = dest.y - destParent.y - (master.y - masterParent.y);
+  return {
+    left: instance.x - instanceParent.x + dLeft * scale.x,
+    top: instance.y - instanceParent.y + dTop * scale.y,
+    width: size.width,
+    height: size.height
+  };
+}
 var CLIP_SLOP = 0.5;
-function condenseScene(root, states) {
+function condenseScene(root, states, sets = /* @__PURE__ */ new Map()) {
   const kept = /* @__PURE__ */ new Set();
   const trees = [root, ...states.values()];
   const byId = indexNodes(trees);
   for (const tree of trees) keepScrollTargets(tree, byId, kept);
-  for (const tree of trees) bindChanges(tree, states, kept);
+  for (const tree of trees) keepChangeHosts(tree, [], sets, kept);
+  for (const tree of trees) bindChanges(tree, states, kept, [], sets);
   const nextStates = /* @__PURE__ */ new Map();
   for (const [id, state] of states) nextStates.set(id, rebuildNode(state, true, kept));
   return { root: rebuildNode(root, true, kept), states: nextStates };
@@ -131,6 +195,18 @@ function indexNodes(trees) {
   for (const tree of trees) walk(tree);
   return byId;
 }
+function keepChangeHosts(node, ancestors, sets, kept) {
+  for (const reaction of node.reactions) {
+    for (const action of reaction.actions) {
+      if (action.kind !== "change") continue;
+      const host = changeHost(node, action.target, sets, ancestors);
+      if (host.kind === "box") kept.add(host);
+    }
+  }
+  if (node.kind === "box") {
+    for (const child of node.children) keepChangeHosts(child, [node, ...ancestors], sets, kept);
+  }
+}
 function keepScrollTargets(node, byId, kept) {
   for (const reaction of node.reactions) {
     for (const action of reaction.actions) {
@@ -141,18 +217,22 @@ function keepScrollTargets(node, byId, kept) {
   }
   if (node.kind === "box") for (const child of node.children) keepScrollTargets(child, byId, kept);
 }
-function bindChanges(node, states, kept) {
+function bindChanges(node, states, kept, ancestors, sets) {
   for (const reaction of node.reactions) {
     for (const action of reaction.actions) {
       if (action.kind !== "change") continue;
       const dest = states.get(action.target);
-      if (dest !== void 0) reconcilePair(node, dest, kept);
+      if (dest === void 0) continue;
+      reconcilePair(changeHost(node, action.target, sets, ancestors), dest, kept);
     }
   }
-  if (node.kind === "box") for (const child of node.children) bindChanges(child, states, kept);
+  if (node.kind === "box") {
+    for (const child of node.children) bindChanges(child, states, kept, [node, ...ancestors], sets);
+  }
 }
 function reconcilePair(src, dst, kept) {
   if (src.kind !== "box" || dst.kind !== "box") return;
+  if (dst.box.width > src.box.width + 1 && dst.box.height > src.box.height + 1) return;
   const used = /* @__PURE__ */ new Set();
   const sourceOnly = [];
   for (const child of src.children) {
@@ -291,6 +371,7 @@ function rebuild(node, isRoot, kept) {
 }
 
 // src/figma-api.ts
+(0, import_node_dns.setDefaultResultOrder)("ipv4first");
 var FIGMA_ORIGIN = "https://api.figma.com";
 var RETRY_LIMIT = 3;
 var QUERY_BUDGET = 2e3;
@@ -387,15 +468,23 @@ async function getJson(url, token, notFoundId) {
     return readJson(response);
   }
 }
+var REQUEST_TIMEOUT_MS = 18e4;
 async function fetchResponse(url, token) {
   try {
     return await fetch(url, {
       method: "GET",
-      headers: { "X-Figma-Token": token }
+      headers: { "X-Figma-Token": token },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
     });
   } catch (error) {
+    if (isTimeout(error)) {
+      throw new ExportError({ kind: "network", message: "The network request timed out." });
+    }
     throw new ExportError({ kind: "network", message: networkMessage(error, token) });
   }
+}
+function isTimeout(error) {
+  return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
 }
 function networkMessage(error, token) {
   if (!(error instanceof Error) || error.message.length === 0 || error.message.includes(token)) {
@@ -4663,6 +4752,24 @@ function unreactedInstances(input) {
   walkUnreacted(target, names, indexed, found);
   return found;
 }
+function readComponentSets(wire) {
+  const sets = /* @__PURE__ */ new Map();
+  if (typeof wire !== "object" || wire === null) return sets;
+  const nodes = wire.nodes;
+  if (typeof nodes !== "object" || nodes === null) return sets;
+  for (const entry of Object.values(nodes)) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const components = entry.components;
+    if (typeof components !== "object" || components === null) continue;
+    for (const [id, meta] of Object.entries(components)) {
+      if (typeof meta !== "object" || meta === null) continue;
+      const setId = meta.componentSetId;
+      if (typeof setId !== "string" || setId.length === 0) continue;
+      sets.set(nodeIdFromWire(id), nodeIdFromWire(setId));
+    }
+  }
+  return sets;
+}
 function reactionsFromDocument(wire, nodeId) {
   return mapReactions(readFetchedDocument(nodeId, wire));
 }
@@ -4690,10 +4797,28 @@ function findNamedLayers(input) {
       kind: "unmatched-name",
       nodeId: input.nodeId,
       name: input.name,
-      children: visibleChildNames(fetched)
+      children: visibleChildren(fetched)
     });
   }
   return matches;
+}
+function parentFillHint(input) {
+  const fetched = readFetchedDocument(input.nodeId, input.wire);
+  return hintUnder(fetched, null, input.focusId);
+}
+function hintUnder(node, parent, focusId) {
+  if (sameNodeId(node.id, focusId)) {
+    if (parent === null || hasVisibleFill(node) || !hasVisibleFill(parent)) return null;
+    return { name: parent.name, id: nodeIdFromWire(parent.id) };
+  }
+  for (const child of node.children ?? []) {
+    const hint = hintUnder(child, node, focusId);
+    if (hint !== null) return hint;
+  }
+  return null;
+}
+function hasVisibleFill(node) {
+  return mapPaints(node.fills).length > 0;
 }
 function readFetchedDocument(nodeId, wire) {
   const parsed = envelopeSchema.safeParse(wire);
@@ -4736,13 +4861,13 @@ function sameNodeId(raw, focusId) {
     throw error;
   }
 }
-function visibleChildNames(node) {
-  const names = [];
+function visibleChildren(node) {
+  const children = [];
   for (const child of node.children ?? []) {
     if (child.visible === false) continue;
-    names.push(child.name);
+    children.push({ name: child.name, id: nodeIdFromWire(child.id) });
   }
-  return names;
+  return children;
 }
 function collectNamed(children, prefix, name, matches) {
   for (const child of children) {
@@ -4840,6 +4965,7 @@ function boxNode(node, box, radius, exclude, indexed, borrowed, parent) {
     stroke: mapStroke(node),
     anchorX: anchor.x,
     anchorY: anchor.y,
+    component: node.type === "INSTANCE" && node.componentId ? nodeIdFromWire(node.componentId) : null,
     children: convertChildren(node.children, exclude, indexed, borrowed, node)
   };
 }
@@ -5455,7 +5581,7 @@ function blendOf(raw) {
   }
 }
 function sliceRuns(node) {
-  const characters = node.characters ?? "";
+  const characters = (node.characters ?? "").replaceAll("\u2028", "\n").replaceAll("\u2029", "\n");
   const overrides = node.characterStyleOverrides ?? [];
   const table = node.styleOverrideTable ?? {};
   const groups = [];
@@ -5696,10 +5822,11 @@ function emptyHtmlPlan() {
     hiddenUntil: /* @__PURE__ */ new Set(),
     forceStroke: /* @__PURE__ */ new Set(),
     transitions: /* @__PURE__ */ new Map(),
-    restFills: /* @__PURE__ */ new Map()
+    restFills: /* @__PURE__ */ new Map(),
+    swapHosts: /* @__PURE__ */ new Set()
   };
 }
-function planHtmlPointer(root, states, assets) {
+function planHtmlPointer(roots, states, assets, sets, masters, swapHosts) {
   const plan = {
     css: [],
     insertions: /* @__PURE__ */ new Map(),
@@ -5708,31 +5835,59 @@ function planHtmlPointer(root, states, assets) {
     transitions: /* @__PURE__ */ new Map(),
     restFills: /* @__PURE__ */ new Map(),
     rules: /* @__PURE__ */ new Map(),
-    veils: /* @__PURE__ */ new Map()
+    veils: /* @__PURE__ */ new Map(),
+    swapHosts: new Set(swapHosts)
   };
-  walk(root, null);
+  for (const root of roots) walk(root, null, []);
   plan.css = compilePointerCss(plan);
   return plan;
-  function walk(node, parent) {
+  function walk(node, parent, ancestors) {
     for (const reaction of node.reactions) {
       const pseudo = reaction.trigger.kind === "hover" ? ":hover" : reaction.trigger.kind === "press" ? ":active" : null;
       if (pseudo === null) continue;
       for (const action of reaction.actions) {
         if (action.kind !== "change") continue;
+        if (changeHost(node, action.target, sets, ancestors) !== node) continue;
         const dest = states.get(action.target);
         if (dest === void 0) continue;
-        applyChange(plan, node, dest, parent, pseudo, action.motion, assets);
+        const master = node.kind === "box" && node.component !== null ? masters.get(node.component) : void 0;
+        applyChange(plan, node, dest, master ?? null, parent, pseudo, action.motion, assets);
       }
     }
     if (node.kind === "box") {
-      for (const child of node.children) walk(child, node.box);
+      for (const child of node.children) walk(child, node.box, [node, ...ancestors]);
     }
   }
 }
-function playbackReactions(reactions) {
+function hostKey(nodeId, target) {
+  return `${nodeId}\0${target}`;
+}
+function collectChangeHosts(root, sets) {
+  const hosts = /* @__PURE__ */ new Map();
+  walk(root, []);
+  return hosts;
+  function walk(node, ancestors) {
+    for (const reaction of node.reactions) {
+      for (const action of reaction.actions) {
+        if (action.kind !== "change") continue;
+        const host = changeHost(node, action.target, sets, ancestors);
+        if (host !== node) hosts.set(hostKey(node.id, action.target), host.id);
+      }
+    }
+    if (node.kind === "box") {
+      for (const child of node.children) walk(child, [node, ...ancestors]);
+    }
+  }
+}
+function playbackReactions(reactions, hosts) {
   const played = /* @__PURE__ */ new Map();
   for (const [id, list] of reactions) {
-    const kept = list.filter((reaction) => reaction.trigger.kind !== "hover" && reaction.trigger.kind !== "press");
+    const kept = list.filter((reaction) => {
+      if (reaction.trigger.kind !== "hover" && reaction.trigger.kind !== "press") return true;
+      return reaction.actions.some(
+        (action) => action.kind === "change" && hosts.get(hostKey(id, action.target)) !== void 0
+      );
+    });
     if (kept.length > 0) played.set(id, kept);
   }
   return played;
@@ -5750,15 +5905,27 @@ function playbackTargets(reactions) {
   }
   return targets;
 }
-function applyChange(plan, hot, dest, parent, pseudo, motion, assets) {
-  walkPair(hot, dest, parent, null, true);
-  function walkPair(src, dst, srcParent, dstParent, isHot) {
-    diffPaint(plan, hot, pseudo, src, dst, motion, assets);
-    if (motion.kind === "smart") diffGeometry(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion);
+function applyChange(plan, hot, dest, master, parent, pseudo, motion, assets) {
+  const lockGeometry = master === null && hot.kind === "box" && hot.component !== null;
+  const scale = master === null ? { x: 1, y: 1 } : variantScale(hot.box, master.box);
+  walkPair(hot, dest, master, parent, null, null, true);
+  function walkPair(src, dst, basis, srcParent, dstParent, basisParent, isHot) {
+    diffPaint(plan, hot, pseudo, src, dst, basis, motion, assets);
+    if (motion.kind === "smart" && basis !== null) {
+      diffVariantGeometry(plan, hot, pseudo, src, dst, basis, srcParent, dstParent, basisParent, isHot, scale, motion);
+    } else if (motion.kind === "smart" && !lockGeometry) {
+      diffGeometry(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion);
+    }
     if (src.kind !== "box" || dst.kind !== "box") return;
     const matched = pairByName(src.children, dst.children);
-    for (const pair of matched.pairs) walkPair(pair.src, pair.dst, src.box, dst.box, false);
-    if (motion.kind !== "smart") return;
+    const basisChildren = /* @__PURE__ */ new Map();
+    if (basis?.kind === "box") {
+      for (const pair of pairByName(src.children, basis.children).pairs) basisChildren.set(pair.src, pair.dst);
+    }
+    for (const pair of matched.pairs) {
+      walkPair(pair.src, pair.dst, basisChildren.get(pair.src) ?? null, src.box, dst.box, basis?.kind === "box" ? basis.box : null, false);
+    }
+    if (motion.kind !== "smart" || lockGeometry) return;
     for (const only of matched.sourceOnly) {
       setProp(plan, hot, pseudo, only, "opacity", "0");
       rememberTransition(plan, only, "opacity", motion);
@@ -5789,8 +5956,8 @@ function pairByName(source, dest) {
   }
   return { pairs, sourceOnly, destOnly: dest.filter((_, index) => !used.has(index)) };
 }
-function diffPaint(plan, hot, pseudo, src, dst, motion, assets) {
-  const from = paintProps(src, assets);
+function diffPaint(plan, hot, pseudo, src, dst, basis, motion, assets) {
+  const from = paintProps(basis ?? src, assets);
   const to = paintProps(dst, assets);
   for (const key of /* @__PURE__ */ new Set([...from.keys(), ...to.keys()])) {
     const fromValue = from.get(key);
@@ -5817,11 +5984,12 @@ function diffPaint(plan, hot, pseudo, src, dst, motion, assets) {
       if (identity2 !== void 0) setRest(plan, src, key, identity2);
     }
   }
-  diffStroke(plan, hot, pseudo, src, dst, assets);
+  diffStroke(plan, hot, pseudo, src, dst, basis, assets);
 }
-function diffStroke(plan, hot, pseudo, src, dst, assets) {
-  if (src.kind !== "box" || dst.kind !== "box") return;
-  const from = src.stroke === null ? null : strokeProps(src, assets);
+function diffStroke(plan, hot, pseudo, src, dst, basis, assets) {
+  const fromNode = basis ?? src;
+  if (fromNode.kind !== "box" || dst.kind !== "box" || src.kind !== "box") return;
+  const from = fromNode.stroke === null ? null : strokeProps(fromNode, assets);
   const to = dst.stroke === null ? null : strokeProps(dst, assets);
   if (from === null && to === null) return;
   const fromMap = from ?? EMPTY_STROKE;
@@ -5836,6 +6004,36 @@ function diffStroke(plan, hot, pseudo, src, dst, assets) {
   if (!changed || from !== null) return;
   plan.forceStroke.add(src);
   for (const [key, value] of EMPTY_STROKE) setRest(plan, src, key, value);
+}
+function diffVariantGeometry(plan, hot, pseudo, src, dst, basis, srcParent, dstParent, basisParent, isHot, scale, motion) {
+  const rest = placement(src, srcParent);
+  let left = rest.leftPx;
+  let top = rest.topPx;
+  let width = src.box.width;
+  let height = src.box.height;
+  if (isHot || srcParent === null || dstParent === null || basisParent === null) {
+    const size = variantSize(src.box, basis.box, dst.box, scale);
+    width = size.width;
+    height = size.height;
+    if (isHot && src.kind === "box") {
+      const dw = width - src.box.width;
+      const dh = height - src.box.height;
+      if (src.anchorX === "center") left -= dw / 2;
+      if (src.anchorX === "end") left -= dw;
+      if (src.anchorY === "center") top -= dh / 2;
+      if (src.anchorY === "end") top -= dh;
+    }
+  } else {
+    const next = variantOffset(src.box, basis.box, dst.box, srcParent, basisParent, dstParent, scale);
+    left = next.left;
+    top = next.top;
+    width = next.width;
+    height = next.height;
+  }
+  setGeom(plan, hot, pseudo, src, motion, "left", rest.leftPx, left);
+  setGeom(plan, hot, pseudo, src, motion, "top", rest.topPx, top);
+  setGeom(plan, hot, pseudo, src, motion, "width", rest.widthPx, width);
+  setGeom(plan, hot, pseudo, src, motion, "height", rest.heightPx, height);
 }
 function diffGeometry(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion) {
   const rest = placement(src, srcParent);
@@ -5875,14 +6073,14 @@ function paintProps(node, assets) {
   if (node.kind === "box") {
     putDecl(props, backgroundDecl(node.paints, assets));
     putDecl(props, radiusDecl(node.radius));
-    for (const decl of effectDecls(node.effects)) putDecl(props, decl);
+    for (const decl of effectDecls(node.effects, node.paints.length === 0)) putDecl(props, decl);
     if (node.opacity !== 1) props.set("opacity", formatNumber(node.opacity));
     return props;
   }
   if (node.kind === "text") {
     const first = node.runs[0];
     if (first !== void 0) props.set("color", first.color);
-    for (const decl of effectDecls(node.effects)) putDecl(props, decl);
+    for (const decl of effectDecls(node.effects, true)) putDecl(props, decl);
     if (node.opacity !== 1) props.set("opacity", formatNumber(node.opacity));
   }
   return props;
@@ -6045,15 +6243,29 @@ function styledDecls(node, parts, plan) {
 }
 function renderDocument(input) {
   const states = input.states ?? /* @__PURE__ */ new Map();
+  const sets = input.sets ?? /* @__PURE__ */ new Map();
+  const masters = /* @__PURE__ */ new Map();
+  for (const [id, master] of input.masters ?? []) masters.set(id, condenseScene(master, states, sets).root);
   assertStates(input.scene.root, states);
   for (const state of states.values()) assertStates(state, states);
-  const condensed = condenseScene(input.scene.root, states);
+  const condensed = condenseScene(input.scene.root, states, sets);
   rememberStyles();
-  const pointer = planHtmlPointer(condensed.root, condensed.states, input.assets);
+  const hosts = collectChangeHosts(condensed.root, sets);
+  for (const state of condensed.states.values()) {
+    for (const [key, host] of collectChangeHosts(state, sets)) hosts.set(key, host);
+  }
+  const pointer = planHtmlPointer(
+    [condensed.root, ...condensed.states.values()],
+    condensed.states,
+    input.assets,
+    sets,
+    masters,
+    new Set(hosts.values())
+  );
   const reactions = /* @__PURE__ */ new Map();
   collectReactionMap(input.scene.root, reactions);
   for (const state of states.values()) collectReactionMap(state, reactions);
-  const played = playbackReactions(reactions);
+  const played = playbackReactions(reactions, hosts);
   const playedTargets = playbackTargets(played);
   const families = collectFamilies(condensed.root);
   for (const id of playedTargets) {
@@ -6091,7 +6303,7 @@ function renderDocument(input) {
       const placed = renderNode(state, { x: state.box.x, y: state.box.y }, input.assets, false, emptyHtmlPlan(), EMPTY_CASCADE);
       lines.push(`<template data-state="${escapeAttr(id)}">${placed}</template>`);
     }
-    lines.push(`<script type="application/json" id="figma-reactions">${reactionJson(played)}</script>`);
+    lines.push(`<script type="application/json" id="figma-reactions">${reactionJson(played, hosts)}</script>`);
     lines.push(PLAYER);
   }
   lines.push("</body>", "</html>", "");
@@ -6125,14 +6337,15 @@ function renderBox(node, place, assets, screen, plan, cascade) {
     backgroundDecl(node.paints, assets),
     radiusDecl(node.radius),
     node.clips ? "overflow: hidden" : null,
-    ...effectDecls(node.effects),
+    ...effectDecls(node.effects, node.paints.length === 0),
     ...compositeDecls(node.opacity, node.blend),
     ...node.stroke ? strokeDecls(node.stroke, node.radius, assets) : [],
     ...flow.decls,
     cursor.decl
   ], plan);
   const strokeAttr = node.stroke || plan.forceStroke.has(node) ? ' data-stroke=""' : "";
-  return `${openDiv(node, style, `${strokeAttr}${anchorAttrs(node)}${hotAttrs(node, screen)}`)}${children}</div>`;
+  const swapAttr = plan.swapHosts.has(node.id) ? ' data-swap=""' : "";
+  return `${openDiv(node, style, `${strokeAttr}${anchorAttrs(node)}${hotAttrs(node, screen)}${swapAttr}`)}${children}</div>`;
 }
 function renderText(node, place, screen, plan, cascade) {
   const rendered = renderRuns(node.runs);
@@ -6142,14 +6355,14 @@ function renderText(node, place, screen, plan, cascade) {
     ...placementDecls(place),
     ...flow.decls,
     `color: ${rendered.first.color}`,
-    ...alignDecls(node.alignY),
+    ...alignDecls(node.alignY, node.alignX === "center" && !node.wrap),
     textClips(node) ? "overflow: hidden" : null,
-    ...effectDecls(node.effects),
+    ...effectDecls(node.effects, true),
     ...compositeDecls(node.opacity, node.blend),
     textStrokeDecl(node.stroke),
     cursor.decl
   ], plan);
-  const inner = node.alignY === "top" ? rendered.inner : `<span style="${escapeAttr(declList(["width: 100%", "min-width: 0px"]))}">${rendered.inner}</span>`;
+  const inner = textInner(node, rendered.inner);
   return `${openDiv(node, style, hotAttrs(node, screen))}${inner}</div>`;
 }
 function renderRaster(node, place, assets, screen, plan, cascade) {
@@ -6208,9 +6421,18 @@ function collectReactionMap(node, reactions) {
     for (const child of node.children) collectReactionMap(child, reactions);
   }
 }
-function reactionJson(reactions) {
+function reactionJson(reactions, hosts) {
   const payload = {};
-  for (const [id, list] of reactions) payload[id] = list;
+  for (const [id, list] of reactions) {
+    payload[id] = list.map((reaction) => ({
+      trigger: reaction.trigger,
+      actions: reaction.actions.map((action) => {
+        if (action.kind !== "change") return action;
+        const host = hosts.get(hostKey(id, action.target));
+        return host === void 0 ? action : { ...action, host };
+      })
+    }));
+  }
   return JSON.stringify(payload).replaceAll("<", "\\u003c");
 }
 var PLAYER = `<script>
@@ -6244,12 +6466,21 @@ var PLAYER = `<script>
   function template(id) {
     return document.querySelector('template[data-state="' + CSS.escape(id) + '"]');
   }
+  function findNode(scope, id) {
+    if (!scope || !id) return null;
+    if (scope.nodeType === 1 && scope.getAttribute('data-node-id') === id) return scope;
+    if (!scope.querySelector) return null;
+    return scope.querySelector('[data-node-id="' + CSS.escape(id) + '"]');
+  }
+  function reactionKey(el) {
+    return el.getAttribute('data-state-id') || el.getAttribute('data-node-id');
+  }
   function cloneState(id) {
     var tmpl = template(id);
     if (!tmpl || !tmpl.content.firstElementChild) return null;
     return tmpl.content.firstElementChild.cloneNode(true);
   }
-  var PAINT = ['background', 'color', 'border-radius', 'box-shadow', 'opacity', 'filter', 'backdrop-filter', '--stroke-inset', '--stroke-pad', '--stroke-paint', '--stroke-radius'];
+  var PAINT = ['background', 'color', 'font-weight', 'border-radius', 'box-shadow', 'opacity', 'filter', 'backdrop-filter', '--stroke-inset', '--stroke-pad', '--stroke-paint', '--stroke-radius'];
   function motionMs(motion) {
     if (!motion || motion.kind === 'none') return 0;
     return motion.durationMs || 0;
@@ -6358,6 +6589,7 @@ var PLAYER = `<script>
     var clone = cloneState(action.target);
     if (!clone) return;
     var rec = record(el);
+    if (!temporary) rec.sticky = true;
     var pairs = [];
     matchNodes(el, clone, pairs);
     if (!rec.temp) rec.temp = new Map();
@@ -6378,6 +6610,7 @@ var PLAYER = `<script>
     var clone = cloneState(action.target);
     if (!clone) return;
     var rec = record(el);
+    rec.sticky = true;
     dropInserted(el);
     var pairs = [];
     matchNodes(el, clone, pairs);
@@ -6398,10 +6631,31 @@ var PLAYER = `<script>
       src.style.transition = ms > 0 ? smartList(ms, ease) : 'none';
       applyPaint(src, shot, veil ? { background: true } : null);
       applyBox(src, index === 0 ? anchoredBox(src, dst) : readBox(dst));
+      var nextId = dst.getAttribute('data-node-id');
+      if (nextId) src.setAttribute('data-state-id', nextId);
+      syncHot(src, nextId);
+      copyText(src, dst);
       if (veil) addVeil(src, nextBg, rec, ms, ease);
     });
     addMissing(el, clone, rec, ms, ease);
     rec.motion = action.motion;
+  }
+  function syncHot(src, id) {
+    var list = (id && data[id]) || [];
+    if (!list.length) {
+      src.removeAttribute('data-hot');
+      src.removeAttribute('tabindex');
+      if (src.style.cursor === 'pointer') src.style.removeProperty('cursor');
+      return;
+    }
+    src.setAttribute('data-hot', '');
+    if (list.some(function (reaction) { return reaction.trigger && reaction.trigger.kind === 'click'; })) src.setAttribute('tabindex', '0');
+    else src.removeAttribute('tabindex');
+  }
+  function copyText(src, dst) {
+    if (src.querySelector('[data-node-id]') || dst.querySelector('[data-node-id]')) return;
+    if (src.innerHTML === dst.innerHTML) return;
+    src.innerHTML = dst.innerHTML;
   }
   function addVeil(src, background, rec, ms, ease) {
     var veil = document.createElement('div');
@@ -6457,6 +6711,10 @@ var PLAYER = `<script>
   function clearTemp(el) {
     var rec = records.get(el);
     if (!rec) return;
+    var linked = rec.linked;
+    rec.linked = null;
+    if (linked) linked.forEach(function (other) { clearTemp(other); });
+    if (rec.sticky) return;
     var motion = rec.motion;
     var ms = motionMs(motion);
     var ease = motionEase(motion);
@@ -6555,14 +6813,41 @@ var PLAYER = `<script>
     }, motionMs(motion));
     current = clone;
   }
-  function runActions(el, actions) {
+  function swapAncestor(el, target) {
+    var dest = template(target);
+    var destRoot = dest && dest.content && dest.content.firstElementChild;
+    if (!destRoot) return null;
+    // A nested control is smaller than the variant it swaps. A control that
+    // swaps itself, such as a pagination dot, is the same size and stays put.
+    if (num(destRoot.style.width) <= num(el.style.width) + 1 && num(destRoot.style.height) <= num(el.style.height) + 1) return null;
+    var node = el.parentElement;
+    while (node && node !== document.body) {
+      if (node.hasAttribute && node.hasAttribute('data-swap')) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+  function subject(el, action, temporary) {
+    var scope = current || document;
+    var found = action.host ? findNode(scope, action.host) : null;
+    if (!found) found = swapAncestor(el, action.target);
+    if (!found) return el;
+    if (temporary && found !== el) {
+      var rec = record(el);
+      var linked = rec.linked || [];
+      if (linked.indexOf(found) === -1) linked.push(found);
+      rec.linked = linked;
+    }
+    return found;
+  }
+  function runActions(el, actions, temporary) {
     actions.forEach(function (action) {
       if (action.kind === 'url') window.open(action.href, '_blank', 'noopener');
       else if (action.kind === 'scroll') {
-        var target = current.querySelector('[data-node-id="' + CSS.escape(action.target) + '"]');
+        var target = findNode(current, action.target);
         if (target) target.scrollIntoView();
-      } else if (action.kind === 'change' && action.motion && action.motion.kind === 'smart') showSmart(el, action);
-      else if (action.kind === 'change') showChange(el, action, false);
+      } else if (action.kind === 'change' && temporary) showChange(subject(el, action, temporary), action, true);
+      else if (action.kind === 'change') showSmart(subject(el, action, temporary), action);
       else if (action.kind === 'navigate' || action.kind === 'swap-screen') {
         var clone = cloneState(action.target);
         if (!clone) return;
@@ -6586,11 +6871,11 @@ var PLAYER = `<script>
     });
   }
   function run(el, kind) {
-    var list = data[el.getAttribute('data-node-id')] || [];
+    var list = data[reactionKey(el)] || [];
     list.forEach(function (reaction) {
       if (reaction.trigger.kind !== kind) return;
       var delay = reaction.trigger.delayMs || 0;
-      later(el, delay, function () { runActions(el, reaction.actions); });
+      later(el, delay, function () { runActions(el, reaction.actions, kind === 'hover' || kind === 'press'); });
     });
   }
   function back(motion) {
@@ -6630,6 +6915,7 @@ var PLAYER = `<script>
     if (!next || next.contains(event.relatedTarget)) return;
     clearTimer(next);
     run(next, 'mouse-enter');
+    run(next, 'hover');
   });
   document.addEventListener('pointerout', function (event) {
     var leaving = hot(event);
@@ -6644,6 +6930,7 @@ var PLAYER = `<script>
     if (!el) return;
     pressed = el;
     run(el, 'mouse-down');
+    run(el, 'press');
   });
   document.addEventListener('pointerup', function () {
     if (!pressed) return;
@@ -6816,14 +7103,18 @@ function cornerValues(radius) {
     }
   }
 }
-function effectDecls(effects) {
+function effectDecls(effects, followsAlpha) {
   const shadows = [];
   const filters = [];
   const backdrops = [];
   for (const effect of effects) {
     switch (effect.kind) {
       case "drop-shadow":
-        shadows.push(`${px(effect.x)} ${px(effect.y)} ${px(effect.blur)} ${px(effect.spread)} ${effect.color}`);
+        if (followsAlpha && effect.spread === 0) {
+          filters.push(`drop-shadow(${px(effect.x)} ${px(effect.y)} ${px(effect.blur / 2)} ${effect.color})`);
+        } else {
+          shadows.push(`${px(effect.x)} ${px(effect.y)} ${px(effect.blur)} ${px(effect.spread)} ${effect.color}`);
+        }
         break;
       case "inner-shadow":
         shadows.push(
@@ -7074,9 +7365,21 @@ function isInitialStyle(prop, value, direction) {
       return false;
   }
 }
-function alignDecls(align) {
-  if (align === "top") return [];
-  return ["display: flex", "flex-direction: column", `justify-content: ${justifyContent(align)}`];
+function alignDecls(align, hugCenter = false) {
+  if (align === "top" && !hugCenter) return [];
+  const decls = ["display: flex", "flex-direction: column"];
+  if (align !== "top") decls.push(`justify-content: ${justifyContent(align)}`);
+  if (hugCenter) decls.push("align-items: center");
+  return decls;
+}
+function textInner(node, inner) {
+  if (node.alignX === "center" && !node.wrap) {
+    const decls = ["display: inline-block", "text-align: center", "width: max-content", "max-width: none"];
+    if (node.alignY !== "top") decls.push("align-self: center");
+    return `<span style="${escapeAttr(declList(decls))}">${inner}</span>`;
+  }
+  if (node.alignY === "top") return inner;
+  return `<span style="${escapeAttr(declList(["width: 100%", "min-width: 0px"]))}">${inner}</span>`;
 }
 function cursorDecl(node, cascade) {
   if (node.reactions.length === 0 || cascade.get("cursor") === "pointer") return { decl: null, next: cascade };
@@ -7128,8 +7431,57 @@ function walkFamilies(node, families) {
     }
   }
 }
+var GOOGLE_FONTS = /* @__PURE__ */ new Set([
+  "Alef",
+  "Assistant",
+  "Barlow",
+  "Cousine",
+  "Crimson Text",
+  "DM Sans",
+  "Figtree",
+  "Fira Sans",
+  "Frank Ruhl Libre",
+  "Heebo",
+  "IBM Plex Sans",
+  "IBM Plex Sans Hebrew",
+  "Inconsolata",
+  "Inter",
+  "JetBrains Mono",
+  "Karla",
+  "Lato",
+  "Libre Baskerville",
+  "Libre Franklin",
+  "Lora",
+  "Manrope",
+  "Merriweather",
+  "Montserrat",
+  "Mulish",
+  "Noto Sans",
+  "Noto Sans Hebrew",
+  "Nunito",
+  "Open Sans",
+  "Oswald",
+  "Outfit",
+  "Playfair Display",
+  "Plus Jakarta Sans",
+  "Poppins",
+  "PT Sans",
+  "PT Serif",
+  "Raleway",
+  "Roboto",
+  "Roboto Condensed",
+  "Roboto Mono",
+  "Rubik",
+  "Secular One",
+  "Source Sans 3",
+  "Source Serif 4",
+  "Space Grotesk",
+  "Titillium Web",
+  "Ubuntu",
+  "Work Sans"
+]);
 function googleFontLink(families) {
-  const unique = [...new Set(families)].filter((family) => !GENERIC_FAMILIES.has(family)).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+  const unique = [...new Set(families)].filter((family) => GOOGLE_FONTS.has(family)).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
   if (unique.length === 0) return null;
   const query = unique.map((family) => `family=${encodeURIComponent(family).replaceAll("%20", "+")}`).join("&");
   return `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${query}&display=swap">`;
@@ -7195,12 +7547,15 @@ function componentNameFrom(name) {
 }
 function renderReactComponent(input) {
   const states = input.states ?? /* @__PURE__ */ new Map();
-  const condensed = condenseScene(input.scene.root, states);
+  const sets = input.sets ?? /* @__PURE__ */ new Map();
+  const masters = /* @__PURE__ */ new Map();
+  for (const [id, master] of input.masters ?? []) masters.set(id, condenseScene(master, states, sets).root);
+  const condensed = condenseScene(input.scene.root, states, sets);
   rememberStyles2();
   const componentName = componentNameFrom(condensed.root.name);
   const usedClasses = /* @__PURE__ */ new Set();
   assignClasses(condensed.root, usedClasses);
-  const plan = planPointerCss(condensed.root, condensed.states, input.assets, usedClasses);
+  const plan = planPointerCss(condensed.root, condensed.states, input.assets, usedClasses, sets, masters);
   activePlan = plan;
   const hasBoxStroke = treeHasBoxStroke(condensed.root) || plan.forceStroke.size > 0;
   const { jsxLines, cssNest } = emitNode(condensed.root, null, input.assets, true, 2, EMPTY_CASCADE2);
@@ -7386,7 +7741,7 @@ function boxDeclLines(node, place, assets, cascade) {
       withSemi(backgroundDecl2(node.paints, assets)),
       withSemi(radiusDecl2(node.radius)),
       node.clips ? "overflow: hidden;" : null,
-      ...effectDecls2(node.effects).map((decl) => `${decl};`),
+      ...effectDecls2(node.effects, node.paints.length === 0).map((decl) => `${decl};`),
       ...compositeDecls2(node.opacity, node.blend).map((decl) => `${decl};`),
       ...node.stroke ? strokeDecls2(node.stroke, node.radius, assets) : [],
       ...flow.decls.map((decl) => `${decl};`),
@@ -7404,7 +7759,7 @@ function textDeclLines(node, place, first, cascade) {
     `color: ${first.color};`,
     ...alignDecls2(node.alignY).map((decl) => `${decl};`),
     textClips2(node) ? "overflow: hidden;" : null,
-    ...effectDecls2(node.effects).map((decl) => `${decl};`),
+    ...effectDecls2(node.effects, true).map((decl) => `${decl};`),
     ...compositeDecls2(node.opacity, node.blend).map((decl) => `${decl};`),
     withSemi(textStrokeDecl2(node.stroke)),
     cursor.decl === null ? null : `${cursor.decl};`
@@ -7441,24 +7796,26 @@ function emptyPlan() {
     veils: /* @__PURE__ */ new Map()
   };
 }
-function planPointerCss(root, states, assets, used) {
+function planPointerCss(root, states, assets, used, sets, masters) {
   const plan = emptyPlan();
-  walk(root, null);
+  walk(root, null, []);
   return plan;
-  function walk(node, parent) {
+  function walk(node, parent, ancestors) {
     if (parent !== null) parentByNode.set(node, parent);
     for (const reaction of node.reactions) {
       const pseudo = pointerPseudo(reaction.trigger.kind);
       if (pseudo === null) continue;
       for (const action of reaction.actions) {
         if (action.kind !== "change") continue;
+        if (changeHost(node, action.target, sets, ancestors) !== node) continue;
         const dest = states.get(action.target);
         if (dest === void 0) continue;
-        applyChange2(plan, node, dest, parent === null ? null : parent.box, pseudo, action.motion, assets, used);
+        const master = node.kind === "box" && node.component !== null ? masters.get(node.component) : void 0;
+        applyChange2(plan, node, dest, master ?? null, parent === null ? null : parent.box, pseudo, action.motion, assets, used);
       }
     }
     if (node.kind === "box") {
-      for (const child of node.children) walk(child, node);
+      for (const child of node.children) walk(child, node, [node, ...ancestors]);
     }
   }
 }
@@ -7467,15 +7824,35 @@ function pointerPseudo(kind) {
   if (kind === "press") return ":active";
   return null;
 }
-function applyChange2(plan, hot, dest, parent, pseudo, motion, assets, used) {
-  walkPair(hot, dest, parent, null, true);
-  function walkPair(src, dst, srcParent, dstParent, isHot) {
-    diffPaint2(plan, hot, pseudo, src, dst, motion, assets);
-    if (motion.kind === "smart") diffGeometry2(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion);
+function applyChange2(plan, hot, dest, master, parent, pseudo, motion, assets, used) {
+  const lockGeometry = master === null && hot.kind === "box" && hot.component !== null;
+  const scale = master === null ? { x: 1, y: 1 } : variantScale(hot.box, master.box);
+  walkPair(hot, dest, master, parent, null, null, true);
+  function walkPair(src, dst, basis, srcParent, dstParent, basisParent, isHot) {
+    diffPaint2(plan, hot, pseudo, src, dst, basis, motion, assets);
+    if (motion.kind === "smart" && basis !== null) {
+      diffVariantGeometry2(plan, hot, pseudo, src, dst, basis, srcParent, dstParent, basisParent, isHot, scale, motion);
+    } else if (motion.kind === "smart" && !lockGeometry) {
+      diffGeometry2(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion);
+    }
     if (src.kind !== "box" || dst.kind !== "box") return;
     const matched = pairByName2(src.children, dst.children);
-    for (const pair of matched.pairs) walkPair(pair.src, pair.dst, src.box, dst.box, false);
-    if (motion.kind !== "smart") return;
+    const basisChildren = /* @__PURE__ */ new Map();
+    if (basis?.kind === "box") {
+      for (const pair of pairByName2(src.children, basis.children).pairs) basisChildren.set(pair.src, pair.dst);
+    }
+    for (const pair of matched.pairs) {
+      walkPair(
+        pair.src,
+        pair.dst,
+        basisChildren.get(pair.src) ?? null,
+        src.box,
+        dst.box,
+        basis?.kind === "box" ? basis.box : null,
+        false
+      );
+    }
+    if (motion.kind !== "smart" || lockGeometry) return;
     for (const only of matched.sourceOnly) {
       setProp2(plan, hot, pseudo, only, "opacity", "0");
       rememberTransition2(plan, only, "opacity", motion);
@@ -7508,8 +7885,8 @@ function pairByName2(source, dest) {
   }
   return { pairs, sourceOnly, destOnly: dest.filter((_, index) => !used.has(index)) };
 }
-function diffPaint2(plan, hot, pseudo, src, dst, motion, assets) {
-  const from = paintProps2(src, assets);
+function diffPaint2(plan, hot, pseudo, src, dst, basis, motion, assets) {
+  const from = paintProps2(basis ?? src, assets);
   const to = paintProps2(dst, assets);
   const keys = /* @__PURE__ */ new Set([...from.keys(), ...to.keys()]);
   for (const key of keys) {
@@ -7537,11 +7914,12 @@ function diffPaint2(plan, hot, pseudo, src, dst, motion, assets) {
       if (identity2 !== void 0) setRest2(plan, src, key, identity2);
     }
   }
-  diffStroke2(plan, hot, pseudo, src, dst, assets);
+  diffStroke2(plan, hot, pseudo, src, dst, basis, assets);
 }
-function diffStroke2(plan, hot, pseudo, src, dst, assets) {
-  if (src.kind !== "box" || dst.kind !== "box") return;
-  const from = src.stroke === null ? null : strokeProps2(src, assets);
+function diffStroke2(plan, hot, pseudo, src, dst, basis, assets) {
+  const fromNode = basis ?? src;
+  if (fromNode.kind !== "box" || dst.kind !== "box" || src.kind !== "box") return;
+  const from = fromNode.stroke === null ? null : strokeProps2(fromNode, assets);
   const to = dst.stroke === null ? null : strokeProps2(dst, assets);
   if (from === null && to === null) return;
   const fromMap = from ?? EMPTY_STROKE2;
@@ -7557,6 +7935,36 @@ function diffStroke2(plan, hot, pseudo, src, dst, assets) {
   if (!changed || from !== null) return;
   plan.forceStroke.add(src);
   for (const [key, value] of EMPTY_STROKE2) setRest2(plan, src, key, value);
+}
+function diffVariantGeometry2(plan, hot, pseudo, src, dst, basis, srcParent, dstParent, basisParent, isHot, scale, motion) {
+  const rest = placement2(src, srcParent);
+  let left = rest.leftPx;
+  let top = rest.topPx;
+  let width = src.box.width;
+  let height = src.box.height;
+  if (isHot || srcParent === null || dstParent === null || basisParent === null) {
+    const size = variantSize(src.box, basis.box, dst.box, scale);
+    width = size.width;
+    height = size.height;
+    if (isHot && src.kind === "box") {
+      const dw = width - src.box.width;
+      const dh = height - src.box.height;
+      if (src.anchorX === "center") left -= dw / 2;
+      if (src.anchorX === "end") left -= dw;
+      if (src.anchorY === "center") top -= dh / 2;
+      if (src.anchorY === "end") top -= dh;
+    }
+  } else {
+    const next = variantOffset(src.box, basis.box, dst.box, srcParent, basisParent, dstParent, scale);
+    left = next.left;
+    top = next.top;
+    width = next.width;
+    height = next.height;
+  }
+  setGeom2(plan, hot, pseudo, src, motion, "left", rest.leftPx, left);
+  setGeom2(plan, hot, pseudo, src, motion, "top", rest.topPx, top);
+  setGeom2(plan, hot, pseudo, src, motion, "width", rest.widthPx, width);
+  setGeom2(plan, hot, pseudo, src, motion, "height", rest.heightPx, height);
 }
 function diffGeometry2(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion) {
   const rest = placement2(src, srcParent);
@@ -7596,13 +8004,13 @@ function paintProps2(node, assets) {
   if (node.kind === "box") {
     putDecl2(props, backgroundDecl2(node.paints, assets));
     putDecl2(props, radiusDecl2(node.radius));
-    for (const decl of effectDecls2(node.effects)) putDecl2(props, decl);
+    for (const decl of effectDecls2(node.effects, node.paints.length === 0)) putDecl2(props, decl);
     if (node.opacity !== 1) props.set("opacity", formatNumber2(node.opacity));
     return props;
   }
   if (node.kind === "text") {
     props.set("color", node.runs[0].color);
-    for (const decl of effectDecls2(node.effects)) putDecl2(props, decl);
+    for (const decl of effectDecls2(node.effects, true)) putDecl2(props, decl);
     if (node.opacity !== 1) props.set("opacity", formatNumber2(node.opacity));
   }
   return props;
@@ -8055,14 +8463,18 @@ function cornerValues2(radius) {
     }
   }
 }
-function effectDecls2(effects) {
+function effectDecls2(effects, followsAlpha) {
   const shadows = [];
   const filters = [];
   const backdrops = [];
   for (const effect of effects) {
     switch (effect.kind) {
       case "drop-shadow":
-        shadows.push(`${px2(effect.x)} ${px2(effect.y)} ${px2(effect.blur)} ${px2(effect.spread)} ${effect.color}`);
+        if (followsAlpha && effect.spread === 0) {
+          filters.push(`drop-shadow(${px2(effect.x)} ${px2(effect.y)} ${px2(effect.blur / 2)} ${effect.color})`);
+        } else {
+          shadows.push(`${px2(effect.x)} ${px2(effect.y)} ${px2(effect.blur)} ${px2(effect.spread)} ${effect.color}`);
+        }
         break;
       case "inner-shadow":
         shadows.push(
@@ -8355,10 +8767,11 @@ async function exportDocument(request, chooseLayer) {
     const body = await client.fetchNodeBody(request);
     await writeAtomic(request.destination.dumpPath, `${JSON.stringify(body, null, 2)}
 `);
-    return { kind: "dump", dumpPath: request.destination.dumpPath };
+    return { kind: "dump", dumpPath: request.destination.dumpPath, notices: [] };
   }
   const wire = await client.fetchNodeBody(request);
   const focusId = await chosenFocus(request, wire, chooseLayer);
+  const notices = focusNotices(request, wire, focusId);
   const borrowed = await borrowReactions(client, request, wire, focusId);
   const parsed = parseScene({
     nodeId: request.nodeId,
@@ -8367,23 +8780,177 @@ async function exportDocument(request, chooseLayer) {
     exclude: request.exclude,
     ...borrowed.size === 0 ? {} : { borrowed }
   });
-  const loaded = await loadStates(client, request, parsed.root);
+  const sets = readComponentSets(wire);
+  const loaded = await loadStates(client, request, parsed.root, sets);
   const scene = { root: applyOverlayChrome(parsed.root, loaded.chrome) };
   const states = /* @__PURE__ */ new Map();
   for (const [id, node] of loaded.states) states.set(id, applyOverlayChrome(node, loaded.chrome));
+  const masters = await loadMasters(client, request, scene.root, sets, states);
   const assetStates = request.destination.kind === "react" ? pointerStates(scene.root, states) : states;
   const assets = await resolveAssets(client, request, scene, assetStates);
   if (request.destination.kind === "react") {
-    const rendered = renderReactComponent({ scene, assets, states: assetStates });
+    const rendered = renderReactComponent({ scene, assets, states: assetStates, sets, masters });
     const componentDir = import_node_path.default.join(request.destination.dir, rendered.componentName);
     for (const file of rendered.files) {
       await writeAtomic(import_node_path.default.join(componentDir, file.name), file.contents);
     }
-    return { kind: "react", dir: componentDir };
+    return { kind: "react", dir: componentDir, notices };
   }
-  const html = renderDocument({ scene, assets, states });
+  const html = renderDocument({ scene, assets, states, sets, masters });
   if (request.destination.kind === "file") await writeAtomic(request.destination.htmlPath, html);
-  return { kind: "document", html };
+  return { kind: "document", html, notices };
+}
+async function inspectDocument(request, chooseLayer) {
+  const client = createFigmaClient();
+  const asExport = {
+    fileKey: request.fileKey,
+    nodeId: request.nodeId,
+    token: request.token,
+    destination: { kind: "stdout" },
+    layerName: request.layerName,
+    exclude: []
+  };
+  const wire = await client.fetchNodeBody(asExport);
+  const focusId = await chosenFocus(asExport, wire, chooseLayer);
+  const notices = focusNotices(asExport, wire, focusId);
+  const borrowed = await borrowReactions(client, asExport, wire, focusId);
+  const parsed = parseScene({
+    nodeId: request.nodeId,
+    wire,
+    ...focusId === void 0 ? {} : { focusId },
+    exclude: [],
+    ...borrowed.size === 0 ? {} : { borrowed }
+  });
+  const sets = readComponentSets(wire);
+  const loaded = await loadStates(client, asExport, parsed.root, sets);
+  const root = applyOverlayChrome(parsed.root, loaded.chrome);
+  const states = /* @__PURE__ */ new Map();
+  for (const [id, node] of loaded.states) states.set(id, applyOverlayChrome(node, loaded.chrome));
+  return { text: inspectReport({ root, states, sets }), notices };
+}
+function inspectReport(input) {
+  const sets = input.sets ?? /* @__PURE__ */ new Map();
+  const deltas = /* @__PURE__ */ new Map();
+  collectColorDeltas(input.root, [], input.states, sets, deltas);
+  const blocks = [];
+  emitInspect(input.root, true, deltas, blocks);
+  return blocks.join("\n");
+}
+function focusNotices(request, wire, focusId) {
+  if (request.layerName === null || focusId === void 0) return [];
+  const parent = parentFillHint({ nodeId: request.nodeId, wire, focusId });
+  if (parent === null) return [];
+  return [`Parent ${parent.name} (${parent.id}) has a fill this layer does not.`];
+}
+function collectColorDeltas(node, ancestors, states, sets, deltas) {
+  for (const reaction of node.reactions) {
+    if (reaction.trigger.kind !== "hover" && reaction.trigger.kind !== "press") continue;
+    for (const action of reaction.actions) {
+      if (action.kind !== "change") continue;
+      const dest = states.get(action.target);
+      if (dest === void 0) continue;
+      const host = changeHost(node, action.target, sets, ancestors);
+      const lines = colorDelta(reaction.trigger.kind, host, dest);
+      if (lines.length === 0) continue;
+      const existing = deltas.get(host.id) ?? [];
+      for (const line of lines) {
+        if (!existing.includes(line)) existing.push(line);
+      }
+      deltas.set(host.id, existing);
+    }
+  }
+  if (node.kind === "box") {
+    for (const child of node.children) collectColorDeltas(child, [node, ...ancestors], states, sets, deltas);
+  }
+}
+function colorDelta(trigger, host, dest) {
+  const lines = [];
+  const fromFill = paintSummary(nodePaints(host));
+  const toFill = paintSummary(nodePaints(dest));
+  if (fromFill !== toFill && (fromFill !== "none" || toFill !== "none")) {
+    lines.push(`${trigger}: fill ${fromFill} -> ${toFill}`);
+  }
+  const fromStroke = paintSummary(nodeStroke(host)?.paints);
+  const toStroke = paintSummary(nodeStroke(dest)?.paints);
+  if (fromStroke !== toStroke && (fromStroke !== "none" || toStroke !== "none")) {
+    lines.push(`${trigger}: stroke ${fromStroke} -> ${toStroke}`);
+  }
+  const fromOpacity = nodeOpacity(host);
+  const toOpacity = nodeOpacity(dest);
+  if (fromOpacity !== null && toOpacity !== null && fromOpacity !== toOpacity) {
+    lines.push(`${trigger}: opacity ${fromOpacity} -> ${toOpacity}`);
+  }
+  return lines;
+}
+function emitInspect(node, force, deltas, blocks) {
+  const body = inspectBody(node, deltas.get(node.id) ?? []);
+  if (force || body.length > 0) blocks.push([`${node.name} (${node.id})`, ...body].join("\n"));
+  if (node.kind !== "box") return;
+  for (const child of node.children) emitInspect(child, false, deltas, blocks);
+}
+function inspectBody(node, deltas) {
+  const lines = [];
+  const fill = paintSummary(nodePaints(node));
+  if (fill !== "none") lines.push(`fill: ${fill}`);
+  const stroke = paintSummary(nodeStroke(node)?.paints);
+  if (stroke !== "none") lines.push(`stroke: ${stroke}`);
+  const radius = radiusLine(node);
+  if (radius !== null) lines.push(radius);
+  if (node.kind === "text") lines.push(...fontLines(node));
+  lines.push(...deltas);
+  return lines;
+}
+function nodePaints(node) {
+  if (node.kind === "box") return node.paints;
+  return void 0;
+}
+function nodeStroke(node) {
+  if (node.kind === "box" || node.kind === "text") return node.stroke;
+  return null;
+}
+function nodeOpacity(node) {
+  if (node.kind === "raster") return null;
+  return node.opacity;
+}
+function paintSummary(paints) {
+  if (paints === void 0 || paints === null || paints.length === 0) return "none";
+  const colors = [];
+  for (const paint of paints) {
+    if (paint.kind === "solid") colors.push(paint.color);
+    else if (paint.kind === "linear-gradient" || paint.kind === "radial-gradient") {
+      for (const stop of paint.stops) colors.push(stop.color);
+    }
+  }
+  if (colors.length === 0) return "none";
+  return colors.join(", ");
+}
+function radiusLine(node) {
+  if (node.kind !== "box") return null;
+  switch (node.radius.kind) {
+    case "square":
+      return null;
+    case "uniform":
+      return `radius: ${node.radius.px}`;
+    case "ellipse":
+      return "radius: ellipse";
+    case "corners":
+      return `radius: ${node.radius.topLeft} ${node.radius.topRight} ${node.radius.bottomRight} ${node.radius.bottomLeft}`;
+    default: {
+      const _exhaustive = node.radius;
+      return _exhaustive;
+    }
+  }
+}
+function fontLines(node) {
+  const lines = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const run of node.runs) {
+    const line = `font: ${run.fontFamily} ${run.fontSizePx} ${run.fontWeight}`;
+    if (seen.has(line)) continue;
+    seen.add(line);
+    lines.push(line);
+  }
+  return lines;
 }
 async function borrowReactions(client, request, wire, focusId) {
   const hosts = unreactedInstances({
@@ -8427,7 +8994,7 @@ async function borrowReactions(client, request, wire, focusId) {
   }
   return borrowed;
 }
-async function loadStates(client, request, root) {
+async function loadStates(client, request, root, sets) {
   const states = /* @__PURE__ */ new Map();
   const chrome = /* @__PURE__ */ new Map();
   let pending = unseenDestinations(root, states);
@@ -8437,6 +9004,7 @@ async function loadStates(client, request, root) {
       token: request.token,
       nodeIds: pending
     });
+    for (const [id, setId] of readComponentSets(wire)) sets.set(id, setId);
     const discovered = [];
     for (const id of pending) {
       if (states.has(id)) continue;
@@ -8459,6 +9027,45 @@ async function loadStates(client, request, root) {
     pending = discovered;
   }
   return { states, chrome };
+}
+async function loadMasters(client, request, root, sets, states) {
+  const masters = /* @__PURE__ */ new Map();
+  const pending = [];
+  const seen = /* @__PURE__ */ new Set();
+  collectMasters(root, [], sets, states, masters, pending, seen);
+  if (pending.length === 0) return masters;
+  const wire = await client.fetchNodes({
+    fileKey: request.fileKey,
+    token: request.token,
+    nodeIds: pending
+  });
+  for (const [id, setId] of readComponentSets(wire)) sets.set(id, setId);
+  for (const id of pending) {
+    if (destinationMissing(wire, id)) continue;
+    try {
+      masters.set(id, parseScene({ nodeId: id, wire, exclude: [] }).root);
+    } catch (error) {
+      if (error instanceof ExportError && error.failure.kind === "invalid-document") continue;
+      throw error;
+    }
+  }
+  return masters;
+}
+function collectMasters(node, ancestors, sets, states, masters, pending, seen) {
+  for (const reaction of node.reactions) {
+    for (const action of reaction.actions) {
+      if (action.kind !== "change") continue;
+      const host = changeHost(node, action.target, sets, ancestors);
+      if (host.kind !== "box" || host.component === null || seen.has(host.component)) continue;
+      seen.add(host.component);
+      const known = states.get(host.component);
+      if (known !== void 0) masters.set(host.component, known);
+      else pending.push(host.component);
+    }
+  }
+  if (node.kind === "box") {
+    for (const child of node.children) collectMasters(child, [node, ...ancestors], sets, states, masters, pending, seen);
+  }
 }
 function pointerStates(root, states) {
   const needed = /* @__PURE__ */ new Map();
@@ -8527,9 +9134,9 @@ async function resolveAssets(client, request, scene, states) {
   for (const state of states.values()) collect(state, fillRefs, rasterIds, seenFills, seenRasters);
   const fillUrls = fillRefs.length === 0 ? /* @__PURE__ */ new Map() : await client.fetchFillUrls({ fileKey: request.fileKey, token: request.token, refs: fillRefs });
   const rasterUrls = rasterIds.length === 0 ? /* @__PURE__ */ new Map() : await client.fetchRasterUrls({ fileKey: request.fileKey, token: request.token, ids: rasterIds });
-  const assetsDir = request.destination.kind === "file" ? request.destination.assetsDir : null;
-  const htmlPath = request.destination.kind === "file" ? request.destination.htmlPath : null;
-  if (htmlPath === null || assetsDir === null) return { fills: fillUrls, rasters: rasterUrls };
+  const local = localAssets(request, scene);
+  if (local === null) return { fills: fillUrls, rasters: rasterUrls };
+  const { assetsDir, anchorPath } = local;
   const fills = /* @__PURE__ */ new Map();
   const rasters = /* @__PURE__ */ new Map();
   await Promise.all([
@@ -8538,17 +9145,29 @@ async function resolveAssets(client, request, scene, states) {
       if (remote === void 0) throw new ExportError({ kind: "missing-asset", id: ref });
       const destination = import_node_path.default.join(assetsDir, fillFileName(ref));
       await download(remote, destination);
-      fills.set(ref, relativeToHtml(htmlPath, destination));
+      fills.set(ref, relativeToHtml(anchorPath, destination));
     }),
     ...rasterIds.map(async (id) => {
       const remote = rasterUrls.get(id);
       if (remote === void 0) throw new ExportError({ kind: "missing-asset", id });
       const destination = import_node_path.default.join(assetsDir, rasterFileName(id));
       await download(remote, destination);
-      rasters.set(id, relativeToHtml(htmlPath, destination));
+      rasters.set(id, relativeToHtml(anchorPath, destination));
     })
   ]);
   return { fills, rasters };
+}
+function localAssets(request, scene) {
+  const destination = request.destination;
+  if (destination.kind === "file" && destination.assetsDir !== null) {
+    return { assetsDir: destination.assetsDir, anchorPath: destination.htmlPath };
+  }
+  if (destination.kind === "react" && destination.assetsDir !== null) {
+    const componentName = componentNameFrom(scene.root.name);
+    const componentDir = import_node_path.default.join(destination.dir, componentName);
+    return { assetsDir: destination.assetsDir, anchorPath: import_node_path.default.join(componentDir, `${componentName}.js`) };
+  }
+  return null;
 }
 function collect(node, fills, rasters, seenFills, seenRasters) {
   switch (node.kind) {
@@ -8593,8 +9212,11 @@ function relativeToHtml(htmlPath, assetPath) {
 async function download(url, destination) {
   let response;
   try {
-    response = await fetch(url);
-  } catch {
+    response = await fetch(url, { signal: AbortSignal.timeout(18e4) });
+  } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      throw new ExportError({ kind: "network", message: "The asset download timed out." });
+    }
     throw new ExportError({ kind: "network", message: "The asset download failed." });
   }
   if (!response.ok) {
@@ -8634,20 +9256,26 @@ async function runCli(input) {
     return 0;
   }
   try {
-    const request = parseArgs(input.argv, input.env);
+    const parsed = parseArgs(input.argv, input.env);
     const interactive = input.terminal?.interactive ?? process.stdin.isTTY === true;
     const readAnswer = input.terminal?.readAnswer ?? readStdinLine;
-    const output = await exportDocument(
-      request,
-      (matches) => pickNamedLayer({
-        name: request.layerName ?? "",
-        matches,
-        interactive,
-        readAnswer,
-        write
-      })
-    );
-    if (output.kind === "document" && request.destination.kind === "stdout") {
+    const chooseLayer = (matches) => pickNamedLayer({
+      name: parsed.request.layerName ?? "",
+      matches,
+      interactive,
+      readAnswer,
+      write
+    });
+    if (parsed.command === "inspect") {
+      const inspected = await inspectDocument(parsed.request, chooseLayer);
+      for (const notice of inspected.notices) write(notice);
+      writeOut(inspected.text.endsWith("\n") ? inspected.text : `${inspected.text}
+`);
+      return 0;
+    }
+    const output = await exportDocument(parsed.request, chooseLayer);
+    for (const notice of output.notices) write(notice);
+    if (output.kind === "document" && parsed.request.destination.kind === "stdout") {
       process.stdout.write(output.html);
     }
     return 0;
@@ -8698,17 +9326,22 @@ function wantsHelp(argv) {
   if (command === "help" || command === "--help" || command === "-h") return true;
   return rest.includes("--help") || rest.includes("-h");
 }
-var HELP = `Usage: figma-cli export <file-or-url> <node-id> [--name layer] [--exclude layer [--index n]] [--stdout] [--out file.html] [--assets dir] [--dist dir] [--dump file.json]
+var HELP = `Usage: figma-cli export <file-or-url> [node-id] [--name layer] [--exclude layer [--index n]] [--stdout] [--out file.html] [--assets dir] [--dist dir] [--dump file.json]
+       figma-cli inspect <file-or-url> [node-id] [--name layer]
 
 Set FIGMA_ACCESS_TOKEN in the environment. It is not a flag. \`figma-cli help\` prints this text and exits 0.
 
-With no \`--stdout\`, \`--out\`, \`--dist\`, or \`--dump\`, the process exits 2 and does not fetch.
+A figma.com URL may include ?node-id=. That id is the node, and a second node id must match it. A file key still needs a node id.
+
+Failures start with \`error: <kind>\` on stderr, then a sentence. Exit codes are unchanged.
+
+With no \`--stdout\`, \`--out\`, \`--dist\`, or \`--dump\`, export exits 2 and does not fetch.
 
 --name layer
-Exact, case-sensitive descendant name. That layer becomes the document, children included. The fetched node's own name is not a match. One match is the root. Several matches list each path and, on a terminal, ask for a number. With no terminal, the process prints the paths and exits 10. No match exits 9.
+Exact, case-sensitive descendant name. That layer becomes the document, children included. The fetched node's own name is not a match. One match is the root. Several matches list each path and id and, on a terminal, ask for a number. With no terminal, the process prints the paths and exits 10. No match exits 9 and names that node's children and their ids. A copied layer id that Figma does not serve as its own node exits 4. Export the instance id and pass --name.
 
 --exclude layer
-Exact, case-sensitive name. After the export root is chosen, every visible direct child with that name is omitted, and so are its children. A deeper layer of that name stays. The export root stays even when its name is listed. A name that matches nothing is ignored. Repeat the flag for each name. There is no prompt when several direct children share the name; each of them is omitted. Figma reuses one generated name, such as Frame 1562162381, on unrelated layers. A bare --exclude drops only the export root's own children with that name. --exclude cannot be combined with --dump.
+Exact, case-sensitive name. After the export root is chosen, every visible direct child with that name is omitted, and so are its children. A deeper layer of that name stays. The export root stays even when its name is listed. A name that matches nothing is ignored. Repeat the flag for each name. There is no prompt when several direct children share the name; each of them is omitted. Figma reuses one generated name, such as Frame 1562162381, on unrelated layers. A bare --exclude drops only the export root's own children with that name. --exclude cannot be combined with --dump or inspect.
 
 --index n
 Qualifies the immediately preceding --exclude. The number is the 1-based slot in the export root's children array, hidden entries included. Figma lists that array back to front, so 1 is the bottom row of the Layers panel. Only that child is omitted, with its children. The other direct children of the same name stay, and so does a deeper layer of that name. The child at that slot must have the given name. A missing slot or a different name exits 6. With --name, the index counts the chosen layer's children. --index requires a preceding --exclude, applies once, and the value is an integer of 1 or more.
@@ -8720,20 +9353,36 @@ Write the HTML document to stdout. Cannot be combined with --out, --dist, or --d
 Write the HTML document to this path. Cannot be combined with --stdout, --dist, or --dump.
 
 --assets dir
-Download images next to the HTML file. Requires --out. Image URLs from Figma expire when this flag is omitted. Cannot be used with --dist.
+Download images into this directory. Requires --out or --dist. Paths in the output are relative to the HTML file or the component .js file. Image URLs from Figma expire when this flag is omitted. Cannot be used with --stdout or --dump.
 
 --dist dir
-Write a React component with styled-components under \`<dir>/<ComponentName>/\`: \`index.js\`, \`<ComponentName>.js\`, and \`Styled<ComponentName>.js\`. ComponentName is the PascalCase form of the export root layer. Image fills and rasters stay as the Figma URLs. Those URLs expire. Cannot be combined with --stdout, --out, --dump, or --assets.
+Write a React component with styled-components under \`<dir>/<ComponentName>/\`: \`index.js\`, \`<ComponentName>.js\`, and \`Styled<ComponentName>.js\`. ComponentName is the PascalCase form of the export root layer. Image fills and rasters stay as the Figma URLs unless --assets is set. Those URLs expire. Cannot be combined with --stdout, --out, or --dump.
 
 --dump file.json
-Write the raw nodes response and do not render. Cannot be combined with --out, --assets, --name, --exclude, or --index.
+Write the raw nodes response and do not render. Cannot be combined with --stdout, --out, --assets, --name, --exclude, or --index.
+
+inspect
+Print the node's fills, type, stroke, radius, and hover or press color and opacity changes. It writes no file. Geometry, text swaps, and scale are omitted. --exclude and the output flags are rejected.
 `;
 function parseArgs(argv, env) {
-  const usageLine = "Usage: figma-cli export <file-or-url> <node-id> [--name layer] [--exclude layer [--index n]] [--stdout] [--out file.html] [--assets dir] [--dist dir] [--dump file.json]";
-  const [command, fileArg, nodeArg, ...rest] = argv;
-  if (command !== "export" || fileArg === void 0 || nodeArg === void 0) {
-    throw usage(usageLine);
+  const usageLine = "Usage: figma-cli export <file-or-url> [node-id] [--name layer] [--exclude layer [--index n]] [--stdout] [--out file.html] [--assets dir] [--dist dir] [--dump file.json]";
+  const [command, fileArg, ...rest] = argv;
+  if (command !== "export" && command !== "inspect" || fileArg === void 0) {
+    throw usage(command === "inspect" ? "Usage: figma-cli inspect <file-or-url> [node-id] [--name layer]" : usageLine);
   }
+  const target = parseExportTarget(fileArg);
+  let nodeId = target.nodeId;
+  let flags = rest;
+  const positional = rest[0];
+  if (positional !== void 0 && !positional.startsWith("--")) {
+    const explicit = parseNodeId(positional);
+    if (nodeId !== null && explicit !== nodeId) {
+      throw usage("The URL node-id does not match the node id.");
+    }
+    nodeId = explicit;
+    flags = rest.slice(1);
+  }
+  if (nodeId === null) throw usage("Expected a Figma node id.");
   let htmlPath = null;
   let assetsDir = null;
   let dumpPath = null;
@@ -8741,9 +9390,10 @@ function parseArgs(argv, env) {
   let stdoutFlag = false;
   let layerName = null;
   const exclude = [];
-  for (let index = 0; index < rest.length; index += 1) {
-    const flag = rest[index];
+  for (let index = 0; index < flags.length; index += 1) {
+    const flag = flags[index];
     if (flag === "--stdout") {
+      if (command === "inspect") throw usage("`inspect` does not take an output flag.");
       if (stdoutFlag) throw usage("`--stdout` was given more than once.");
       stdoutFlag = true;
       continue;
@@ -8751,9 +9401,15 @@ function parseArgs(argv, env) {
     if (flag !== "--out" && flag !== "--assets" && flag !== "--dist" && flag !== "--dump" && flag !== "--name" && flag !== "--exclude" && flag !== "--index") {
       throw usage("Unexpected argument.");
     }
-    const value = rest[index + 1];
+    const value = flags[index + 1];
     if (value === void 0 || value.startsWith("--")) throw usage(`Expected a value for ${flag}.`);
     index += 1;
+    if (flag === "--out" || flag === "--dist" || flag === "--dump" || flag === "--assets") {
+      if (command === "inspect") throw usage("`inspect` does not take an output flag.");
+    }
+    if (flag === "--exclude" || flag === "--index") {
+      if (command === "inspect") throw usage("`--exclude` cannot be combined with `inspect`.");
+    }
     if (flag === "--out") {
       if (htmlPath !== null) throw usage("`--out` was given more than once.");
       htmlPath = value;
@@ -8767,11 +9423,25 @@ function parseArgs(argv, env) {
     else if (layerName !== null) throw usage("`--name` was given more than once.");
     else layerName = value;
   }
+  const tokenRaw = env.FIGMA_ACCESS_TOKEN;
+  if (tokenRaw === void 0 || tokenRaw === "") {
+    throw usage("FIGMA_ACCESS_TOKEN is missing or invalid.");
+  }
+  const token = parseAccessToken(tokenRaw);
+  if (command === "inspect") {
+    return {
+      command,
+      request: { fileKey: target.fileKey, nodeId, token, layerName }
+    };
+  }
   if (stdoutFlag && htmlPath !== null) throw usage("`--stdout` cannot be combined with `--out`.");
   if (distDir !== null && (htmlPath !== null || stdoutFlag || dumpPath !== null)) {
     throw usage("`--dist` cannot be combined with `--out`, `--stdout`, or `--dump`.");
   }
-  if (assetsDir !== null && htmlPath === null) throw usage("`--assets` requires `--out`.");
+  if (assetsDir !== null && htmlPath === null && distDir === null) {
+    throw usage("`--assets` requires `--out` or `--dist`.");
+  }
+  if (dumpPath !== null && stdoutFlag) throw usage("`--dump` cannot be combined with `--stdout`.");
   if (dumpPath !== null && (htmlPath !== null || assetsDir !== null)) {
     throw usage("`--dump` cannot be combined with `--out` or `--assets`.");
   }
@@ -8783,20 +9453,19 @@ function parseArgs(argv, env) {
   }
   const outputModes = (stdoutFlag ? 1 : 0) + (htmlPath !== null ? 1 : 0) + (distDir !== null ? 1 : 0) + (dumpPath !== null ? 1 : 0);
   if (outputModes === 0) {
-    throw usage("Choose an output with --stdout, --out file.html, or --dist dir.");
+    throw usage("Choose an output with --stdout, --out file.html, --dist dir, or --dump file.json.");
   }
-  const tokenRaw = env.FIGMA_ACCESS_TOKEN;
-  if (tokenRaw === void 0 || tokenRaw === "") {
-    throw usage("FIGMA_ACCESS_TOKEN is missing or invalid.");
-  }
-  const destination = dumpPath !== null ? { kind: "dump", dumpPath } : distDir !== null ? { kind: "react", dir: distDir } : htmlPath !== null ? { kind: "file", htmlPath, assetsDir } : { kind: "stdout" };
+  const destination = dumpPath !== null ? { kind: "dump", dumpPath } : distDir !== null ? { kind: "react", dir: distDir, assetsDir } : htmlPath !== null ? { kind: "file", htmlPath, assetsDir } : { kind: "stdout" };
   return {
-    fileKey: parseFileArg(fileArg),
-    nodeId: parseNodeId(nodeArg),
-    token: parseAccessToken(tokenRaw),
-    destination,
-    layerName,
-    exclude
+    command: "export",
+    request: {
+      fileKey: target.fileKey,
+      nodeId,
+      token,
+      destination,
+      layerName,
+      exclude
+    }
   };
 }
 function qualifyExclude(exclude, value) {
@@ -8812,13 +9481,17 @@ function usage(message) {
   return new ExportError({ kind: "usage", message });
 }
 function failureSentence(failure) {
+  return `error: ${failure.kind}
+${failureBody(failure)}`;
+}
+function failureBody(failure) {
   switch (failure.kind) {
     case "usage":
       return failure.message;
     case "unauthorized":
       return "Figma rejected the access token.";
     case "not-found":
-      return `Figma has no node ${failure.nodeId}.`;
+      return failure.nodeId.startsWith("I") ? `Figma has no node ${failure.nodeId}.` : `Figma has no node ${failure.nodeId}. Export the instance id and pass --name for a layer inside it.`;
     case "rate-limited":
       return "Figma rate limited the request.";
     case "invalid-document":
@@ -8826,7 +9499,7 @@ function failureSentence(failure) {
     case "missing-asset":
       return `Figma did not return an image for ${failure.id}.`;
     case "unmatched-name":
-      return failure.children.length === 0 ? `No layer named ${failure.name} under ${failure.nodeId}.` : `No layer named ${failure.name} under ${failure.nodeId}. Children: ${failure.children.join(", ")}.`;
+      return failure.children.length === 0 ? `No layer named ${failure.name} under ${failure.nodeId}.` : `No layer named ${failure.name} under ${failure.nodeId}. Children: ${failure.children.map((child) => `${child.name} (${child.id})`).join(", ")}.`;
     case "ambiguous-name":
       return [`More than one layer is named ${failure.name}.`, ...failure.paths.map((match) => layerLine(match))].join(
         "\n"

@@ -16,7 +16,8 @@ model-workspace-protocol/
 │   └── skills/                        (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
 │       ├── jira-research/             (searching/extracting info from Jira -- experimental)
 │       ├── browser-cdp/               (drive Chrome via CDP scripts: screenshots, diffs, DOM, console, interaction -- provisional)
-│       └── system-flowcharts/         (plan and generate editable Excalidraw flowcharts)
+│       ├── system-flowcharts/         (plan and generate editable Excalidraw flowcharts)
+│       └── wp-graphql/                (fixed commands for a project's WordPress GraphQL schema)
 └── workspaces/
     ├── course-deck-production/        (unstructured material -> course PowerPoints)
     ├── workspace-builder/             (builds new MWP workspaces)
@@ -35,6 +36,7 @@ model-workspace-protocol/
 | Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
 | Drive a browser (screenshots, visual diffs, page data, console errors, interaction) | `_core/skills/browser-cdp/SKILL.md` |
 | Generate a planned Excalidraw flowchart of an idea or system | `_core/skills/system-flowcharts/SKILL.md` |
+| Read a project's live WordPress GraphQL schema for ACF sections | `_core/skills/wp-graphql/SKILL.md` |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
 | Understand the placeholder system | `_core/placeholder-syntax.md` |
 | Use a template for a new workspace | `_core/templates/` |

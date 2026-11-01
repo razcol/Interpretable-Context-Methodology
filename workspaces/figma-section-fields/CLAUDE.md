@@ -63,8 +63,8 @@ Replace each STATUS with COMPLETE or PENDING.
 | Task | Load These | Do NOT Load |
 |------|-----------|-------------|
 | Export a layer | `stages/01-figma-export/CONTEXT.md`, `shared/export-contract.md`, `stages/01-figma-export/references/figma-cli-setup.md`, `targets/repos.md` | Stage 02 and stage 03 files until the export record exists. Then load stage 02. The repo that is not the chosen project |
-| Write the fragment | `stages/02-section-graphql/CONTEXT.md`, `stages/01-figma-export/output/export-record.md`, `skills/acf-section-fields/SKILL.md`, `skills/acf-section-fields/references/field-patterns.md`, `stages/02-section-graphql/references/graphql-stage.md` | Stage 03 files until `<Folder>.gql` and `field-report.md` exist in the section folder. Then load stage 03. `tools/figma-cli` source, the other site's repo |
-| Bind fields | `stages/03-field-migration/CONTEXT.md`, `stages/01-figma-export/output/export-record.md`, `<export-dir>/<Folder>/<Folder>.gql`, `stages/03-field-migration/references/migration-rules.md`, `skills/acf-section-fields/references/field-patterns.md` (fragment shapes only) | `tools/figma-cli`, the other site's repo, `field-report.md`, skill files other than `field-patterns.md` |
+| Write the fragment | `stages/02-section-graphql/CONTEXT.md`, `stages/01-figma-export/output/export-record.md`, `_core/skills/wp-graphql/SKILL.md`, `stages/02-section-graphql/references/graphql-stage.md` | Stage 03 files until `<Folder>.gql` and `field-report.md` exist in the section folder. Then load stage 03. `skills/acf-section-fields/`, `tools/figma-cli` source, the other site's repo |
+| Bind fields | `stages/03-field-migration/CONTEXT.md`, `stages/01-figma-export/output/export-record.md`, `<export-dir>/<Folder>/<Folder>.gql`, `stages/03-field-migration/references/migration-rules.md` | `tools/figma-cli`, the other site's repo, `field-report.md`, `skills/acf-section-fields/` |
 
 ## Stage Handoffs
 
@@ -72,4 +72,4 @@ A run is the whole pipeline. Stage 01 writes `stages/01-figma-export/output/expo
 
 Later stages read earlier outputs. Earlier stages do not read later stages.
 
-`tools/figma-cli` is the shipped exporter. Run it; do not read it as source. `skills/acf-section-fields` is the field and fragment guide. Load a skill file only when the stage CONTEXT names it.
+`tools/figma-cli` is the shipped exporter. Run it; do not read it as source. Stage 02 reads the live schema through the wp-graphql skill named in its CONTEXT. `skills/acf-section-fields` is the Jaecoo and luxury-trade field guide. Load a skill file only when the stage CONTEXT names it.

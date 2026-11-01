@@ -10,7 +10,6 @@ Bind fragment fields to the exported component.
 | Fragment | `<export-dir>/<Folder>/<Folder>.gql` | Full file | Fields to bind |
 | Component | Files beside the `.gql` path | `index.js`, `<Folder>.js`, `Styled<Folder>.js` | JSX to edit |
 | Rules | `references/migration-rules.md` | Full file | Binding rules |
-| Patterns | `../../skills/acf-section-fields/references/field-patterns.md` | Fragment shapes only | MediaItem and ButtonItem shapes |
 
 ## Process
 
@@ -18,7 +17,7 @@ Bind fragment fields to the exported component.
 2. Plan a binding from each fragment field to the JSX: text nodes, images, and buttons.
 3. Show the binding table in the reply and apply it in this same run. Do not wait for another message before editing.
 4. Edit the component so content comes from those props. Leave the Styled file as the visual shell. Keep `index.js` as the default export.
-5. `order` is not a field. Images follow MediaItem (`node.mediaItemUrl`). Buttons follow ButtonItem. Read those shapes from the skill file.
+5. `order` is not a field. Bind each selected field in the shape the `.gql` writes. A spread is that object. Do not replace it with a single image URL or a flat button.
 6. If the user already gave a render location, wire the component only there and record the path. If they did not, stop. Do not ask where to render.
 7. Run the audit. Write `output/migration-record.md` listing files changed and the field bindings.
 

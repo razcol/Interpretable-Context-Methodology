@@ -14,9 +14,7 @@ Keep `index.js` as the default export.
 
 ## Images and buttons
 
-Images follow MediaItem (`node.mediaItemUrl`). Buttons follow ButtonItem.
-
-Shared fragment shapes are defined only in `skills/acf-section-fields/references/field-patterns.md`. Read that file. Do not copy its tables into this stage or into the component.
+Bind the selection in the `.gql`. A field that spreads `BackgroundFields`, `ResponsiveMediaItem`, `MediaItem`, or `Button` is passed through as that object. Do not flatten a group into one image URL unless the fragment selects `node.mediaItemUrl` itself.
 
 ## Render location
 
