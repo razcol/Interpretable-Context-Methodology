@@ -287,6 +287,44 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(compact["ToneEnum"]["enumValues"], ["dark", "light"])
         self.assertEqual(compact["ButtonFields"]["fields"][0]["acfType"], "select")
         self.assertEqual(compact["ButtonFields"]["fields"][0]["choices"], ["primary", "ghost"])
+    def test_null_compare_says_nothing_compared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "Ghost.gql"
+            path.write_text("fragment Ghost on FieldsFlexibleGhostLayout { title }\n")
+            result = wp.command_check_fragment(schema(), False, root, path)
+        joined = " ".join(result["summary"])
+        self.assertIn("No type was compared", joined)
+        self.assertNotIn("Every fragment field exists", joined)
+        self.assertFalse(result["fragment"]["compared"])
+
+    def test_check_repo_lists_not_compared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / "app" / "components" / "Sections" / "Ghost"
+            folder.mkdir(parents=True)
+            (folder / "Ghost.gql").write_text("fragment Ghost on FieldsFlexibleGhostLayout { title }\n")
+            result = wp.command_check_repo(schema(), False, root)
+        self.assertEqual([item["name"] for item in result["notCompared"]], ["Ghost"])
+        self.assertEqual(result["problems"], [])
+        self.assertNotIn("Every checked fragment matches.", result["summary"])
+
+    def test_section_layout_not_on_flexible(self):
+        data = schema()
+        data["FieldsFlexibleLoneLayout"] = obj("FieldsFlexibleLoneLayout", [field("title", "String")])
+        with tempfile.TemporaryDirectory() as tmp:
+            result = wp.command_section(data, False, Path(tmp), "Lone")
+        self.assertIn("is not on the flexible layout type", result["summary"][0])
+        self.assertFalse(result["onFlexibleUnion"])
+
+    def test_type_layout_not_on_flexible(self):
+        data = schema()
+        data["FieldsFlexibleLoneLayout"] = obj("FieldsFlexibleLoneLayout", [field("title", "String")])
+        with tempfile.TemporaryDirectory() as tmp:
+            result = wp.command_type(data, False, Path(tmp), "FieldsFlexibleLoneLayout")
+        self.assertEqual(result["layoutType"], "FieldsFlexibleLoneLayout")
+        self.assertIsNone(result["groupType"])
+        self.assertIn("is not on the flexible layout type", result["summary"][0])
 
 
 if __name__ == "__main__":

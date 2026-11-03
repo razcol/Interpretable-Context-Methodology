@@ -1019,6 +1019,7 @@ def fragment_report(schema: dict, fragments: dict[str, dict], fragment: dict) ->
         "on": target,
         "onExists": target_exists,
         "comparedTo": compared,
+        "compared": compared is not None,
         "missingOnSchema": missing,
         "notSelected": omitted_fields(schema, compared, fragment["selection"], fragments),
         "shapeMismatches": mismatches,
@@ -1325,7 +1326,10 @@ def exposed_names(schema: dict, type_name: str | None) -> list[str]:
 def append_fragment_facts(summary: list[str], report: dict) -> None:
     summary.append(f"Fragment {report['name']} targets {report['on']}.")
     summary.append("That target type is in the schema." if report["onExists"] else "That target type is not in the schema.")
-    if report.get("comparedTo") and report["comparedTo"] != report["on"]:
+    if not report.get("comparedTo"):
+        summary.append("No type was compared. The fragment fields were not checked.")
+        return
+    if report["comparedTo"] != report["on"]:
         summary.append(f"Field comparison used {report['comparedTo']}.")
     if report["missingOnSchema"]:
         summary.append(f"Fragment fields absent on {report['comparedTo']}: " + ", ".join(report["missingOnSchema"][:12]) + ".")
@@ -1352,6 +1356,7 @@ def compare_file(schema: dict, repo: Path, file_path: Path, prefer: str | None, 
         mismatches: list[dict] = []
         compare_selection(parsed["selection"], fallback_type, schema, fragments, "", missing, mismatches)
         report["comparedTo"] = fallback_type
+        report["compared"] = True
         report["missingOnSchema"] = missing
         report["notSelected"] = omitted_fields(schema, fallback_type, parsed["selection"], fragments)
         report["shapeMismatches"] = mismatches
@@ -1368,6 +1373,10 @@ def command_section(schema: dict, schema_cached: bool, repo: Path, section: str)
     summary = []
     if resolved["layout"] and resolved["layout"] in members:
         summary.append(f"{section} is flexible layout {resolved['layout']} on {union_name_for(schema, resolved['layout'])}.")
+    elif resolved["layout"]:
+        summary.append(
+            f"{section} has layout type {resolved['layout']}, but {resolved['layout']} is not on the flexible layout type."
+        )
     elif resolved["group"]:
         summary.append(f"{section} is field group {resolved['group']}, not a flexible layout.")
     else:
@@ -1426,12 +1435,19 @@ def command_type(schema: dict, schema_cached: bool, repo: Path, name: str) -> di
     if primary is None:
         primary = resolved["layout"] or resolved["group"]
     layout = primary if primary in members else None
-    group = primary if primary and primary not in members else None
+    stray_layout = (
+        primary
+        if primary and not layout and primary.endswith("Layout") and primary.startswith(LAYOUT_PREFIXES)
+        else None
+    )
+    group = primary if primary and primary not in members and not stray_layout else None
     tree = field_tree(schema, primary, 6, set()) if primary else []
     exposed = exposed_names(schema, primary)
     summary = []
     if layout:
         summary.append(f"{name} is flexible layout {layout} on {union_name_for(schema, layout)}.")
+    elif stray_layout:
+        summary.append(f"{name} has layout type {stray_layout}, but {stray_layout} is not on the flexible layout type.")
     elif root:
         summary.append(f"{name} is root field {root['parent']}.{root['field']} of type {root['type']}.")
     elif group:
@@ -1454,7 +1470,7 @@ def command_type(schema: dict, schema_cached: bool, repo: Path, name: str) -> di
         "summary": summary,
         "type": primary,
         "rootField": None if root is None else f"{root['parent']}.{root['field']}",
-        "layoutType": layout,
+        "layoutType": layout or stray_layout,
         "onFlexibleUnion": bool(layout),
         "groupType": group,
         "exposedAs": exposed,
@@ -1514,6 +1530,7 @@ def command_choices(schema: dict, schema_cached: bool, spec: str) -> dict:
 def command_check_repo(schema: dict, schema_cached: bool, repo: Path) -> dict:
     fragments = load_fragments(repo)
     problems = []
+    not_compared = []
     checked = 0
     for path in iter_gql_files(repo):
         try:
@@ -1525,6 +1542,9 @@ def command_check_repo(schema: dict, schema_cached: bool, repo: Path) -> dict:
             local = dict(fragments)
             local[fragment["name"]] = fragment
             report = fragment_report(schema, local, fragment)
+            if not report["compared"]:
+                not_compared.append({"file": str(path), "name": report["name"], "on": report["on"]})
+                continue
             if report["missingOnSchema"] or report["shapeMismatches"]:
                 problems.append(
                     {
@@ -1536,14 +1556,20 @@ def command_check_repo(schema: dict, schema_cached: bool, repo: Path) -> dict:
                     }
                 )
     summary = [f"{checked} fragments checked.", f"{len(problems)} fragments do not match the schema."]
+    if not_compared:
+        summary.append(
+            f"{len(not_compared)} fragments were not compared because their target type is not in the schema."
+        )
     if problems:
         for item in problems[:20]:
             if item["missingOnSchema"]:
                 summary.append(f"{item['file']} {item['name']}: absent {', '.join(item['missingOnSchema'][:6])}.")
             else:
                 summary.append(f"{item['file']} {item['name']}: shape mismatch.")
-    else:
+    elif not not_compared:
         summary.append("Every checked fragment matches.")
+    else:
+        summary.append("Every compared fragment matches.")
     return {
         "ok": True,
         "command": "check-repo",
@@ -1551,6 +1577,7 @@ def command_check_repo(schema: dict, schema_cached: bool, repo: Path) -> dict:
         "summary": summary,
         "checked": checked,
         "problems": problems,
+        "notCompared": not_compared,
     }
 
 

@@ -32,7 +32,7 @@ Looks up `FieldsFlexible<Name>Layout`, then `EnFieldsEnFlexible<Name>Layout`, th
 
 | Field | Meaning |
 |---|---|
-| `layoutType` | The flexible layout type, or null. |
+| `layoutType` | The flexible layout type, or null. When the type exists but is not on the flexible layout type, `layoutType` is set, `onFlexibleUnion` is false, and `summary` says so. |
 | `onFlexibleUnion` | Whether that layout is a member of a flexible layout type. That type is a union or an interface. |
 | `groupType` | A field-group object type named like the section, or null. |
 | `exposedAs` | `Parent.field` pairs whose field type is that group or layout. |
@@ -41,6 +41,8 @@ Looks up `FieldsFlexible<Name>Layout`, then `EnFieldsEnFlexible<Name>Layout`, th
 | `similarLayout` | Another flexible layout that shares the most field names. This is not an ACF clone. `basedOn` is `fragment` when the fragment matches, and `live` when it does not. `cloneFrom` is the same object. |
 
 When the fragment targets a missing layout type and a group type exists, the field comparison uses the group type and `fragment.comparedTo` names it.
+
+`fragment.compared` is false when no type was compared. Then `missingOnSchema` and `shapeMismatches` are empty because nothing was checked, and `summary` says "No type was compared. The fragment fields were not checked." That is not a match.
 
 A live-field label `clone of SomeType` means the GraphQL type is a reused ACF clone, not `similarLayout`.
 
@@ -66,7 +68,7 @@ Same fragment fields as `section`, for the first fragment in the file, plus `onF
 
 ## check-repo
 
-Compares every fragment under `app/` and `code/app/`. `checked` is the number read. `problems` lists only files whose fragment has `missingOnSchema` or `shapeMismatches`.
+Compares every fragment under `app/` and `code/app/`. `checked` is the number read. `problems` lists only files whose fragment has `missingOnSchema` or `shapeMismatches`. `notCompared` lists fragments whose `on` type is not in the schema, such as shared `on TYPE` fragments or a layout that does not exist yet. Those were not checked, so `summary` never says every fragment matches while `notCompared` is non-empty.
 
 ## Shared flags
 
