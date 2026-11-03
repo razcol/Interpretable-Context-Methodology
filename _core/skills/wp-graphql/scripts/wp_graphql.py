@@ -1650,6 +1650,147 @@ def command_check_fragment(schema: dict, schema_cached: bool, repo: Path, file_p
     }
 
 
+PLAN_MAX_BYTES = 256 * 1024
+PLAN_MAX_DEPTH = 6
+PLAN_TOP_KEYS = {"schemaVersion", "folder", "graphqlName", "layoutType", "fields", "questions", "route"}
+PLAN_FIELD_KEYS = {"name", "label", "acfType", "shape", "cloneOf", "min", "max", "list", "children"}
+PLAN_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+PLAN_UNKNOWN = ["title", "location", "min/max", "required", "seamless clone"]
+SHARED_SHAPES = {"mediaItem", "responsiveMedia", "responsiveFull", "button", "spacing"}
+LIST_ACF_TYPES = {"repeater", "gallery", "relationship", "flexible_content"}
+
+
+def validate_plan_fields(fields: object, depth: int, where: str) -> None:
+    if not isinstance(fields, list):
+        raise UsageError(f"Plan {where} must be a list.")
+    if depth > PLAN_MAX_DEPTH:
+        raise UsageError(f"Plan fields nest deeper than {PLAN_MAX_DEPTH} levels.")
+    for entry in fields:
+        if not isinstance(entry, dict):
+            raise UsageError(f"Plan {where} entries must be objects.")
+        unknown = set(entry) - PLAN_FIELD_KEYS
+        if unknown:
+            raise UsageError(f"Plan field has unknown keys: {', '.join(sorted(unknown))}.")
+        name = entry.get("name")
+        if not isinstance(name, str) or not PLAN_NAME.fullmatch(name):
+            raise UsageError("Every plan field needs a GraphQL name.")
+        for key in ("label", "acfType", "shape", "cloneOf"):
+            if key in entry and entry[key] is not None and not isinstance(entry[key], str):
+                raise UsageError(f"Plan field {name}: {key} must be a string.")
+        for key in ("min", "max"):
+            if key in entry and entry[key] is not None and (not isinstance(entry[key], int) or isinstance(entry[key], bool)):
+                raise UsageError(f"Plan field {name}: {key} must be a whole number.")
+        if "list" in entry and not isinstance(entry["list"], bool):
+            raise UsageError(f"Plan field {name}: list must be true or false.")
+        validate_plan_fields(entry.get("children", []), depth + 1, f"field {name} children")
+
+
+def load_plan(path: Path) -> dict:
+    try:
+        size = path.stat().st_size
+    except OSError:
+        raise CommandError("FILE_NOT_FOUND", "Plan file was not found.", 4)
+    if size > PLAN_MAX_BYTES:
+        raise UsageError("Plan file is larger than 256 KB.")
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raise UsageError("Plan file is not valid JSON.")
+    if not isinstance(data, dict):
+        raise UsageError("Plan must be a JSON object.")
+    unknown = set(data) - PLAN_TOP_KEYS
+    if unknown:
+        raise UsageError(f"Plan has unknown keys: {', '.join(sorted(unknown))}.")
+    if data.get("schemaVersion") != 1:
+        raise UsageError("Plan schemaVersion must be 1.")
+    validate_plan_fields(data.get("fields"), 1, "fields")
+    return data
+
+
+def plan_is_list(entry: dict) -> bool | None:
+    if "list" in entry:
+        return entry["list"]
+    if entry.get("acfType"):
+        return entry["acfType"] in LIST_ACF_TYPES
+    return None
+
+
+def diff_trees(plan_fields: list[dict], live_nodes: list[dict], prefix: str, out: dict) -> None:
+    live = {node["name"]: node for node in live_nodes if node["name"] != "fieldGroupName"}
+    planned = {entry["name"]: entry for entry in plan_fields}
+    for name in planned:
+        if name not in live:
+            out["added"].append(prefix + name)
+    for name in live:
+        if name not in planned:
+            out["removed"].append(prefix + name)
+    for name, entry in planned.items():
+        node = live.get(name)
+        if node is None:
+            continue
+        path = prefix + name
+        reasons = []
+        if entry.get("shape") and node.get("shape") and entry["shape"] != node["shape"]:
+            reasons.append(f"shape {entry['shape']} in the plan, {node['shape']} live")
+        if entry.get("cloneOf") and node.get("namedType") and entry["cloneOf"] != node["namedType"]:
+            reasons.append(f"clone of {entry['cloneOf']} in the plan, {node['namedType']} live")
+        if entry.get("acfType") and node.get("acfType") and entry["acfType"] != node["acfType"]:
+            reasons.append(f"ACF type {entry['acfType']} in the plan, {node['acfType']} live")
+        if reasons:
+            out["typeChanged"].append({"path": path, "reason": "; ".join(reasons)})
+        wanted_list = plan_is_list(entry)
+        live_list = "[" in (node.get("gqlType") or "").replace("!", "")
+        if wanted_list is not None and wanted_list != live_list:
+            out["cardinalityChanged"].append(
+                {"path": path, "plan": "list" if wanted_list else "single", "live": "list" if live_list else "single"}
+            )
+        children = entry.get("children") or []
+        if children or (not entry.get("shape") in SHARED_SHAPES and entry.get("acfType") in ("group", "repeater")):
+            diff_trees(children, node.get("children") or [], path + ".", out)
+
+
+def command_diff_group(schema: dict, schema_cached: bool, section: str, plan: dict) -> dict:
+    graphql_name(section)
+    members = layout_members(schema)
+    resolved = resolve_section_types(schema, section, members)
+    primary = resolved["layout"] or resolved["group"]
+    tree = field_tree(schema, primary, 6, set()) if primary else []
+    out: dict = {"added": [], "removed": [], "typeChanged": [], "cardinalityChanged": []}
+    diff_trees(plan.get("fields") or [], tree, "", out)
+    summary = []
+    if primary is None:
+        summary.append(f"No GraphQL type was found for {section}. Every plan field is added.")
+    else:
+        summary.append(f"Compared the plan with {primary}.")
+    differences = sum(len(value) for value in out.values())
+    if differences:
+        for key, label in (
+            ("added", "In the plan, not live"),
+            ("removed", "Live, not in the plan"),
+        ):
+            if out[key]:
+                summary.append(f"{label}: " + ", ".join(out[key][:12]) + ".")
+        for item in out["typeChanged"][:12]:
+            summary.append(f"{item['path']}: {item['reason']}.")
+        for item in out["cardinalityChanged"][:12]:
+            summary.append(f"{item['path']} is {item['plan']} in the plan and {item['live']} live.")
+    else:
+        summary.append("The live group matches the plan.")
+    summary.append("GraphQL cannot show the group title, location, min/max, required, or whether a clone is Seamless.")
+    return {
+        "ok": True,
+        "command": "diff-group",
+        "schemaCached": schema_cached,
+        "section": section,
+        "summary": summary,
+        "layoutType": resolved["layout"],
+        "groupType": resolved["group"],
+        "matches": differences == 0 and primary is not None,
+        **out,
+        "unknown": list(PLAN_UNKNOWN),
+    }
+
+
 class CommandParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         emit({"ok": False, "error": {"code": "USAGE", "message": message}}, 1)
@@ -1673,6 +1814,9 @@ def build_parser() -> argparse.ArgumentParser:
     choices.add_argument("spec", help="Type.field, for example ButtonFields.variant.")
     check = sub.add_parser("check-fragment", parents=[common])
     check.add_argument("file")
+    diff = sub.add_parser("diff-group", parents=[common])
+    diff.add_argument("name")
+    diff.add_argument("--plan", required=True, help="Field plan JSON (schemaVersion 1).")
     return parser
 
 
@@ -1685,6 +1829,7 @@ def main() -> None:
     settings = connection_settings(repo, args.store)
     if args.command == "status":
         emit(command_status(settings, args.refresh))
+    plan = load_plan(Path(args.plan).expanduser()) if args.command == "diff-group" else None
     schema, schema_cached = load_schema(settings, args.refresh)
     if args.command == "patterns":
         emit(command_patterns(schema, schema_cached))
@@ -1698,6 +1843,8 @@ def main() -> None:
         emit(command_check_fragment(schema, schema_cached, repo, Path(args.file).expanduser()))
     if args.command == "check-repo":
         emit(command_check_repo(schema, schema_cached, repo))
+    if args.command == "diff-group":
+        emit(command_diff_group(schema, schema_cached, args.name, plan))
     raise UsageError("Unknown command.")
 
 

@@ -70,6 +70,21 @@ Same fragment fields as `section`, for the first fragment in the file, plus `onF
 
 Compares every fragment under `app/` and `code/app/`. `checked` is the number read. `problems` lists only files whose fragment has `missingOnSchema` or `shapeMismatches`. `notCompared` lists fragments whose `on` type is not in the schema, such as shared `on TYPE` fragments or a layout that does not exist yet. Those were not checked, so `summary` never says every fragment matches while `notCompared` is non-empty.
 
+## diff-group NAME --plan FILE
+
+Compares a field plan with the live layout (or group) for section NAME, using the same tree as `section`. The plan is JSON. Its shape is defined in `workspaces/figma-section-fields/stages/02-field-plan/references/field-plan-schema.md`: `schemaVersion` 1 and `fields`, each with `name` and optional `label`, `acfType`, `shape`, `cloneOf`, `min`, `max`, `list` and `children`. A plan over 256 KB, nested deeper than 6 levels, with unknown keys, or with a field name that is not a GraphQL name is a `USAGE` error.
+
+| Field | Meaning |
+|---|---|
+| `matches` | True when the section exists and every list below is empty. |
+| `added` | Dotted paths in the plan that are not live. |
+| `removed` | Live paths not in the plan. `fieldGroupName` is ignored. |
+| `typeChanged` | `{path, reason}` when `shape`, `cloneOf` (against `namedType`) or `acfType` differ. `acfType` is compared only when both sides have it. |
+| `cardinalityChanged` | `{path, plan, live}` when one side is a list and the other is not. The plan side is `list`, or derived from `acfType` (repeater, gallery, relationship, flexible content). |
+| `unknown` | Settings GraphQL cannot show: title, location, min/max, required, Seamless. |
+
+Children of a field with a shared `shape` (media, button, spacing) are not compared.
+
 ## Shared flags
 
 - `--repo` (required): Next app root. The store is `dist/dev/cache/store.json` under that root, or `code/dist/dev/cache/store.json`.

@@ -453,6 +453,82 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(wp.CACHE_VERSION, 3)
         self.assertFalse(wp.cache_is_fresh({"version": 2, "fetchedAt": int(time.time()), "schema": {}}))
         self.assertTrue(wp.cache_is_fresh({"version": 3, "fetchedAt": int(time.time()), "schema": {}}))
+    def diff_schema(self):
+        data = schema()
+        data["FieldsFlexibleGridLayout"] = obj(
+            "FieldsFlexibleGridLayout",
+            [
+                field("fieldGroupName", "String"),
+                field("intro", "String", acf="text"),
+                field("grid", "GridItem", gql="[GridItem]", acf="repeater"),
+            ],
+        )
+        data["GridItem"] = obj("GridItem", [field("text", "String", acf="text"), field("image", "AcfMediaItemConnectionEdge")])
+        data["FieldsFlexible_Layout"]["possibleTypes"].append("FieldsFlexibleGridLayout")
+        return data
+
+    def plan(self, fields):
+        return {"schemaVersion": 1, "folder": "Grid", "fields": fields}
+
+    def matching_fields(self):
+        return [
+            {"name": "intro", "acfType": "text"},
+            {"name": "grid", "acfType": "repeater", "children": [
+                {"name": "text", "acfType": "text"},
+                {"name": "image", "shape": "mediaItem"},
+            ]},
+        ]
+
+    def test_diff_group_identical_plan_has_no_differences(self):
+        result = wp.command_diff_group(self.diff_schema(), False, "Grid", self.plan(self.matching_fields()))
+        self.assertTrue(result["matches"])
+        for key in ("added", "removed", "typeChanged", "cardinalityChanged"):
+            self.assertEqual(result[key], [])
+        self.assertIn("seamless clone", result["unknown"])
+
+    def test_diff_group_added_and_removed(self):
+        fields = [{"name": "header", "acfType": "group"}, {"name": "intro", "acfType": "text"}]
+        result = wp.command_diff_group(self.diff_schema(), False, "Grid", self.plan(fields))
+        self.assertEqual(result["added"], ["header"])
+        self.assertEqual(result["removed"], ["grid"])
+        self.assertFalse(result["matches"])
+
+    def test_diff_group_type_changed(self):
+        fields = self.matching_fields()
+        fields[1]["children"][1] = {"name": "image", "shape": "responsiveMedia"}
+        result = wp.command_diff_group(self.diff_schema(), False, "Grid", self.plan(fields))
+        self.assertEqual([item["path"] for item in result["typeChanged"]], ["grid.image"])
+
+    def test_diff_group_cardinality_changed(self):
+        fields = self.matching_fields()
+        fields[1] = {"name": "grid", "acfType": "group", "list": False, "children": fields[1]["children"]}
+        result = wp.command_diff_group(self.diff_schema(), False, "Grid", self.plan(fields))
+        self.assertEqual(result["cardinalityChanged"][0]["path"], "grid")
+        self.assertEqual(result["cardinalityChanged"][0]["live"], "list")
+
+    def test_diff_group_missing_section_adds_everything(self):
+        result = wp.command_diff_group(self.diff_schema(), False, "Nothing", self.plan(self.matching_fields()))
+        self.assertEqual(result["added"], ["intro", "grid"])
+        self.assertFalse(result["matches"])
+
+    def test_plan_validation_rejects_bad_plans(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "plan.json"
+            cases = [
+                {"schemaVersion": 2, "fields": []},
+                {"schemaVersion": 1, "fields": [{"name": "bad name"}]},
+                {"schemaVersion": 1, "fields": [], "extra": 1},
+                {"schemaVersion": 1, "fields": [{"name": "a", "children": [{"name": "b", "children": [{"name": "c", "children": [{"name": "d", "children": [{"name": "e", "children": [{"name": "f", "children": [{"name": "g"}]}]}]}]}]}]}]},
+            ]
+            for case in cases:
+                path.write_text(__import__("json").dumps(case))
+                with self.assertRaises(wp.UsageError):
+                    wp.load_plan(path)
+            path.write_text("not json")
+            with self.assertRaises(wp.UsageError):
+                wp.load_plan(path)
+            path.write_text(__import__("json").dumps(self.plan(self.matching_fields())))
+            self.assertEqual(wp.load_plan(path)["schemaVersion"], 1)
 
 
 if __name__ == "__main__":

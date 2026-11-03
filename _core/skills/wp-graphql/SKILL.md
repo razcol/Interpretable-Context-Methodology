@@ -1,6 +1,6 @@
 ---
 name: wp-graphql
-description: "Run fixed commands against this project's WordPress GraphQL schema for ACF sections, options pages, and templates. Use when the task needs live section patterns, where a type is attached, the field tree for a section or type name, select choices, or a check of one .gql fragment or every fragment in the repo. Pass the section name, Type.field, or fragment path. Do not write a GraphQL query, introspection, or sign-in script."
+description: "Run fixed commands against this project's WordPress GraphQL schema for ACF sections, options pages, and templates. Use when the task needs live section patterns, where a type is attached, the field tree for a section or type name, select choices, a check of one .gql fragment or every fragment in the repo, or a comparison of a field plan with the live group. Pass the section name, Type.field, or fragment path. Do not write a GraphQL query, introspection, or sign-in script."
 ---
 
 # WP GraphQL
@@ -17,6 +17,7 @@ python3 scripts/wp_graphql.py type carsBoardSettings --repo /path/to/next
 python3 scripts/wp_graphql.py choices ButtonFields.variant --repo /path/to/next
 python3 scripts/wp_graphql.py check-fragment /path/to/File.gql --repo /path/to/next
 python3 scripts/wp_graphql.py check-repo --repo /path/to/next
+python3 scripts/wp_graphql.py diff-group ImageGrid --plan /path/to/field-plan.json --repo /path/to/next
 ```
 
 Add `--refresh` only when the user just changed ACF and the cached schema would be stale. The cache lasts 15 minutes.
@@ -31,7 +32,8 @@ Add `--refresh` only when the user just changed ACF and the cached schema would 
 | What is an options page, template, or other type that is not a flexible layout? | `type NAME` | `summary`, then `tree` |
 | What are the select options for one field? | `choices Type.field` | `summary`, then `choices` |
 | Does this one fragment match the live type? | `check-fragment FILE` | `summary` |
-| Which fragments in this repo select a field the schema does not have? | `check-repo` | `summary`, then `problems` |
+| Which fragments in this repo select a field the schema does not have? | `check-repo` | `summary`, then `problems` and `notCompared` |
+| Does the ACF group the user built match a field plan? | `diff-group NAME --plan FILE` | `matches`, then `summary` |
 
 `section` looks for `app/components/Sections/<Name>/<Name>.gql` or `code/app/components/Sections/<Name>/<Name>.gql` and includes that comparison. Use `check-fragment` when the file is somewhere else. Use `type` for `siteSettings`, `carsBoardSettings`, `Template_ContactUs`, and any other name that is not a flexible layout.
 
@@ -66,7 +68,7 @@ Failure is `{"ok": false, "error": {"code", "message"}}`.
 | 1 | `USAGE` | Fix the arguments. |
 | 2 | `AUTH_FAILED` | The repo store or `WP_GQL_ENDPOINT` / `WP_GQL_TOKEN` is missing or rejected. Do not invent another sign-in. |
 | 3 | `HTTP_FAILED` or `SCHEMA` | The endpoint did not answer. Retry once with `--refresh`. |
-| 4 | `FILE_NOT_FOUND` | The fragment path is wrong. |
+| 4 | `FILE_NOT_FOUND` | The fragment or plan path is wrong. |
 | 5 | `CHOICES_UNAVAILABLE` | The option list is not in the GraphQL schema. Stop. |
 | 99 | `INTERNAL` | Report the command and stop. |
 
