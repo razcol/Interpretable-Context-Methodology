@@ -41,6 +41,7 @@ Use `--profile NAME --port N` for a separate login/identity. Each profile has it
 | Console, page errors, failed/4xx requests | `capture.js` | `--url`, `--out details.json` | counts plus the first 50 of each |
 | Page structure for reasoning | `snapshot.js` | `--url`, `--mode a11y\|dom\|html\|text`, `--selector` | file path plus stats |
 | Compare two screenshots | `diff.js` | `--baseline`, `--current`, `--max-diff-ratio`, `--init` | match, diff ratio, diff PNG |
+| Does a local page scroll sideways? | `measure.js` | `--url` (localhost or file:// only), `--viewports 1920x1080,1440x900,1100x800`, `--selector` | per viewport: `scrollWidth`, `innerWidth`, `overflowPx`, section box, screenshot |
 | Click, type, submit, assert | `interact.js` | `--steps '[...]'`, optional `--url` | per-step results, console errors |
 | Cookies and localStorage | `state.js` | `cookies-get`, `cookies-set`, `storage-get`, ... | redacted values by default |
 
@@ -67,6 +68,7 @@ Success: `{"ok": true, ...}` and exit 0. Failure: `{"ok": false, "error": {"code
 | 5 | TIMEOUT | Navigation or wait exceeded `--timeout` (default 30000 ms). |
 | 6 | ASSERTION_FAILED | An `assert_*` step did not hold. |
 | 10 | DIFF_DETECTED | Only with `diff.js --fail-on-diff`. |
+| 11 | OVERFLOW_DETECTED | `measure.js`: at least one viewport scrolls sideways. `error.details` holds the full per-viewport result. |
 | 99 | INTERNAL | Unexpected. Log it in `LOG.md`. |
 
 An HTTP 404 or 500 is not a script failure. Check `status` in the JSON.
@@ -98,3 +100,13 @@ Full examples: `references/recipes.md`.
 - `references/troubleshooting.md`: common failures and fixes
 - `fixtures/`: a local test page and server plus `run-all.sh`, `run-extra.sh`, `run-persist.sh` to re-verify the scripts after any change
 - `LOG.md`: usage log, keep updating
+
+## Checking a section export
+
+The figma-section-fields workspace verifies a section at two levels.
+
+- **Level 1, export fidelity.** Screenshot the figma-cli HTML preview (`file://`) at the Figma frame size with `screenshot.js`, then `diff.js --baseline <figma-cli render PNG> --current <screenshot> --max-diff-ratio 1`. Report `diffRatio`. Fonts that are not installed and image smoothing move many pixels, so treat it as a number to compare between runs, not a pass mark.
+- **Level 2, in the app.** Run `measure.js --url http://localhost:3000/<route> --selector '#<order>'` at 1920, 1440 and 1100. Exit 0 means no horizontal overflow at any width. Exit 11 means it overflows; `error.details.results` says where and by how much.
+
+`measure.js` refuses any URL that is not `http://localhost`, `http://127.0.0.1` or `file://`. Its fixtures test is `bash fixtures/run-measure.sh [OUT_DIR]` with the browser started.
+

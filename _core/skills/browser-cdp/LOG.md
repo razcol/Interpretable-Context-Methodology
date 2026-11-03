@@ -2,6 +2,11 @@
 
 Append an entry every time the skill is used, even when it works. Record the command family, the target, the outcome, and anything surprising. Update `SKILL.md` when a pattern repeats.
 
+## 2026-11-03 measure.js for section verify (figma-section-fields)
+- Added `measure.js`: per viewport `scrollWidth` against `innerWidth`, the `--selector` box, and a screenshot; exit 11 (`OVERFLOW_DETECTED`) on overflow. Local URLs only.
+- Tested with `fixtures/run-measure.sh`: a 1300px block overflows a 1100px viewport by exactly 200px; a fluid block passes at 1920, 1440 and 1100; https and LAN URLs are refused with exit 1.
+- Level 1 smoke test: the figma-cli preview of node 1404-7715 against Figma's own PNG gives `diffRatio` 0.605 with pixelmatch defaults. Missing fonts and image resampling account for most of it, so the ratio is only useful run to run.
+
 ## 2026-10-04 Initial build and test (skill-factory stage 04)
 
 - Environment: WSL2 Ubuntu, Node 20.20, Chrome 147 at /usr/bin/google-chrome, headless.

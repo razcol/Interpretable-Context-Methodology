@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 
-export const EXIT = { USAGE: 1, BROWSER: 2, NAVIGATION: 3, ELEMENT: 4, TIMEOUT: 5, ASSERT: 6, DIFF: 10, INTERNAL: 99 };
+export const EXIT = { USAGE: 1, BROWSER: 2, NAVIGATION: 3, ELEMENT: 4, TIMEOUT: 5, ASSERT: 6, DIFF: 10, OVERFLOW: 11, INTERNAL: 99 };
 
 export class CliError extends Error {
   constructor(code, message, exit = EXIT.INTERNAL, details) {
