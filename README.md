@@ -169,6 +169,7 @@ Each stage produces an output file. You can edit that file before moving on. The
 |-----------|-------------|--------|
 | [course-deck-production](workspaces/course-deck-production/) | Unstructured material (PDFs, papers, notes) into polished PowerPoint slide decks | 5 |
 | [workspace-builder](workspaces/workspace-builder/) | Build a new ICM workspace for any domain | 5 |
+| [figma-section-fields](workspaces/figma-section-fields/) | A Figma layer into a section of your Next.js + styled-components + WPGraphQL/ACF repos, with field plan, fragment, binding and a browser check | 5 |
 
 ## Build Your Own Workspace
 

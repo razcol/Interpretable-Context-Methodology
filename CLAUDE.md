@@ -15,14 +15,14 @@ model-workspace-protocol/
 │   ├── templates/                     (blank starting points for new workspaces)
 │   └── skills/                        (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
 │       ├── jira-research/             (searching/extracting info from Jira -- experimental)
-│       ├── browser-cdp/               (drive Chrome via CDP scripts: screenshots, diffs, DOM, console, interaction -- provisional)
+│       ├── browser-cdp/               (drive Chrome via CDP scripts: screenshots, diffs, overflow at set widths, DOM, console, interaction -- provisional)
 │       ├── system-flowcharts/         (plan and generate editable Excalidraw flowcharts)
 │       └── wp-graphql/                (fixed commands for a project's WordPress GraphQL schema)
 └── workspaces/
     ├── course-deck-production/        (unstructured material -> course PowerPoints)
     ├── workspace-builder/             (builds new MWP workspaces)
     ├── skill-factory/                 (create and maintain agent skills, validated via real usage)
-    └── figma-section-fields/          (Figma layer to React section, GraphQL fragment, and bound fields)
+    └── figma-section-fields/          (Figma layer to a Server/Client section in your Next repos: new, sync, resync, element routes, browser-checked)
 ```
 
 ## Routing
@@ -32,11 +32,11 @@ model-workspace-protocol/
 | Build course slide decks from source material | `workspaces/course-deck-production/CLAUDE.md` |
 | Build a new workspace for any domain | `workspaces/workspace-builder/CLAUDE.md` |
 | Create or maintain an agent skill | `workspaces/skill-factory/CLAUDE.md` |
-| Export a Figma layer into a section with a GraphQL fragment | `workspaces/figma-section-fields/CLAUDE.md` |
+| Turn a Figma layer into a section of a Next.js repo (new section, sync to an ACF group, resync drift, restyle one control) | `workspaces/figma-section-fields/CLAUDE.md` |
 | Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
 | Drive a browser (screenshots, visual diffs, page data, console errors, interaction) | `_core/skills/browser-cdp/SKILL.md` |
 | Generate a planned Excalidraw flowchart of an idea or system | `_core/skills/system-flowcharts/SKILL.md` |
-| Read a project's live WordPress GraphQL schema for ACF sections | `_core/skills/wp-graphql/SKILL.md` |
+| Read a project's live WordPress GraphQL schema for ACF sections, check fragments, or compare a field plan with a group | `_core/skills/wp-graphql/SKILL.md` |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
 | Understand the placeholder system | `_core/placeholder-syntax.md` |
 | Use a template for a new workspace | `_core/templates/` |
