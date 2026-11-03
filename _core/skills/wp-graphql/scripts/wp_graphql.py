@@ -506,7 +506,7 @@ def layout_language(member: str) -> str:
 def find_flexibles(schema: dict) -> list[dict]:
     found = []
     for name, item in schema.items():
-        if item.get("kind") != "UNION":
+        if item.get("kind") not in ("UNION", "INTERFACE"):
             continue
         possible = item.get("possibleTypes") or []
         members = [
@@ -514,7 +514,7 @@ def find_flexibles(schema: dict) -> list[dict]:
             for member in possible
             if member.endswith("Layout") and member.startswith(LAYOUT_PREFIXES)
         ]
-        if len(members) < 2:
+        if len(members) < 2 or len(members) != len(possible):
             continue
         languages = {layout_language(member) for member in members}
         language = next(iter(languages)) if len(languages) == 1 else "mixed"
@@ -528,6 +528,52 @@ def layout_members(schema: dict) -> list[str]:
     for entry in find_flexibles(schema):
         members.extend(entry["members"])
     return members
+
+
+def find_flexible_field(schema: dict) -> dict | None:
+    """The fields.flexible field, even when its union has fewer than two layouts."""
+    index = reverse_fields(schema)
+    candidates = []
+    for type_name, item in schema.items():
+        if item.get("kind") != "OBJECT" or type_name.startswith("WithAcf"):
+            continue
+        reachers = []
+        for owner, owner_field in index.get(type_name, []):
+            if owner_field not in ("fields", "enFields"):
+                continue
+            owner_item = schema.get(owner) or {}
+            if owner_item.get("kind") != "OBJECT" or owner.startswith("WithAcf"):
+                continue
+            reachers.append(owner_field)
+        if not reachers:
+            continue
+        for field in item["fields"]:
+            name = field["name"]
+            named_flexible = name in ("flexible", "enFlexible")
+            acf_flexible = field.get("acfType") == "flexible_content"
+            if not named_flexible and not acf_flexible:
+                continue
+            if name == "enFlexible" and "enFields" in reachers:
+                parent_field = "enFields"
+            elif "fields" in reachers:
+                parent_field = "fields"
+            else:
+                parent_field = reachers[0]
+            language = "en" if parent_field == "enFields" or name == "enFlexible" else "he"
+            candidates.append(
+                {
+                    "parentType": type_name,
+                    "parentField": parent_field,
+                    "field": name,
+                    "gqlType": field.get("gqlType") or field.get("named"),
+                    "language": language,
+                }
+            )
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (0 if item["language"] == "he" else 1, item["parentType"], item["field"]))
+    chosen = candidates[0]
+    return {key: chosen[key] for key in ("parentType", "parentField", "field", "gqlType")}
 
 
 def flexible_field_paths(schema: dict, union_name: str) -> tuple[list[str], list[str]]:
@@ -1171,8 +1217,15 @@ def command_patterns(schema: dict, schema_cached: bool) -> dict:
     unions = [summarize_union(schema, entry) for entry in find_flexibles(schema)]
     options = options_roots(schema)
     templates = template_groups(schema)
+    flexible_field = find_flexible_field(schema)
     if not unions:
         summary = ["No flexible layout union was found in this schema."]
+        if flexible_field:
+            summary.append(
+                "A flexible field exists on {parentType}.{field} ({gqlType}) via {parentField}, with no layout union.".format(
+                    **flexible_field
+                )
+            )
     else:
         summary = []
         for block in unions:
@@ -1219,6 +1272,7 @@ def command_patterns(schema: dict, schema_cached: bool) -> dict:
         "counts": primary["counts"] if primary else {},
         "examples": primary["examples"] if primary else {},
         "layouts": [layout for block in unions for layout in block["layouts"]],
+        "flexibleField": flexible_field,
         "options": options,
         "templates": templates[:40],
     }

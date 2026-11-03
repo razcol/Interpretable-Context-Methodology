@@ -14,16 +14,17 @@ Every command prints one JSON object. `summary` is a list of short facts. The ot
 
 | Field | Meaning |
 |---|---|
-| `flexible.union` | The Hebrew flexible union when it exists, otherwise the first union found. |
-| `flexible.paths` | `Page`, `Post`, `Model`, and `Article` paths for that union. |
-| `flexible.unions` | One entry per flexible union: `union`, `language` (`he` or `en`), `paths`, and `layouts`. |
+| `flexible.union` | The Hebrew flexible layout type when it exists, otherwise the first one found. The GraphQL type is a union or an interface whose possible types are all layouts. A wider interface that only contains some layouts, such as `AcfFieldGroup`, is not this type. The key stays `union` either way. |
+| `flexible.paths` | `Page`, `Post`, `Model`, and `Article` paths for that layout type. |
+| `flexible.unions` | One entry per flexible layout type: `union`, `language` (`he` or `en`), `paths`, and `layouts`. |
+| `flexibleField` | The flexible-content field reached by `fields` or `enFields`, or null when that field is absent. `parentType` is the group type that owns it. `parentField` is `fields` or `enFields`. `field` is the field name (`flexible` or `enFlexible`). `gqlType` is that field's GraphQL type. This is set when the field exists even if `flexible` is null because the layout list has fewer than two layouts. Hebrew `fields` / `flexible` wins over English when both exist. |
 | `counts` | Layout count and shape counts for `flexible.union`. |
 | `examples` | First section and field path found for each shape on `flexible.union`. |
-| `layouts` | One entry per layout in every union: `section`, `layout` type, `language`, top-level `fields`, and `shapes`. |
+| `layouts` | One entry per layout on every flexible layout type: `section`, `layout` type, `language`, top-level `fields`, and `shapes`. |
 | `options` | ACF options-page root fields: `parent`, `field`, `type`. |
 | `templates` | `Template_*` object types that own a field group, with the group field names. |
 
-`summary` names both unions. It does not list Comment, Color, or other non-content types. The options and template lines are the names to pass to `type`.
+`summary` names both layout types. It does not list Comment, Color, or other non-content types. The options and template lines are the names to pass to `type`. It does not include the WordPress admin title of a field group.
 
 ## section NAME
 
@@ -32,7 +33,7 @@ Looks up `FieldsFlexible<Name>Layout`, then `EnFieldsEnFlexible<Name>Layout`, th
 | Field | Meaning |
 |---|---|
 | `layoutType` | The flexible layout type, or null. |
-| `onFlexibleUnion` | Whether that layout is a member of a flexible union. |
+| `onFlexibleUnion` | Whether that layout is a member of a flexible layout type. That type is a union or an interface. |
 | `groupType` | A field-group object type named like the section, or null. |
 | `exposedAs` | `Parent.field` pairs whose field type is that group or layout. |
 | `tree` | Nested fields of the layout, or of the group when there is no layout. Each node has `name`, `gqlType`, `namedType`, `acfType`, `shape`, `children`. A `mediaItem` node also has `imageOn`: `edge` or `mediaItem`. A connection edge is expanded one level so `node` is visible. Other connection types are not expanded. `choices` is present when the description listed them. |

@@ -126,11 +126,81 @@ class CommandTests(unittest.TestCase):
         self.assertIn("en", unions)
         self.assertIn("Page.fields.flexible", unions["he"]["paths"])
         self.assertIn("Page.enFields.enFlexible", unions["en"]["paths"])
+        self.assertEqual(
+            result["flexibleField"],
+            {
+                "parentType": "FieldsGroup",
+                "parentField": "fields",
+                "field": "flexible",
+                "gqlType": "FieldsFlexible_Layout",
+            },
+        )
         self.assertNotIn("Comment.fields.flexible", result["flexible"]["paths"])
         self.assertTrue(any(item["field"] == "siteSettings" for item in result["options"]))
         self.assertTrue(any(item["type"] == "Template_ContactUs" for item in result["templates"]))
         joined = " ".join(result["summary"])
         self.assertNotIn("Comment", joined)
+
+    def test_patterns_reports_flexible_field_without_a_two_member_union(self):
+        layout = "FieldsFlexibleOnlyLayout"
+        data = {
+            layout: obj(layout, [field("title", "String")]),
+            "FieldsFlexible_Layout": obj("FieldsFlexible_Layout", [], kind="UNION", possible=[layout]),
+            "Fields": obj(
+                "Fields",
+                [field("flexible", "FieldsFlexible_Layout", gql="[FieldsFlexible_Layout]", acf="flexible_content")],
+            ),
+            "Page": obj("Page", [field("fields", "Fields")]),
+        }
+        result = wp.command_patterns(data, False)
+        self.assertIsNone(result["flexible"])
+        self.assertEqual(
+            result["flexibleField"],
+            {
+                "parentType": "Fields",
+                "parentField": "fields",
+                "field": "flexible",
+                "gqlType": "[FieldsFlexible_Layout]",
+            },
+        )
+        joined = " ".join(result["summary"])
+        self.assertIn("Fields.flexible", joined)
+        self.assertIn("no layout union", joined)
+
+    def test_patterns_counts_interface_layouts(self):
+        hero = "FieldsFlexibleHeroLayout"
+        banner = "FieldsFlexibleBannerLayout"
+        data = {
+            hero: obj(hero, [field("image", "AcfMediaItemConnectionEdge")]),
+            banner: obj(banner, [field("title", "String")]),
+            "FieldsFlexible_Layout": obj(
+                "FieldsFlexible_Layout",
+                [field("fieldGroupName", "String")],
+                kind="INTERFACE",
+                possible=[hero, banner],
+            ),
+            "Fields": obj(
+                "Fields",
+                [field("flexible", "FieldsFlexible_Layout", gql="[FieldsFlexible_Layout]", acf="flexible_content")],
+            ),
+            "Page": obj("Page", [field("fields", "Fields")]),
+            "AcfFieldGroup": obj(
+                "AcfFieldGroup",
+                [],
+                kind="INTERFACE",
+                possible=[hero, banner, "ImageGrid"],
+            ),
+            "ImageGrid": obj("ImageGrid", []),
+        }
+        result = wp.command_patterns(data, False)
+        self.assertEqual(result["flexible"]["union"], "FieldsFlexible_Layout")
+        self.assertEqual([item["union"] for item in result["flexible"]["unions"]], ["FieldsFlexible_Layout"])
+        self.assertEqual(result["flexible"]["unions"][0]["layouts"], 2)
+        self.assertEqual(
+            {item["section"] for item in result["layouts"]},
+            {"Hero", "Banner"},
+        )
+        self.assertIsNotNone(result["flexibleField"])
 
     def test_type_resolves_an_options_root_field(self):
         with tempfile.TemporaryDirectory() as tmp:

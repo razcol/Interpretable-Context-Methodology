@@ -41,7 +41,7 @@ A null `acfType` means the schema description did not name an ACF field type. It
 
 `...MediaItem` is the `mediaItem` shape. `mediaItemId` inside that shared fragment is not compared. `node` selected on `MediaItem` is a real mismatch: on a connection edge, select `node`, then the `MediaItem` fields. `check-fragment` also lists live fields the file did not select.
 
-For a flexible section, follow the Page, Post, Model, and Article paths in `summary`. Hebrew layouts are `fields.flexible` (`FieldsFlexible…Layout`). English layouts are `enFields.enFlexible` (`EnFieldsEnFlexible…Layout`). For an options page or a template, use `type` on the name in the options or template line. A field label `clone of SomeOtherType` is an ACF clone's GraphQL type. `similarLayout` is a different layout with similar field names, not an ACF clone.
+For a flexible section, follow the Page, Post, Model, and Article paths in `summary`. Hebrew layouts are `fields.flexible` (`FieldsFlexible…Layout`). English layouts are `enFields.enFlexible` (`EnFieldsEnFlexible…Layout`). `flexibleField` is set when that field exists even if `flexible` is null because the layout list has fewer than two layouts. A null `flexible` with a set `flexibleField` means the `fields` group is already there. `flexible.union` is the GraphQL type that lists the layouts. That type is a union or an interface. The key name stays `union` either way. Do not read an admin title from this command. The schema does not carry it. For an options page or a template, use `type` on the name in the options or template line. A field label `clone of SomeOtherType` is an ACF clone's GraphQL type. `similarLayout` is a different layout with similar field names, not an ACF clone.
 
 ## What the shapes mean
 
