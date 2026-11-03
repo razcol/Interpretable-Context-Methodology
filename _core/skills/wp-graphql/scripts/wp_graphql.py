@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 CACHE_DIR = Path.home() / ".cache" / "wp-graphql"
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 SCHEMA_TTL_SECONDS = 15 * 60
 TOKEN_FALLBACK_SECONDS = 8 * 60
 CONTENT_TYPES = ("Page", "Post", "Model", "Article")
@@ -37,7 +37,6 @@ KNOWN_SPREAD_SHAPES = {
     "BackgroundFields": "responsiveFull",
 }
 LEAF_SHAPES = {"mediaItem"}
-MEDIA_LEAF_NAMES = {"mediaItemId"}
 ACF_TYPE_NAMES = {
     "text", "textarea", "number", "range", "email", "url", "password", "image", "file",
     "wysiwyg", "oembed", "gallery", "select", "checkbox", "radio", "button_group",
@@ -54,10 +53,11 @@ INTROSPECTION = """
       description
       possibleTypes { name }
       interfaces { name }
-      enumValues(includeDeprecated: false) { name }
-      fields(includeDeprecated: false) {
+      enumValues(includeDeprecated: true) { name }
+      fields(includeDeprecated: true) {
         name
         description
+        isDeprecated
         type {
           kind
           name
@@ -420,6 +420,7 @@ def compact_schema(payload: dict) -> dict:
                     "named": named,
                     "acfType": acf_type(description),
                     "choices": parse_choices(description),
+                    "deprecated": bool(field.get("isDeprecated")),
                 }
             )
         enum_values = [entry.get("name") for entry in (item.get("enumValues") or []) if entry.get("name")]
@@ -504,6 +505,8 @@ def layout_language(member: str) -> str:
 
 
 def find_flexibles(schema: dict) -> list[dict]:
+    flexible_field = find_flexible_field(schema)
+    target = flexible_field.get("named") if flexible_field else None
     found = []
     for name, item in schema.items():
         if item.get("kind") not in ("UNION", "INTERFACE"):
@@ -514,7 +517,10 @@ def find_flexibles(schema: dict) -> list[dict]:
             for member in possible
             if member.endswith("Layout") and member.startswith(LAYOUT_PREFIXES)
         ]
-        if len(members) < 2 or len(members) != len(possible):
+        if len(members) < 2:
+            continue
+        # The type the flexible field points at is the layout list even when a stray possible type sneaks in.
+        if name != target and len(members) != len(possible):
             continue
         languages = {layout_language(member) for member in members}
         language = next(iter(languages)) if len(languages) == 1 else "mixed"
@@ -566,6 +572,7 @@ def find_flexible_field(schema: dict) -> dict | None:
                     "parentField": parent_field,
                     "field": name,
                     "gqlType": field.get("gqlType") or field.get("named"),
+                    "named": field.get("named"),
                     "language": language,
                 }
             )
@@ -573,7 +580,7 @@ def find_flexible_field(schema: dict) -> dict | None:
         return None
     candidates.sort(key=lambda item: (0 if item["language"] == "he" else 1, item["parentType"], item["field"]))
     chosen = candidates[0]
-    return {key: chosen[key] for key in ("parentType", "parentField", "field", "gqlType")}
+    return {key: chosen[key] for key in ("parentType", "parentField", "field", "gqlType", "named")}
 
 
 def flexible_field_paths(schema: dict, union_name: str) -> tuple[list[str], list[str]]:
@@ -652,6 +659,8 @@ def field_tree(schema: dict, type_name: str, depth: int, seen: set[str]) -> list
         return []
     nodes = []
     for field in item["fields"]:
+        if field.get("deprecated"):
+            continue
         named = field.get("named")
         shape = classify(schema, named)
         node = {
@@ -860,23 +869,24 @@ def compare_selection(
     missing: list[str],
     mismatches: list[dict],
     active: tuple[str, ...] = (),
+    deprecated: list[str] | None = None,
 ) -> None:
     item = schema.get(type_name or "")
     fields = {field["name"]: field for field in (item["fields"] if item else [])}
     for node in selection:
         if node["kind"] == "spread":
-            compare_spread(node, type_name, schema, fragments, prefix, missing, mismatches, active)
+            compare_spread(node, type_name, schema, fragments, prefix, missing, mismatches, active, deprecated)
             continue
         if node["kind"] == "inline":
             target = node.get("on") if node.get("on") in schema else type_name
-            compare_selection(node["selection"], target, schema, fragments, prefix, missing, mismatches, active)
+            compare_selection(node["selection"], target, schema, fragments, prefix, missing, mismatches, active, deprecated)
             continue
         path = node["name"] if not prefix else prefix + "." + node["name"]
         if node["name"] not in fields:
-            if node["name"] in MEDIA_LEAF_NAMES and is_media_item(type_name):
-                continue
             missing.append(path)
             continue
+        if fields[node["name"]].get("deprecated") and deprecated is not None:
+            deprecated.append(path)
         if not node["selection"]:
             continue
         child = fields[node["name"]].get("named")
@@ -899,7 +909,7 @@ def compare_selection(
                     }
                 )
                 continue
-        compare_selection(node["selection"], child, schema, fragments, path, missing, mismatches, active)
+        compare_selection(node["selection"], child, schema, fragments, path, missing, mismatches, active, deprecated)
 
 
 def compare_spread(
@@ -911,6 +921,7 @@ def compare_spread(
     missing: list[str],
     mismatches: list[dict],
     active: tuple[str, ...] = (),
+    deprecated: list[str] | None = None,
 ) -> None:
     label = (prefix + "." if prefix else "") + "..." + node["name"]
     if node["name"] in active:
@@ -920,7 +931,7 @@ def compare_spread(
     fragment = fragments.get(node["name"])
     if expected == "mediaItem" and is_media_edge(type_name):
         if is_media_connection_edge(type_name) and spread_fits_edge(fragments, node["name"]):
-            compare_selection(fragment["selection"], type_name, schema, fragments, label, missing, mismatches, nested)
+            compare_selection(fragment["selection"], type_name, schema, fragments, label, missing, mismatches, nested, deprecated)
             return
         mismatches.append(media_edge_mismatch(label, type_name))
         return
@@ -931,9 +942,9 @@ def compare_spread(
         return
     if expected in LEAF_SHAPES:
         target = fragment["on"] if fragment["on"] in schema else type_name
-        compare_selection(fragment["selection"], target, schema, fragments, label, missing, mismatches, nested)
+        compare_selection(fragment["selection"], target, schema, fragments, label, missing, mismatches, nested, deprecated)
         return
-    compare_selection(fragment["selection"], type_name, schema, fragments, prefix, missing, mismatches, nested)
+    compare_selection(fragment["selection"], type_name, schema, fragments, prefix, missing, mismatches, nested, deprecated)
 
 
 def top_level_names(selection: list[dict], fragments: dict[str, dict], active: tuple[str, ...] = ()) -> list[str]:
@@ -1022,7 +1033,7 @@ def omitted_fields(schema: dict, type_name: str | None, selection: list[dict], f
     if not item:
         return []
     selected = set(top_level_names(selection, fragments))
-    return [field["name"] for field in item["fields"] if field["name"] not in selected]
+    return [field["name"] for field in item["fields"] if field["name"] not in selected and not field.get("deprecated")]
 
 
 def fragment_report(schema: dict, fragments: dict[str, dict], fragment: dict) -> dict:
@@ -1038,8 +1049,9 @@ def fragment_report(schema: dict, fragments: dict[str, dict], fragment: dict) ->
         compared = "AcfMediaItemConnectionEdge"
     missing: list[str] = []
     mismatches: list[dict] = []
+    deprecated: list[str] = []
     if compared:
-        compare_selection(fragment["selection"], compared, schema, fragments, "", missing, mismatches)
+        compare_selection(fragment["selection"], compared, schema, fragments, "", missing, mismatches, (), deprecated)
     return {
         "name": fragment["name"],
         "on": target,
@@ -1049,6 +1061,7 @@ def fragment_report(schema: dict, fragments: dict[str, dict], fragment: dict) ->
         "missingOnSchema": missing,
         "notSelected": omitted_fields(schema, compared, fragment["selection"], fragments),
         "shapeMismatches": mismatches,
+        "deprecatedSelected": deprecated,
     }
 
 
@@ -1373,6 +1386,8 @@ def append_fragment_facts(summary: list[str], report: dict) -> None:
         summary.append("Core MediaItem fields are not listed.")
     elif report.get("notSelected"):
         summary.append("Live fields not selected: " + ", ".join(report["notSelected"][:12]) + ".")
+    if report.get("deprecatedSelected"):
+        summary.append("Deprecated fields selected: " + ", ".join(report["deprecatedSelected"][:12]) + ".")
     summary.extend(mismatch_lines(report["shapeMismatches"]))
 
 
@@ -1385,12 +1400,14 @@ def compare_file(schema: dict, repo: Path, file_path: Path, prefer: str | None, 
     if not report["onExists"] and fallback_type:
         missing: list[str] = []
         mismatches: list[dict] = []
-        compare_selection(parsed["selection"], fallback_type, schema, fragments, "", missing, mismatches)
+        deprecated: list[str] = []
+        compare_selection(parsed["selection"], fallback_type, schema, fragments, "", missing, mismatches, (), deprecated)
         report["comparedTo"] = fallback_type
         report["compared"] = True
         report["missingOnSchema"] = missing
         report["notSelected"] = omitted_fields(schema, fallback_type, parsed["selection"], fragments)
         report["shapeMismatches"] = mismatches
+        report["deprecatedSelected"] = deprecated
     return report
 
 

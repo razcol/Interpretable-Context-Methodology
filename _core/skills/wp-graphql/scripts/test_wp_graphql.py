@@ -45,7 +45,7 @@ def schema():
     hero = "FieldsFlexibleHeroLayout"
     en_hero = "EnFieldsEnFlexibleHeroLayout"
     return {
-        "MediaItem": obj("MediaItem", [field("mediaItemUrl", "String")]),
+        "MediaItem": obj("MediaItem", [field("mediaItemUrl", "String"), dict(field("mediaItemId", "Int"), deprecated=True)]),
         "AcfMediaItemConnectionEdge": obj(
             "AcfMediaItemConnectionEdge",
             [field("node", "MediaItem"), field("cursor", "String")],
@@ -133,6 +133,7 @@ class CommandTests(unittest.TestCase):
                 "parentField": "fields",
                 "field": "flexible",
                 "gqlType": "FieldsFlexible_Layout",
+                "named": "FieldsFlexible_Layout",
             },
         )
         self.assertNotIn("Comment.fields.flexible", result["flexible"]["paths"])
@@ -161,6 +162,7 @@ class CommandTests(unittest.TestCase):
                 "parentField": "fields",
                 "field": "flexible",
                 "gqlType": "[FieldsFlexible_Layout]",
+                "named": "FieldsFlexible_Layout",
             },
         )
         joined = " ".join(result["summary"])
@@ -407,6 +409,50 @@ class CommandTests(unittest.TestCase):
         )[0]
         report = wp.fragment_report(data, {"Banner": fragment}, fragment)
         self.assertEqual(report["missingOnSchema"], [])
+
+    def test_flexible_target_kept_with_stray_member(self):
+        hero = "FieldsFlexibleHeroLayout"
+        banner = "FieldsFlexibleBannerLayout"
+        data = {
+            hero: obj(hero, [field("title", "String")]),
+            banner: obj(banner, [field("title", "String")]),
+            "Stray": obj("Stray", []),
+            "FieldsFlexible_Layout": obj("FieldsFlexible_Layout", [], kind="INTERFACE", possible=[hero, banner, "Stray"]),
+            "Wider": obj("Wider", [], kind="INTERFACE", possible=[hero, banner, "Stray"]),
+            "Fields": obj("Fields", [field("flexible", "FieldsFlexible_Layout", gql="[FieldsFlexible_Layout]", acf="flexible_content")]),
+            "Page": obj("Page", [field("fields", "Fields")]),
+        }
+        found = wp.find_flexibles(data)
+        self.assertEqual([entry["union"] for entry in found], ["FieldsFlexible_Layout"])
+        self.assertEqual(sorted(found[0]["members"]), sorted([hero, banner]))
+
+    def test_compact_schema_marks_deprecated(self):
+        payload = {"data": {"__schema": {"types": [{
+            "name": "MediaItem", "kind": "OBJECT", "description": None, "possibleTypes": [], "interfaces": [], "enumValues": [],
+            "fields": [
+                {"name": "mediaItemId", "description": None, "isDeprecated": True, "type": {"kind": "SCALAR", "name": "Int", "ofType": None}},
+                {"name": "mediaItemUrl", "description": None, "isDeprecated": False, "type": {"kind": "SCALAR", "name": "String", "ofType": None}},
+            ],
+        }]}}}
+        compact = wp.compact_schema(payload)
+        flags = {item["name"]: item["deprecated"] for item in compact["MediaItem"]["fields"]}
+        self.assertEqual(flags, {"mediaItemId": True, "mediaItemUrl": False})
+
+    def test_deprecated_selected_not_missing(self):
+        data = schema()
+        data["FieldsFlexibleBannerLayout"]["fields"].append(dict(field("oldTitle", "String"), deprecated=True))
+        fragment = wp.parse_document("fragment Banner on FieldsFlexibleBannerLayout { title oldTitle }")[0]
+        report = wp.fragment_report(data, {"Banner": fragment}, fragment)
+        self.assertEqual(report["missingOnSchema"], [])
+        self.assertEqual(report["deprecatedSelected"], ["oldTitle"])
+        self.assertNotIn("oldTitle", wp.omitted_fields(data, "FieldsFlexibleBannerLayout", [], {}))
+        self.assertNotIn("oldTitle", [node["name"] for node in wp.field_tree(data, "FieldsFlexibleBannerLayout", 2, set())])
+
+    def test_cache_version_3_invalidates_v2(self):
+        import time
+        self.assertEqual(wp.CACHE_VERSION, 3)
+        self.assertFalse(wp.cache_is_fresh({"version": 2, "fetchedAt": int(time.time()), "schema": {}}))
+        self.assertTrue(wp.cache_is_fresh({"version": 3, "fetchedAt": int(time.time()), "schema": {}}))
 
 
 if __name__ == "__main__":
