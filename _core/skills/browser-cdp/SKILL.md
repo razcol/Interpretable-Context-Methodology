@@ -103,7 +103,7 @@ Full examples: `references/recipes.md`.
 
 ## Checking a section export
 
-The figma-section-fields workspace verifies a section at two levels.
+A section exported from Figma is verified at two levels.
 
 - **Level 1, export fidelity.** Screenshot the figma-cli HTML preview (`file://`) at the Figma frame size with `screenshot.js`, then `diff.js --baseline <figma-cli render PNG> --current <screenshot> --max-diff-ratio 1`. Report `diffRatio`. Fonts that are not installed and image smoothing move many pixels, so treat it as a number to compare between runs, not a pass mark.
 - **Level 2, in the app.** Run `measure.js --url http://localhost:3000/<route> --selector '#<order>'` at 1920, 1440 and 1100. Exit 0 means no horizontal overflow at any width. Exit 11 means it overflows; `error.details.results` says where and by how much.

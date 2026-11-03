@@ -1,51 +1,50 @@
 # Export contract
 
-The exporter is the executable `tools/figma-cli`. This file is the contract this workspace relies on. `tools/figma-cli help` prints the same flags.
+What this workspace relies on from `tools/figma-cli`. `$FIGMA` is the call in `shared/figma-cli-setup.md`. `$FIGMA help` prints every flag.
 
-## Command
+## Commands this workspace runs
 
-From `workspaces/figma-section-fields`:
+| Command | Stage | Writes |
+|---|---|---|
+| `$FIGMA inspect '<url>'` | 01 | stdout: per node its box, flow (in flow, absolute inside auto-layout, free), sizing per axis (fixed, hug, fill), auto-layout, clipping, fills, stroke weight and align, font, and the variant each hover or press changes to |
+| `$FIGMA render '<url>' --out <file>.png --scale 1` | 01 | Figma's own PNG of the node, the Level 1 reference |
+| `$FIGMA export '<url>' --out <file>.html` | 01 | HTML preview at Figma's pixel sizes |
+| `$FIGMA export '<url>' --out <file>.html --fluid` | 05 | HTML preview with the scaffold's fluid sizing |
+| `$FIGMA export '<url>' --dist <dir> --scaffold next-section --component <Folder> --repo-profile <profile.json> [--font-map 'Family=export']` | 01 | `<dir>/<Folder>/` in the repo's shape |
 
-```
-tools/figma-cli export <file-or-url> [node-id] --dist <export-dir>
-```
+Use `--name LAYER` or `--exclude LAYER [--index N]` only when the user asks. `--fixed` keeps pixel sizes and is only for a pixel comparison the user asks for. `--assets` is never used: images come from WordPress.
 
-Always pass `--dist`. This workspace does not use `--stdout` or `--dump`. Pass `--name` or `--exclude` only when the user asked. A figma.com design URL may include `?node-id=`. That id is the node, and a second node id must match it. A file key still needs a node id.
+## What the scaffold writes
 
-`tools/figma-cli inspect <file-or-url> [node-id]` prints fills, type, stroke, radius, and hover or press color and opacity changes. It writes no component. Use it when adjusting an existing control, not when exporting a section.
+The files in the profile's `scaffold.files`, except the `.gql` (stage 03 writes it):
 
-Needs Node >= 20. The token is the environment variable `FIGMA_ACCESS_TOKEN`. Never write the token into a file.
+- `index.js` re-exports `./Server<Folder>`.
+- `Server<Folder>.js` starts with `import 'server-only';` and passes `layout`, `order` and the content props.
+- `Client<Folder>.js` starts with `'use client';`, takes every text and image as a prop (text keeps the Figma text as its default), and declares propTypes.
+- `Styled<Folder>.js`: one `styled.div` with role class names (`card`, `card-title`, `card-media`).
 
-## Flags this workspace uses
+Images are props with no URL written. Background images are CSS variables set from props (`--card-image`). Sibling cards that hover the same way share one hover rule. The root is fluid up to the Figma width, with no breakpoints. Colors and fonts that exist in the repo theme become theme tokens. Line endings follow the profile.
 
-`--name LAYER` exports the descendant with that exact, case-sensitive name, children included. The fetched node's own name is not a match. One match becomes the document root. Several matches list each path and exit 10 when there is no terminal. No match exits 9.
+## Notes on stderr
 
-`--exclude LAYER` drops every visible direct child of the export root with that exact name, children included. A deeper layer of that name stays. The export root stays even when its name is listed. A name that matches nothing is ignored. Repeat the flag for each name. Several direct children with the same name are all omitted.
+`note:` lines say where the output could not follow Figma exactly. Copy every one into the export record.
 
-`--exclude LAYER --index N` drops only that direct child. `N` is the 1-based slot in that node's `children` array. The child at that slot must have the given name. A missing slot or a different name exits 6.
-
-`--assets <dir>` with `--dist` downloads images and rewrites paths relative to the component `.js` file. Without `--assets`, image URLs stay remote and expire.
-
-Failures start with `error: <kind>` on stderr, then a sentence. Exit 9 lists child names and ids. Exit 10 lists each path and id. Exit 4 on a node id that is not an instance id says to export the instance and pass `--name`.
-
-## Files on disk
-
-The folder name is PascalCase: `<export-dir>/<PascalCaseName>/`.
-
-- `index.js`
-- `<Name>.js`
-- `Styled<Name>.js`
-- `assets/` only when `--assets` was passed. The CLI does not create that folder by itself
-
-Stage 02 adds `<Name>.gql` and `field-report.md` in that same folder. The CLI does not write those two files. `field-report.md` is the WordPress dashboard checklist for this section. It is not written under `stages/02-section-graphql/output/`.
+| Note | Meaning |
+|---|---|
+| `hairline-dropped <id>` | A 1px or thinner stroke on an image frame was dropped, because Figma shows it as no border. `--keep-hairlines` keeps it |
+| `hover-size-skipped <id>` | A hug or fill size changes on hover and is not animated |
+| `font-unmatched <family>` | No theme font matched. Ask which export to use, then rerun with `--font-map` |
+| `scaffold-image-dropped` | An image paint could not become a prop |
 
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| 2 | Usage error |
-| 6 | Bad exclude index |
-| 9 | No layer matched the name |
-| 10 | More than one layer with the same name |
-
-Exit 9 and exit 10 wait for a human to pick a path. Any other failure stops the run. Do not invent a component folder.
+| Code | Meaning | Do |
+|---|---|---|
+| 0 | Done | Continue |
+| 2 | Usage | Fix the arguments |
+| 3 | Token rejected | Stop. Ask the user to check `/home/dev/cli/figma-cli/.env` |
+| 4 | No such node | Stop. For a layer inside an instance, export the instance id with `--name` |
+| 6 | Bad `--index` or bad document | Stop |
+| 8 | Network or HTTP failure | Retry once, then stop |
+| 9 | `--name` matched nothing | Checkpoint: show the listed children |
+| 10 | `--name` matched several layers | Checkpoint: show the paths |

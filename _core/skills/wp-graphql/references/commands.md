@@ -72,7 +72,22 @@ Compares every fragment under `app/` and `code/app/`. `checked` is the number re
 
 ## diff-group NAME --plan FILE
 
-Compares a field plan with the live layout (or group) for section NAME, using the same tree as `section`. The plan is JSON. Its shape is defined in `workspaces/figma-section-fields/stages/02-field-plan/references/field-plan-schema.md`: `schemaVersion` 1 and `fields`, each with `name` and optional `label`, `acfType`, `shape`, `cloneOf`, `min`, `max`, `list` and `children`. A plan over 256 KB, nested deeper than 6 levels, with unknown keys, or with a field name that is not a GraphQL name is a `USAGE` error.
+Compares a field plan with the live layout (or group) for section NAME, using the same tree as `section`. This section defines the plan JSON.
+
+Top level: `schemaVersion` (must be 1), `fields` (required), and optional `folder`, `graphqlName`, `layoutType`, `route` and `questions`, which the command does not read.
+
+| Field key | Meaning |
+|---|---|
+| `name` | Required. The GraphQL field name, a GraphQL name |
+| `label` | ACF Field Label. Not compared |
+| `acfType` | ACF type (`text`, `textarea`, `wysiwyg`, `image`, `link`, `group`, `repeater`, `clone`, `select`, `true_false`). Compared only when the live field names one |
+| `shape` | `mediaItem`, `responsiveMedia`, `responsiveFull`, `button` or `spacing`. Compared with the live shape |
+| `cloneOf` | The GraphQL type a Clone reuses. Compared with the live `namedType` |
+| `min`, `max` | Repeater rows. GraphQL cannot see them |
+| `list` | True for a list. Derived from `acfType` when absent |
+| `children` | Sub-fields, same keys |
+
+A plan over 256 KB, nested deeper than 6 levels, with unknown keys, or with a field name that is not a GraphQL name is a `USAGE` error.
 
 | Field | Meaning |
 |---|---|
