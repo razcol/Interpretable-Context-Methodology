@@ -325,6 +325,88 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(result["layoutType"], "FieldsFlexibleLoneLayout")
         self.assertIsNone(result["groupType"])
         self.assertIn("is not on the flexible layout type", result["summary"][0])
+    def media_fragments(self):
+        return {
+            "MediaItem": wp.parse_document(
+                "fragment MediaItem on MediaItem { node { mediaItemUrl mediaItemId } }"
+            )[0],
+            "ResponsiveMediaItem": wp.parse_document(
+                "fragment ResponsiveMediaItem on TYPE { desktop { ...MediaItem } mobile { ...MediaItem } }"
+            )[0],
+        }
+
+    def test_node_wrapped_spread_on_edge_matches(self):
+        fragments = self.media_fragments()
+        fragment = wp.parse_document("fragment Hero on FieldsFlexibleHeroLayout { image { ...MediaItem } }")[0]
+        fragments["Hero"] = fragment
+        report = wp.fragment_report(schema(), fragments, fragment)
+        self.assertEqual(report["shapeMismatches"], [])
+        self.assertEqual(report["missingOnSchema"], [])
+
+    def test_flat_spread_on_edge_still_mismatches(self):
+        fragments = {"MediaItem": wp.parse_document("fragment MediaItem on MediaItem { mediaItemUrl }")[0]}
+        fragment = wp.parse_document("fragment Hero on FieldsFlexibleHeroLayout { image { ...MediaItem } }")[0]
+        fragments["Hero"] = fragment
+        report = wp.fragment_report(schema(), fragments, fragment)
+        self.assertEqual(report["shapeMismatches"][0]["schemaShape"], "mediaEdge")
+
+    def test_background_fields_nested_spreads_match(self):
+        fragments = self.media_fragments()
+        fragment = wp.parse_document(
+            "fragment Hero on FieldsFlexibleHeroLayout { imageFields { ...ResponsiveMediaItem } }"
+        )[0]
+        fragments["Hero"] = fragment
+        report = wp.fragment_report(schema(), fragments, fragment)
+        self.assertEqual(report["shapeMismatches"], [])
+        self.assertEqual(report["missingOnSchema"], [])
+
+    def test_gallery_connection_still_reported(self):
+        data = schema()
+        data["AcfMediaItemConnection"] = obj(
+            "AcfMediaItemConnection",
+            [field("nodes", "MediaItem", gql="[MediaItem]"), field("edges", "AcfMediaItemConnectionEdge", gql="[AcfMediaItemConnectionEdge]")],
+        )
+        data["FieldsFlexibleHeroLayout"]["fields"].append(field("gallery", "AcfMediaItemConnection"))
+        fragments = self.media_fragments()
+        fragment = wp.parse_document("fragment Hero on FieldsFlexibleHeroLayout { gallery { ...MediaItem } }")[0]
+        fragments["Hero"] = fragment
+        report = wp.fragment_report(data, fragments, fragment)
+        self.assertEqual(report["shapeMismatches"][0]["schemaType"], "AcfMediaItemConnection")
+        self.assertIn("nodes", " ".join(wp.mismatch_lines(report["shapeMismatches"])))
+
+    def test_double_node_reported(self):
+        fragments = self.media_fragments()
+        fragment = wp.parse_document(
+            "fragment Hero on FieldsFlexibleHeroLayout { image { node { ...MediaItem } } }"
+        )[0]
+        fragments["Hero"] = fragment
+        report = wp.fragment_report(schema(), fragments, fragment)
+        self.assertTrue(report["missingOnSchema"] or report["shapeMismatches"])
+
+    def test_fragment_cycle_does_not_recurse(self):
+        fragments = {
+            "Loop": wp.parse_document("fragment Loop on TYPE { title ...Loop }")[0],
+        }
+        fragment = wp.parse_document("fragment Banner on FieldsFlexibleBannerLayout { ...Loop }")[0]
+        fragments["Banner"] = fragment
+        report = wp.fragment_report(schema(), fragments, fragment)
+        self.assertEqual(report["missingOnSchema"], [])
+
+    def test_standalone_node_media_fragment_is_compared_on_the_edge(self):
+        fragments = self.media_fragments()
+        report = wp.fragment_report(schema(), fragments, fragments["MediaItem"])
+        self.assertEqual(report["comparedTo"], "AcfMediaItemConnectionEdge")
+        self.assertEqual(report["missingOnSchema"], [])
+    def test_inline_fragment_compares_on_its_type(self):
+        data = schema()
+        data["Model"] = obj("Model", [field("modelListCodes", "String")])
+        data["ContentNode"] = obj("ContentNode", [field("id", "ID")], kind="INTERFACE", possible=["Model"])
+        data["FieldsFlexibleBannerLayout"]["fields"].append(field("model", "ContentNode"))
+        fragment = wp.parse_document(
+            "fragment Banner on FieldsFlexibleBannerLayout { model { id ... on Model { modelListCodes } } }"
+        )[0]
+        report = wp.fragment_report(data, {"Banner": fragment}, fragment)
+        self.assertEqual(report["missingOnSchema"], [])
 
 
 if __name__ == "__main__":

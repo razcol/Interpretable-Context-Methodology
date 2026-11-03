@@ -39,7 +39,7 @@ Add `--refresh` only when the user just changed ACF and the cached schema would 
 
 A null `acfType` means the schema description did not name an ACF field type. It does not mean the field has no options. `choices` is the command for the option list. On `CHOICES_UNAVAILABLE`, stop. Do not look in another repo, REST, or the database.
 
-`...MediaItem` is the `mediaItem` shape. `mediaItemId` inside that shared fragment is not compared. `node` selected on `MediaItem` is a real mismatch: on a connection edge, select `node`, then the `MediaItem` fields. `check-fragment` also lists live fields the file did not select.
+`...MediaItem` is the `mediaItem` shape. `mediaItemId` inside that shared fragment is not compared. A shared media fragment whose whole body is `node { ... }`, such as the repos' `MediaItem` and `MediaItemNew`, is written for a connection edge: `image { ...MediaItem }` on an `AcfMediaItemConnectionEdge` field matches, and the body is compared on the edge. A media spread whose body is not `node { ... }` on an edge is a real mismatch, and so is `node { ...MediaItem }` (two `node` levels). A gallery field (`AcfMediaItemConnection`) has `nodes`, not `node`. Inline fragments (`... on Model { }`) are compared on their own type. `check-fragment` also lists live fields the file did not select.
 
 For a flexible section, follow the Page, Post, Model, and Article paths in `summary`. Hebrew layouts are `fields.flexible` (`FieldsFlexible…Layout`). English layouts are `enFields.enFlexible` (`EnFieldsEnFlexible…Layout`). `flexibleField` is set when that field exists even if `flexible` is null because the layout list has fewer than two layouts. A null `flexible` with a set `flexibleField` means the `fields` group is already there. `flexible.union` is the GraphQL type that lists the layouts. That type is a union or an interface. The key name stays `union` either way. Do not read an admin title from this command. The schema does not carry it. For an options page or a template, use `type` on the name in the options or template line. A field label `clone of SomeOtherType` is an ACF clone's GraphQL type. `similarLayout` is a different layout with similar field names, not an ACF clone.
 
@@ -49,7 +49,7 @@ These labels are on `patterns` examples and on `section` tree nodes. Use them as
 
 | Shape | What it is |
 |---|---|
-| `mediaItem` | One image. The fragment spreads `MediaItem`. On a connection edge, the selection is `node { ...MediaItem }`. |
+| `mediaItem` | One image. On a connection edge (`imageOn` is `edge`), spread the repo's shared media fragment whose body is `node { ... }`, for example `image { ...MediaItem }`. |
 | `responsiveMedia` | A group with `desktop` and `mobile`, each a `mediaItem`. |
 | `responsiveFull` | A group with `type`, `imageFields`, and `videoFields`. The shared spread is `BackgroundFields`. |
 | `spacing` | `layout.marginBottom.desktop` and `mobile`. |

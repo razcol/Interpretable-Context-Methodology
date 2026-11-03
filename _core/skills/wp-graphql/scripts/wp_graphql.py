@@ -829,6 +829,28 @@ def find_fragment_file(repo: Path, name: str, type_name: str | None) -> Path | N
     return name_match or type_match
 
 
+def is_media_connection_edge(type_name: str | None) -> bool:
+    return bool(type_name) and type_name.endswith("AcfMediaItemConnectionEdge")
+
+
+def spread_fits_edge(fragments: dict[str, dict], name: str) -> bool:
+    """True when the fragment's whole selection is one `node { ... }` field, so it fits a connection edge."""
+    fragment = fragments.get(name)
+    if not fragment:
+        return False
+    selection = fragment["selection"]
+    return len(selection) == 1 and selection[0]["kind"] == "field" and selection[0]["name"] == "node"
+
+
+def media_edge_mismatch(path: str, schema_type: str | None) -> dict:
+    return {
+        "path": path,
+        "fragmentShape": "mediaItem",
+        "schemaShape": "mediaEdge",
+        "schemaType": schema_type,
+    }
+
+
 def compare_selection(
     selection: list[dict],
     type_name: str | None,
@@ -837,15 +859,17 @@ def compare_selection(
     prefix: str,
     missing: list[str],
     mismatches: list[dict],
+    active: tuple[str, ...] = (),
 ) -> None:
     item = schema.get(type_name or "")
     fields = {field["name"]: field for field in (item["fields"] if item else [])}
     for node in selection:
         if node["kind"] == "spread":
-            compare_spread(node, type_name, schema, fragments, prefix, missing, mismatches)
+            compare_spread(node, type_name, schema, fragments, prefix, missing, mismatches, active)
             continue
         if node["kind"] == "inline":
-            compare_selection(node["selection"], type_name, schema, fragments, prefix, missing, mismatches)
+            target = node.get("on") if node.get("on") in schema else type_name
+            compare_selection(node["selection"], target, schema, fragments, prefix, missing, mismatches, active)
             continue
         path = node["name"] if not prefix else prefix + "." + node["name"]
         if node["name"] not in fields:
@@ -861,16 +885,11 @@ def compare_selection(
             expected = KNOWN_SPREAD_SHAPES.get(spreads[0]["name"])
             actual = classify(schema, child)
             if expected == "mediaItem" and is_media_edge(child):
-                mismatches.append(
-                    {
-                        "path": path,
-                        "fragmentShape": "mediaItem",
-                        "schemaShape": "mediaEdge",
-                        "schemaType": child,
-                    }
-                )
-                continue
-            if expected and actual and expected != actual:
+                fits = is_media_connection_edge(child) and spread_fits_edge(fragments, spreads[0]["name"])
+                if not fits:
+                    mismatches.append(media_edge_mismatch(path, child))
+                    continue
+            elif expected and actual and expected != actual:
                 mismatches.append(
                     {
                         "path": path,
@@ -880,7 +899,7 @@ def compare_selection(
                     }
                 )
                 continue
-        compare_selection(node["selection"], child, schema, fragments, path, missing, mismatches)
+        compare_selection(node["selection"], child, schema, fragments, path, missing, mismatches, active)
 
 
 def compare_spread(
@@ -891,20 +910,20 @@ def compare_spread(
     prefix: str,
     missing: list[str],
     mismatches: list[dict],
+    active: tuple[str, ...] = (),
 ) -> None:
     label = (prefix + "." if prefix else "") + "..." + node["name"]
-    expected = KNOWN_SPREAD_SHAPES.get(node["name"])
-    if expected == "mediaItem" and is_media_edge(type_name):
-        mismatches.append(
-            {
-                "path": label,
-                "fragmentShape": "mediaItem",
-                "schemaShape": "mediaEdge",
-                "schemaType": type_name,
-            }
-        )
+    if node["name"] in active:
         return
+    nested = active + (node["name"],)
+    expected = KNOWN_SPREAD_SHAPES.get(node["name"])
     fragment = fragments.get(node["name"])
+    if expected == "mediaItem" and is_media_edge(type_name):
+        if is_media_connection_edge(type_name) and spread_fits_edge(fragments, node["name"]):
+            compare_selection(fragment["selection"], type_name, schema, fragments, label, missing, mismatches, nested)
+            return
+        mismatches.append(media_edge_mismatch(label, type_name))
+        return
     if fragment is None:
         if expected in LEAF_SHAPES:
             return
@@ -912,20 +931,20 @@ def compare_spread(
         return
     if expected in LEAF_SHAPES:
         target = fragment["on"] if fragment["on"] in schema else type_name
-        compare_selection(fragment["selection"], target, schema, fragments, label, missing, mismatches)
+        compare_selection(fragment["selection"], target, schema, fragments, label, missing, mismatches, nested)
         return
-    compare_selection(fragment["selection"], type_name, schema, fragments, prefix, missing, mismatches)
+    compare_selection(fragment["selection"], type_name, schema, fragments, prefix, missing, mismatches, nested)
 
 
-def top_level_names(selection: list[dict], fragments: dict[str, dict]) -> list[str]:
+def top_level_names(selection: list[dict], fragments: dict[str, dict], active: tuple[str, ...] = ()) -> list[str]:
     names = []
     for node in selection:
         if node["kind"] == "field":
             names.append(node["name"])
-        elif node["kind"] == "spread":
+        elif node["kind"] == "spread" and node["name"] not in active:
             fragment = fragments.get(node["name"])
             if fragment:
-                names.extend(top_level_names(fragment["selection"], fragments))
+                names.extend(top_level_names(fragment["selection"], fragments, active + (node["name"],)))
     return names
 
 
@@ -1010,6 +1029,13 @@ def fragment_report(schema: dict, fragments: dict[str, dict], fragment: dict) ->
     target = fragment["on"]
     target_exists = target in schema
     compared = target if target_exists else None
+    if (
+        is_media_item(target)
+        and "AcfMediaItemConnectionEdge" in schema
+        and spread_fits_edge({fragment["name"]: fragment}, fragment["name"])
+    ):
+        # A shared media fragment whose body is node { ... } is written for a connection edge.
+        compared = "AcfMediaItemConnectionEdge"
     missing: list[str] = []
     mismatches: list[dict] = []
     if compared:
@@ -1100,9 +1126,14 @@ def mismatch_lines(mismatches: list[dict]) -> list[str]:
     lines = []
     for mismatch in mismatches:
         if mismatch.get("schemaShape") == "mediaEdge":
-            lines.append(
-                f"{mismatch['path']} spreads MediaItem on {mismatch.get('schemaType')}. Select node, then the MediaItem fields."
-            )
+            if is_media_connection_edge(mismatch.get("schemaType")):
+                lines.append(
+                    f"{mismatch['path']} spreads a media fragment on {mismatch.get('schemaType')}, but that fragment's body is not node {{ ... }}. Use a shared fragment whose body is node {{ ... }}, or select node, then the media fields."
+                )
+            else:
+                lines.append(
+                    f"{mismatch['path']} is the gallery connection {mismatch.get('schemaType')}. Select nodes, then the media fields."
+                )
             continue
         lines.append(
             f"{mismatch['path']} is {mismatch['fragmentShape']} in the fragment and {mismatch['schemaShape']} on the schema."
