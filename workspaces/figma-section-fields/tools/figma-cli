@@ -259,7 +259,7 @@ function reconcilePair(src, dst, kept) {
   }
 }
 function canDrop(node) {
-  return !clipsVisually(node) && node.paints.length === 0 && node.stroke === null && node.effects.length === 0 && node.opacity === 1 && node.blend === "pass-through" && node.reactions.length === 0;
+  return node.stack === null && !clipsVisually(node) && node.paints.length === 0 && node.stroke === null && node.effects.length === 0 && node.opacity === 1 && node.blend === "pass-through" && node.reactions.length === 0;
 }
 function clipsVisually(node) {
   if (!node.clips) return false;
@@ -4723,9 +4723,26 @@ var wireNodeSchema = external_exports.lazy(
     styleOverrideTable: external_exports.record(external_exports.string(), typeStyleSchema).nullish(),
     style: typeStyleSchema.nullish(),
     layoutMode: external_exports.string().nullish(),
+    layoutWrap: external_exports.string().nullish(),
     primaryAxisAlignItems: external_exports.string().nullish(),
     counterAxisAlignItems: external_exports.string().nullish(),
+    primaryAxisSizingMode: external_exports.string().nullish(),
+    counterAxisSizingMode: external_exports.string().nullish(),
     layoutAlign: external_exports.string().nullish(),
+    layoutGrow: external_exports.number().nullish(),
+    layoutPositioning: external_exports.string().nullish(),
+    layoutSizingHorizontal: external_exports.string().nullish(),
+    layoutSizingVertical: external_exports.string().nullish(),
+    itemSpacing: external_exports.number().nullish(),
+    counterAxisSpacing: external_exports.number().nullish(),
+    paddingLeft: external_exports.number().nullish(),
+    paddingRight: external_exports.number().nullish(),
+    paddingTop: external_exports.number().nullish(),
+    paddingBottom: external_exports.number().nullish(),
+    minWidth: external_exports.number().nullish(),
+    maxWidth: external_exports.number().nullish(),
+    minHeight: external_exports.number().nullish(),
+    maxHeight: external_exports.number().nullish(),
     children: external_exports.array(wireNodeSchema).nullish()
   })
 );
@@ -4911,13 +4928,13 @@ function convertNode(node, exclude, indexed, borrowed, parent) {
   const kind = drawnKind(node);
   switch (kind) {
     case "text":
-      return textNode(node, box, borrowed);
+      return textNode(node, box, borrowed, parent);
     case "ellipse":
       return boxNode(node, box, { kind: "ellipse" }, exclude, indexed, borrowed, parent);
     case "box":
       return boxNode(node, box, radiusOf(node), exclude, indexed, borrowed, parent);
     case "raster":
-      return rasterNode(node, box, borrowed);
+      return rasterNode(node, box, borrowed, parent);
     default: {
       const _exhaustive = kind;
       return _exhaustive;
@@ -4956,7 +4973,7 @@ function drawnKind(node) {
 function boxNode(node, box, radius, exclude, indexed, borrowed, parent) {
   const anchor = anchorOf(parent, node);
   return {
-    ...composited(node, box, borrowed),
+    ...composited(node, box, borrowed, parent),
     kind: "box",
     clips: node.clipsContent === true,
     radius,
@@ -4966,10 +4983,12 @@ function boxNode(node, box, radius, exclude, indexed, borrowed, parent) {
     anchorX: anchor.x,
     anchorY: anchor.y,
     component: node.type === "INSTANCE" && node.componentId ? nodeIdFromWire(node.componentId) : null,
+    stack: stackOf(node),
     children: convertChildren(node.children, exclude, indexed, borrowed, node)
   };
 }
 function anchorOf(parent, node) {
+  if (flowOf(parent, node).kind === "in-flow") return { x: "start", y: "start" };
   if (parent == null || parent.layoutMode !== "HORIZONTAL" && parent.layoutMode !== "VERTICAL") {
     return { x: "start", y: "start" };
   }
@@ -4990,9 +5009,9 @@ function alignAxis(raw) {
       return "start";
   }
 }
-function textNode(node, box, borrowed) {
+function textNode(node, box, borrowed, parent) {
   return {
-    ...composited(node, box, borrowed),
+    ...composited(node, box, borrowed, parent),
     kind: "text",
     runs: sliceRuns(node),
     alignX: alignX(node.style?.textAlignHorizontal),
@@ -5004,9 +5023,9 @@ function textNode(node, box, borrowed) {
     stroke: mapStroke(node)
   };
 }
-function rasterNode(node, box, borrowed) {
+function rasterNode(node, box, borrowed, parent) {
   return {
-    ...identity(node, box, borrowed),
+    ...identity(node, box, borrowed, parent),
     kind: "raster",
     blend: blendOf(node.blendMode),
     bleed: bleedOf(box, node.absoluteRenderBounds ?? null)
@@ -5025,18 +5044,130 @@ function convertChildren(children, exclude, indexed, borrowed, parent) {
   }
   return sceneChildren;
 }
-function identity(node, box, borrowed) {
+function identity(node, box, borrowed, parent) {
   const id = nodeIdFromWire(node.id);
   const own = mapReactions(node);
   const borrowedReactions = own.length > 0 ? [] : borrowed?.get(id) ?? [];
-  return { id, name: node.name, box, reactions: own.length > 0 ? own : borrowedReactions };
-}
-function composited(node, box, borrowed) {
   return {
-    ...identity(node, box, borrowed),
+    id,
+    name: node.name,
+    box,
+    reactions: own.length > 0 ? own : borrowedReactions,
+    flow: flowOf(parent, node),
+    limits: limitsOf(node)
+  };
+}
+function composited(node, box, borrowed, parent) {
+  return {
+    ...identity(node, box, borrowed, parent),
     opacity: unitInterval(node.opacity ?? 1),
     blend: blendOf(node.blendMode)
   };
+}
+function parentDirection(parent) {
+  if (parent?.layoutMode === "HORIZONTAL") return "horizontal";
+  if (parent?.layoutMode === "VERTICAL") return "vertical";
+  return null;
+}
+function flowOf(parent, node) {
+  const direction = parentDirection(parent);
+  if (direction === null || node.layoutPositioning === "ABSOLUTE") return { kind: "out-of-flow" };
+  return {
+    kind: "in-flow",
+    width: trackOf(node, "horizontal", direction),
+    height: trackOf(node, "vertical", direction),
+    align: selfAlign(node.layoutAlign),
+    main: direction === "horizontal" ? "width" : "height"
+  };
+}
+function trackOf(node, axis, parentDirectionName) {
+  const sizing = axis === "horizontal" ? node.layoutSizingHorizontal : node.layoutSizingVertical;
+  if (sizing === "FIXED") return "fixed";
+  if (sizing === "HUG") return "hug";
+  if (sizing === "FILL") return "fill";
+  const onMain = axis === parentDirectionName;
+  if (onMain && (node.layoutGrow ?? 0) > 0) return "fill";
+  if (!onMain && node.layoutAlign === "STRETCH") return "fill";
+  const own = nodeDirection(node);
+  if (own !== null) {
+    const onOwnMain = own === "horizontal" && axis === "horizontal" || own === "vertical" && axis === "vertical";
+    const mode = onOwnMain ? node.primaryAxisSizingMode : node.counterAxisSizingMode;
+    if (mode === "AUTO") return "hug";
+  }
+  return "fixed";
+}
+function nodeDirection(node) {
+  if (node.layoutMode === "HORIZONTAL") return "horizontal";
+  if (node.layoutMode === "VERTICAL") return "vertical";
+  return null;
+}
+function selfAlign(raw) {
+  switch (raw) {
+    case "MIN":
+      return "start";
+    case "CENTER":
+      return "center";
+    case "MAX":
+      return "end";
+    case "STRETCH":
+      return "stretch";
+    default:
+      return "auto";
+  }
+}
+function stackOf(node) {
+  const direction = nodeDirection(node);
+  if (direction === null) return null;
+  return {
+    direction,
+    gap: node.itemSpacing ?? 0,
+    counterGap: node.counterAxisSpacing ?? null,
+    padding: {
+      top: node.paddingTop ?? 0,
+      right: node.paddingRight ?? 0,
+      bottom: node.paddingBottom ?? 0,
+      left: node.paddingLeft ?? 0
+    },
+    main: stackMain(node.primaryAxisAlignItems),
+    cross: stackCross(node.counterAxisAlignItems),
+    wrap: node.layoutWrap === "WRAP"
+  };
+}
+function stackMain(raw) {
+  switch (raw) {
+    case "CENTER":
+      return "center";
+    case "MAX":
+      return "end";
+    case "SPACE_BETWEEN":
+      return "space-between";
+    default:
+      return "start";
+  }
+}
+function stackCross(raw) {
+  switch (raw) {
+    case "CENTER":
+      return "center";
+    case "MAX":
+      return "end";
+    case "BASELINE":
+      return "baseline";
+    default:
+      return "start";
+  }
+}
+function limitsOf(node) {
+  return {
+    minWidth: finiteSize(node.minWidth),
+    maxWidth: finiteSize(node.maxWidth),
+    minHeight: finiteSize(node.minHeight),
+    maxHeight: finiteSize(node.maxHeight)
+  };
+}
+function finiteSize(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return value;
 }
 function boxOf(node) {
   const box = node.absoluteBoundingBox;
@@ -5778,20 +5909,23 @@ function nonEmpty(items) {
 function placement(node, parent) {
   if (parent === null) {
     return {
-      position: "relative",
+      kind: "root",
       leftPx: 0,
       topPx: 0,
       widthPx: node.box.width,
       heightPx: node.box.height
     };
   }
-  return {
-    position: "absolute",
-    leftPx: node.box.x - parent.x,
-    topPx: node.box.y - parent.y,
-    widthPx: node.box.width,
-    heightPx: node.box.height
-  };
+  if (node.flow.kind === "out-of-flow") {
+    return {
+      kind: "absolute",
+      leftPx: node.box.x - parent.x,
+      topPx: node.box.y - parent.y,
+      widthPx: node.box.width,
+      heightPx: node.box.height
+    };
+  }
+  return { kind: "flow" };
 }
 var STROKE_RULE = "[data-stroke]::after { content: ''; position: absolute; pointer-events: none; inset: var(--stroke-inset); padding: var(--stroke-pad); border-radius: var(--stroke-radius); background: var(--stroke-paint); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }";
 var GENERIC_FAMILIES = /* @__PURE__ */ new Set(["sans-serif", "serif", "monospace", "cursive", "fantasy", "system-ui"]);
@@ -6006,7 +6140,13 @@ function diffStroke(plan, hot, pseudo, src, dst, basis, assets) {
   for (const [key, value] of EMPTY_STROKE) setRest(plan, src, key, value);
 }
 function diffVariantGeometry(plan, hot, pseudo, src, dst, basis, srcParent, dstParent, basisParent, isHot, scale, motion) {
+  if (src.flow.kind === "in-flow") {
+    const next = variantBox(src, dst, basis, srcParent, dstParent, basisParent, isHot, scale);
+    tweenFlowSize(plan, hot, pseudo, src, motion, next.width, next.height);
+    return;
+  }
   const rest = placement(src, srcParent);
+  if (rest.kind === "flow") return;
   let left = rest.leftPx;
   let top = rest.topPx;
   let width = src.box.width;
@@ -6036,7 +6176,12 @@ function diffVariantGeometry(plan, hot, pseudo, src, dst, basis, srcParent, dstP
   setGeom(plan, hot, pseudo, src, motion, "height", rest.heightPx, height);
 }
 function diffGeometry(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion) {
+  if (src.flow.kind === "in-flow") {
+    tweenFlowSize(plan, hot, pseudo, src, motion, dst.box.width, dst.box.height);
+    return;
+  }
   const rest = placement(src, srcParent);
+  if (rest.kind === "flow") return;
   let left = rest.leftPx;
   let top = rest.topPx;
   let width = dst.box.width;
@@ -6051,7 +6196,7 @@ function diffGeometry(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, 
       if (src.anchorY === "end") top -= dh;
     }
   } else if (dstParent !== null) {
-    const next = placement(dst, dstParent);
+    const next = boxOffset(dst, dstParent);
     left = next.leftPx;
     top = next.topPx;
     width = next.widthPx;
@@ -6061,6 +6206,26 @@ function diffGeometry(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, 
   setGeom(plan, hot, pseudo, src, motion, "top", rest.topPx, top);
   setGeom(plan, hot, pseudo, src, motion, "width", rest.widthPx, width);
   setGeom(plan, hot, pseudo, src, motion, "height", rest.heightPx, height);
+}
+function variantBox(src, dst, basis, srcParent, dstParent, basisParent, isHot, scale) {
+  if (isHot || srcParent === null || dstParent === null || basisParent === null) {
+    return variantSize(src.box, basis.box, dst.box, scale);
+  }
+  const next = variantOffset(src.box, basis.box, dst.box, srcParent, basisParent, dstParent, scale);
+  return { width: next.width, height: next.height };
+}
+function tweenFlowSize(plan, hot, pseudo, src, motion, width, height) {
+  if (src.flow.kind !== "in-flow") return;
+  if (src.flow.width === "fixed") setGeom(plan, hot, pseudo, src, motion, "width", src.box.width, width);
+  if (src.flow.height === "fixed") setGeom(plan, hot, pseudo, src, motion, "height", src.box.height, height);
+}
+function boxOffset(node, parent) {
+  return {
+    leftPx: node.box.x - parent.x,
+    topPx: node.box.y - parent.y,
+    widthPx: node.box.width,
+    heightPx: node.box.height
+  };
 }
 function setGeom(plan, hot, pseudo, src, motion, prop, restPx, nextPx) {
   const next = px(nextPx);
@@ -6276,7 +6441,7 @@ function renderDocument(input) {
     for (const extra of extras) families.push(...collectFamilies(extra.node));
   }
   const fontLink = googleFontLink(families);
-  const body = renderNode(condensed.root, null, input.assets, true, pointer, EMPTY_CASCADE);
+  const body = renderNode(condensed.root, null, input.assets, true, pointer, EMPTY_CASCADE, null);
   const lines = [
     "<!DOCTYPE html>",
     "<html>",
@@ -6300,7 +6465,7 @@ function renderDocument(input) {
     for (const id of playedTargets) {
       const state = condensed.states.get(id);
       if (state === void 0) continue;
-      const placed = renderNode(state, { x: state.box.x, y: state.box.y }, input.assets, false, emptyHtmlPlan(), EMPTY_CASCADE);
+      const placed = renderNode(state, { x: state.box.x, y: state.box.y }, input.assets, false, emptyHtmlPlan(), EMPTY_CASCADE, null);
       lines.push(`<template data-state="${escapeAttr(id)}">${placed}</template>`);
     }
     lines.push(`<script type="application/json" id="figma-reactions">${reactionJson(played, hosts)}</script>`);
@@ -6309,31 +6474,43 @@ function renderDocument(input) {
   lines.push("</body>", "</html>", "");
   return lines.join("\n");
 }
-function renderNode(node, parent, assets, screen, plan, cascade) {
+function renderNode(node, parent, assets, screen, plan, cascade, marginEnd) {
   const place = placement(node, parent);
   switch (node.kind) {
     case "box":
-      return renderBox(node, place, assets, screen, plan, cascade);
+      return renderBox(node, place, assets, screen, plan, cascade, marginEnd);
     case "text":
-      return renderText(node, place, screen, plan, cascade);
+      return renderText(node, place, screen, plan, cascade, marginEnd);
     case "raster":
-      return renderRaster(node, place, assets, screen, plan, cascade);
+      return renderRaster(node, place, assets, screen, plan, cascade, marginEnd);
     default: {
       const _exhaustive = node;
       return _exhaustive;
     }
   }
 }
-function renderBox(node, place, assets, screen, plan, cascade) {
+function renderBox(node, place, assets, screen, plan, cascade, marginEnd) {
   const flow = inheritedDecls(agreedStyle(node) ?? EMPTY_CASCADE, cascade);
   const cursor = cursorDecl(node, flow.next);
   const extras = plan.insertions.get(node) ?? [];
-  const children = [
-    ...node.children.map((child) => renderNode(child, node.box, assets, false, plan, cursor.next)),
-    ...extras.map((extra) => renderNode(extra.node, extra.origin, assets, false, plan, cursor.next))
-  ].join("");
+  const rendered = [
+    ...node.children.map((child) => ({ node: child, origin: node.box })),
+    ...extras.map((extra) => ({ node: extra.node, origin: extra.origin }))
+  ];
+  const lastInFlow = lastInFlowIndex(rendered.map((entry) => entry.node));
+  const children = rendered.map(
+    (entry, index) => renderNode(
+      entry.node,
+      entry.origin,
+      assets,
+      false,
+      plan,
+      cursor.next,
+      flowMargin(node, entry.node, index === lastInFlow)
+    )
+  ).join("");
   const style = styledDecls(node, [
-    ...placementDecls(place),
+    ...layoutDecls(node, place, marginEnd, rendered.map((entry) => entry.node)),
     backgroundDecl(node.paints, assets),
     radiusDecl(node.radius),
     node.clips ? "overflow: hidden" : null,
@@ -6347,12 +6524,12 @@ function renderBox(node, place, assets, screen, plan, cascade) {
   const swapAttr = plan.swapHosts.has(node.id) ? ' data-swap=""' : "";
   return `${openDiv(node, style, `${strokeAttr}${anchorAttrs(node)}${hotAttrs(node, screen)}${swapAttr}`)}${children}</div>`;
 }
-function renderText(node, place, screen, plan, cascade) {
+function renderText(node, place, screen, plan, cascade, marginEnd) {
   const rendered = renderRuns(node.runs);
   const flow = inheritedDecls(textStyleMap(node), cascade);
   const cursor = cursorDecl(node, flow.next);
   const style = styledDecls(node, [
-    ...placementDecls(place),
+    ...layoutDecls(node, place, marginEnd),
     ...flow.decls,
     `color: ${rendered.first.color}`,
     ...alignDecls(node.alignY, node.alignX === "center" && !node.wrap),
@@ -6365,12 +6542,12 @@ function renderText(node, place, screen, plan, cascade) {
   const inner = textInner(node, rendered.inner);
   return `${openDiv(node, style, hotAttrs(node, screen))}${inner}</div>`;
 }
-function renderRaster(node, place, assets, screen, plan, cascade) {
+function renderRaster(node, place, assets, screen, plan, cascade, marginEnd) {
   const src = assets.rasters.get(node.id);
   if (src === void 0) throw new ExportError({ kind: "missing-asset", id: node.id });
   const cursor = cursorDecl(node, cascade);
   const style = styledDecls(node, [
-    ...placementDecls(place),
+    ...layoutDecls(node, place, marginEnd),
     ...blendDecls(node.blend),
     cursor.decl
   ], plan);
@@ -6390,6 +6567,7 @@ function rasterBleeds(node) {
   return node.bleed.left !== 0 || node.bleed.top !== 0 || node.bleed.right !== 0 || node.bleed.bottom !== 0;
 }
 function anchorAttrs(node) {
+  if (node.flow.kind !== "out-of-flow") return "";
   const parts = [];
   if (node.anchorX !== "start") parts.push(` data-anchor-x="${node.anchorX}"`);
   if (node.anchorY !== "start") parts.push(` data-anchor-y="${node.anchorY}"`);
@@ -6957,11 +7135,152 @@ function openDiv(node, style, extra) {
   return `<div${extra} data-node-id="${escapeAttr(node.id)}" data-node-name="${escapeAttr(node.name)}" style="${escapeAttr(style)}">`;
 }
 function placementDecls(place) {
-  const decls = [`position: ${place.position}`];
-  if (place.position === "absolute" || place.leftPx !== 0) decls.push(`left: ${px(place.leftPx)}`);
-  if (place.position === "absolute" || place.topPx !== 0) decls.push(`top: ${px(place.topPx)}`);
-  decls.push(`width: ${px(place.widthPx)}`, `height: ${px(place.heightPx)}`);
+  if (place.kind === "flow") return [];
+  if (place.kind === "root") {
+    return ["position: relative", `width: ${px(place.widthPx)}`, `height: ${px(place.heightPx)}`];
+  }
+  return [
+    "position: absolute",
+    `left: ${px(place.leftPx)}`,
+    `top: ${px(place.topPx)}`,
+    `width: ${px(place.widthPx)}`,
+    `height: ${px(place.heightPx)}`
+  ];
+}
+function layoutDecls(node, place, marginEnd, hosted = []) {
+  return [
+    ...placementDecls(place),
+    ...flowDecls(node, marginEnd),
+    ...limitDecls(node),
+    ...node.kind === "box" ? containingDecls(node, hosted) : [],
+    ...node.kind === "box" && node.stack !== null ? stackDecls(node.stack) : []
+  ];
+}
+function flowDecls(node, marginEnd) {
+  if (node.flow.kind !== "in-flow") return [];
+  const flow = node.flow;
+  const decls = [];
+  const mainTrack = flow.main === "width" ? flow.width : flow.height;
+  if (mainTrack === "fill") decls.push("flex: 1 0 0");
+  if (flow.width === "fixed") decls.push(`width: ${px(node.box.width)}`);
+  if (flow.height === "fixed") decls.push(`height: ${px(node.box.height)}`);
+  const align = alignSelfDecl(flow);
+  if (align !== null) decls.push(`align-self: ${align}`);
+  if (marginEnd !== null) decls.push(marginEnd);
   return decls;
+}
+function alignSelfDecl(flow) {
+  switch (flow.align) {
+    case "start":
+      return "flex-start";
+    case "center":
+      return "center";
+    case "end":
+      return "flex-end";
+    case "stretch":
+      return "stretch";
+    case "auto": {
+      const cross = flow.main === "width" ? flow.height : flow.width;
+      return cross === "fill" ? "stretch" : null;
+    }
+    default: {
+      const _exhaustive = flow.align;
+      return _exhaustive;
+    }
+  }
+}
+function limitDecls(node) {
+  const decls = [];
+  if (node.limits.minWidth !== null) decls.push(`min-width: ${px(node.limits.minWidth)}`);
+  if (node.limits.maxWidth !== null) decls.push(`max-width: ${px(node.limits.maxWidth)}`);
+  if (node.limits.minHeight !== null) decls.push(`min-height: ${px(node.limits.minHeight)}`);
+  if (node.limits.maxHeight !== null) decls.push(`max-height: ${px(node.limits.maxHeight)}`);
+  return decls;
+}
+function containingDecls(node, hosted) {
+  if (node.flow.kind !== "in-flow") return [];
+  if (!hosted.some((child) => child.flow.kind === "out-of-flow")) return [];
+  return ["position: relative"];
+}
+function stackDecls(stack) {
+  if (stack === null) return [];
+  const decls = ["display: flex"];
+  if (stack.direction === "vertical") decls.push("flex-direction: column");
+  if (stack.wrap) decls.push("flex-wrap: wrap");
+  const justify = stackMainCss(stack.main);
+  if (justify !== "flex-start") decls.push(`justify-content: ${justify}`);
+  const align = stackCrossCss(stack.cross);
+  if (align !== "flex-start") decls.push(`align-items: ${align}`);
+  decls.push(...gapDecls(stack), ...paddingDecls(stack.padding));
+  return decls;
+}
+function stackMainCss(main) {
+  switch (main) {
+    case "center":
+      return "center";
+    case "end":
+      return "flex-end";
+    case "space-between":
+      return "space-between";
+    case "start":
+      return "flex-start";
+    default: {
+      const _exhaustive = main;
+      return _exhaustive;
+    }
+  }
+}
+function stackCrossCss(cross) {
+  switch (cross) {
+    case "center":
+      return "center";
+    case "end":
+      return "flex-end";
+    case "baseline":
+      return "baseline";
+    case "start":
+      return "flex-start";
+    default: {
+      const _exhaustive = cross;
+      return _exhaustive;
+    }
+  }
+}
+function gapDecls(stack) {
+  if (!stack.wrap) return stack.gap > 0 ? [`gap: ${px(stack.gap)}`] : [];
+  const main = stack.gap > 0 ? stack.gap : 0;
+  const crossRaw = stack.counterGap ?? stack.gap;
+  const cross = crossRaw > 0 ? crossRaw : 0;
+  const decls = [];
+  if (stack.direction === "horizontal") {
+    if (main !== 0) decls.push(`column-gap: ${px(main)}`);
+    if (cross !== 0) decls.push(`row-gap: ${px(cross)}`);
+  } else {
+    if (main !== 0) decls.push(`row-gap: ${px(main)}`);
+    if (cross !== 0) decls.push(`column-gap: ${px(cross)}`);
+  }
+  return decls;
+}
+function paddingDecls(padding) {
+  const decls = [];
+  if (padding.top !== 0) decls.push(`padding-top: ${px(padding.top)}`);
+  if (padding.right !== 0) decls.push(`padding-right: ${px(padding.right)}`);
+  if (padding.bottom !== 0) decls.push(`padding-bottom: ${px(padding.bottom)}`);
+  if (padding.left !== 0) decls.push(`padding-left: ${px(padding.left)}`);
+  return decls;
+}
+function lastInFlowIndex(nodes) {
+  let last = -1;
+  nodes.forEach((node, index) => {
+    if (node.flow.kind === "in-flow") last = index;
+  });
+  return last;
+}
+function flowMargin(parent, child, isLastInFlow) {
+  if (parent.stack === null || parent.stack.gap >= 0) return null;
+  if (child.flow.kind !== "in-flow" || isLastInFlow) return null;
+  const prop = parent.stack.direction === "horizontal" ? "margin-right" : "margin-bottom";
+  return `${prop}: ${px(parent.stack.gap)}`;
 }
 function backgroundDecl(paints, assets) {
   if (paints.length === 0) return null;
@@ -7558,7 +7877,7 @@ function renderReactComponent(input) {
   const plan = planPointerCss(condensed.root, condensed.states, input.assets, usedClasses, sets, masters);
   activePlan = plan;
   const hasBoxStroke = treeHasBoxStroke(condensed.root) || plan.forceStroke.size > 0;
-  const { jsxLines, cssNest } = emitNode(condensed.root, null, input.assets, true, 2, EMPTY_CASCADE2);
+  const { jsxLines, cssNest } = emitNode(condensed.root, null, input.assets, true, 2, EMPTY_CASCADE2, null);
   applyPointerCss(plan);
   const rootStroke = plan.forceStroke.has(condensed.root) || condensed.root.kind === "box" && condensed.root.stroke !== null;
   const styledContents = formatStyledFile(componentName, cssNest, hasBoxStroke);
@@ -7595,37 +7914,52 @@ function classNameOf(node) {
   if (className === void 0) throw new Error("missing class for node");
   return className;
 }
-function emitNode(node, parent, assets, isRoot, jsxIndent, cascade) {
+function emitNode(node, parent, assets, isRoot, jsxIndent, cascade, marginEnd) {
   const place = placement2(node, parent);
   const className = classNameOf(node);
   switch (node.kind) {
     case "box":
-      return emitBox(node, place, assets, isRoot, jsxIndent, className, cascade);
+      return emitBox(node, place, assets, isRoot, jsxIndent, className, cascade, marginEnd);
     case "text":
-      return emitText(node, place, isRoot, jsxIndent, className, cascade);
+      return emitText(node, place, isRoot, jsxIndent, className, cascade, marginEnd);
     case "raster":
-      return emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade);
+      return emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade, marginEnd);
     default: {
       const _exhaustive = node;
       return _exhaustive;
     }
   }
 }
-function emitBox(node, place, assets, isRoot, jsxIndent, className, cascade) {
-  const built = boxDeclLines(node, place, assets, cascade);
+function emitBox(node, place, assets, isRoot, jsxIndent, className, cascade, marginEnd) {
+  const extras = activePlan?.insertions.get(node) ?? [];
+  const rendered = [
+    ...node.children.map((child) => ({ node: child, origin: node.box })),
+    ...extras.map((extra) => ({ node: extra.node, origin: extra.origin }))
+  ];
+  const built = boxDeclLines(
+    node,
+    place,
+    assets,
+    cascade,
+    marginEnd,
+    rendered.map((entry) => entry.node)
+  );
   const declLines = built.lines;
   const childCss = [];
   const childJsx = [];
-  for (const child of node.children) {
-    const childBuilt = emitNode(child, node.box, assets, false, jsxIndent + 1, built.next);
+  const lastInFlow = lastInFlowIndex2(rendered.map((entry) => entry.node));
+  for (const [index, entry] of rendered.entries()) {
+    const childBuilt = emitNode(
+      entry.node,
+      entry.origin,
+      assets,
+      false,
+      jsxIndent + 1,
+      built.next,
+      flowMargin2(node, entry.node, index === lastInFlow)
+    );
     childJsx.push(...childBuilt.jsxLines);
     childCss.push(childBuilt.cssNest);
-  }
-  const extras = activePlan?.insertions.get(node) ?? [];
-  for (const extra of extras) {
-    const extraBuilt = emitNode(extra.node, extra.origin, assets, false, jsxIndent + 1, built.next);
-    childJsx.push(...extraBuilt.jsxLines);
-    childCss.push(extraBuilt.cssNest);
   }
   const strokeAttr = node.stroke || activePlan?.forceStroke.has(node) ? ' data-stroke=""' : "";
   const pad = indent(jsxIndent);
@@ -7638,13 +7972,13 @@ function emitBox(node, place, assets, isRoot, jsxIndent, className, cascade) {
   nestByNode.set(node, cssNest);
   return { jsxLines, cssNest };
 }
-function emitText(node, place, isRoot, jsxIndent, className, cascade) {
+function emitText(node, place, isRoot, jsxIndent, className, cascade, marginEnd) {
   const groups = groupRuns(node.runs);
   const first = groups[0]?.[0];
   if (first === void 0) {
     throw new ExportError({ kind: "invalid-document", message: "A text node has no runs." });
   }
-  const declLines = textDeclLines(node, place, first, cascade);
+  const declLines = textDeclLines(node, place, first, cascade, marginEnd);
   const needsLine = node.alignY !== "top";
   const lineClass = `${className}-line`;
   const base = runStyleMap2(first);
@@ -7690,12 +8024,12 @@ function emitText(node, place, isRoot, jsxIndent, className, cascade) {
   nestByNode.set(node, cssNest);
   return { jsxLines, cssNest };
 }
-function emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade) {
+function emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade, marginEnd) {
   const src = assets.rasters.get(node.id);
   if (src === void 0) throw new ExportError({ kind: "missing-asset", id: node.id });
   const cursor = cursorDecl2(node, cascade);
   const declLines = cssDeclLines([
-    ...placementDecls2(place).map((decl) => `${decl};`),
+    ...layoutDecls2(node, place, marginEnd).map((decl) => `${decl};`),
     ...blendDecls2(node.blend).map((decl) => `${decl};`),
     cursor.decl === null ? null : `${cursor.decl};`
   ]);
@@ -7732,12 +8066,12 @@ function emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade) 
   nestByNode.set(node, cssNest);
   return { jsxLines, cssNest };
 }
-function boxDeclLines(node, place, assets, cascade) {
+function boxDeclLines(node, place, assets, cascade, marginEnd, hosted) {
   const flow = inheritedDecls2(agreedStyle2(node) ?? EMPTY_CASCADE2, cascade);
   const cursor = cursorDecl2(node, flow.next);
   return {
     lines: cssDeclLines([
-      ...placementDecls2(place).map((decl) => `${decl};`),
+      ...layoutDecls2(node, place, marginEnd, hosted).map((decl) => `${decl};`),
       withSemi(backgroundDecl2(node.paints, assets)),
       withSemi(radiusDecl2(node.radius)),
       node.clips ? "overflow: hidden;" : null,
@@ -7750,11 +8084,11 @@ function boxDeclLines(node, place, assets, cascade) {
     next: cursor.next
   };
 }
-function textDeclLines(node, place, first, cascade) {
+function textDeclLines(node, place, first, cascade, marginEnd) {
   const flow = inheritedDecls2(textStyleMap2(node), cascade);
   const cursor = cursorDecl2(node, flow.next);
   return cssDeclLines([
-    ...placementDecls2(place).map((decl) => `${decl};`),
+    ...layoutDecls2(node, place, marginEnd).map((decl) => `${decl};`),
     ...flow.decls.map((decl) => `${decl};`),
     `color: ${first.color};`,
     ...alignDecls2(node.alignY).map((decl) => `${decl};`),
@@ -7937,7 +8271,13 @@ function diffStroke2(plan, hot, pseudo, src, dst, basis, assets) {
   for (const [key, value] of EMPTY_STROKE2) setRest2(plan, src, key, value);
 }
 function diffVariantGeometry2(plan, hot, pseudo, src, dst, basis, srcParent, dstParent, basisParent, isHot, scale, motion) {
+  if (src.flow.kind === "in-flow") {
+    const next = variantBox2(src, dst, basis, srcParent, dstParent, basisParent, isHot, scale);
+    tweenFlowSize2(plan, hot, pseudo, src, motion, next.width, next.height);
+    return;
+  }
   const rest = placement2(src, srcParent);
+  if (rest.kind === "flow") return;
   let left = rest.leftPx;
   let top = rest.topPx;
   let width = src.box.width;
@@ -7967,7 +8307,12 @@ function diffVariantGeometry2(plan, hot, pseudo, src, dst, basis, srcParent, dst
   setGeom2(plan, hot, pseudo, src, motion, "height", rest.heightPx, height);
 }
 function diffGeometry2(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot, motion) {
+  if (src.flow.kind === "in-flow") {
+    tweenFlowSize2(plan, hot, pseudo, src, motion, dst.box.width, dst.box.height);
+    return;
+  }
   const rest = placement2(src, srcParent);
+  if (rest.kind === "flow") return;
   let left = rest.leftPx;
   let top = rest.topPx;
   let width = dst.box.width;
@@ -7982,7 +8327,7 @@ function diffGeometry2(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot,
       if (src.anchorY === "end") top -= dh;
     }
   } else if (dstParent !== null) {
-    const next = placement2(dst, dstParent);
+    const next = boxOffset2(dst, dstParent);
     left = next.leftPx;
     top = next.topPx;
     width = next.widthPx;
@@ -7992,6 +8337,26 @@ function diffGeometry2(plan, hot, pseudo, src, dst, srcParent, dstParent, isHot,
   setGeom2(plan, hot, pseudo, src, motion, "top", rest.topPx, top);
   setGeom2(plan, hot, pseudo, src, motion, "width", rest.widthPx, width);
   setGeom2(plan, hot, pseudo, src, motion, "height", rest.heightPx, height);
+}
+function variantBox2(src, dst, basis, srcParent, dstParent, basisParent, isHot, scale) {
+  if (isHot || srcParent === null || dstParent === null || basisParent === null) {
+    return variantSize(src.box, basis.box, dst.box, scale);
+  }
+  const next = variantOffset(src.box, basis.box, dst.box, srcParent, basisParent, dstParent, scale);
+  return { width: next.width, height: next.height };
+}
+function tweenFlowSize2(plan, hot, pseudo, src, motion, width, height) {
+  if (src.flow.kind !== "in-flow") return;
+  if (src.flow.width === "fixed") setGeom2(plan, hot, pseudo, src, motion, "width", src.box.width, width);
+  if (src.flow.height === "fixed") setGeom2(plan, hot, pseudo, src, motion, "height", src.box.height, height);
+}
+function boxOffset2(node, parent) {
+  return {
+    leftPx: node.box.x - parent.x,
+    topPx: node.box.y - parent.y,
+    widthPx: node.box.width,
+    heightPx: node.box.height
+  };
 }
 function setGeom2(plan, hot, pseudo, src, motion, prop, restPx, nextPx) {
   const next = px2(nextPx);
@@ -8298,27 +8663,170 @@ function withSemi(decl) {
 function placement2(node, parent) {
   if (parent === null) {
     return {
-      position: "relative",
+      kind: "root",
       leftPx: 0,
       topPx: 0,
       widthPx: node.box.width,
       heightPx: node.box.height
     };
   }
-  return {
-    position: "absolute",
-    leftPx: node.box.x - parent.x,
-    topPx: node.box.y - parent.y,
-    widthPx: node.box.width,
-    heightPx: node.box.height
-  };
+  if (node.flow.kind === "out-of-flow") {
+    return {
+      kind: "absolute",
+      leftPx: node.box.x - parent.x,
+      topPx: node.box.y - parent.y,
+      widthPx: node.box.width,
+      heightPx: node.box.height
+    };
+  }
+  return { kind: "flow" };
 }
 function placementDecls2(place) {
-  const decls = [`position: ${place.position}`];
-  if (place.position === "absolute" || place.leftPx !== 0) decls.push(`left: ${px2(place.leftPx)}`);
-  if (place.position === "absolute" || place.topPx !== 0) decls.push(`top: ${px2(place.topPx)}`);
-  decls.push(`width: ${px2(place.widthPx)}`, `height: ${px2(place.heightPx)}`);
+  if (place.kind === "flow") return [];
+  if (place.kind === "root") {
+    return ["position: relative", `width: ${px2(place.widthPx)}`, `height: ${px2(place.heightPx)}`];
+  }
+  return [
+    "position: absolute",
+    `left: ${px2(place.leftPx)}`,
+    `top: ${px2(place.topPx)}`,
+    `width: ${px2(place.widthPx)}`,
+    `height: ${px2(place.heightPx)}`
+  ];
+}
+function layoutDecls2(node, place, marginEnd, hosted = []) {
+  return [
+    ...placementDecls2(place),
+    ...flowDecls2(node, marginEnd),
+    ...limitDecls2(node),
+    ...node.kind === "box" ? containingDecls2(node, hosted) : [],
+    ...node.kind === "box" && node.stack !== null ? stackDecls2(node.stack) : []
+  ];
+}
+function flowDecls2(node, marginEnd) {
+  if (node.flow.kind !== "in-flow") return [];
+  const flow = node.flow;
+  const decls = [];
+  const mainTrack = flow.main === "width" ? flow.width : flow.height;
+  if (mainTrack === "fill") decls.push("flex: 1 0 0");
+  if (flow.width === "fixed") decls.push(`width: ${px2(node.box.width)}`);
+  if (flow.height === "fixed") decls.push(`height: ${px2(node.box.height)}`);
+  const align = alignSelfDecl2(flow);
+  if (align !== null) decls.push(`align-self: ${align}`);
+  if (marginEnd !== null) decls.push(marginEnd);
   return decls;
+}
+function alignSelfDecl2(flow) {
+  switch (flow.align) {
+    case "start":
+      return "flex-start";
+    case "center":
+      return "center";
+    case "end":
+      return "flex-end";
+    case "stretch":
+      return "stretch";
+    case "auto": {
+      const cross = flow.main === "width" ? flow.height : flow.width;
+      return cross === "fill" ? "stretch" : null;
+    }
+    default: {
+      const _exhaustive = flow.align;
+      return _exhaustive;
+    }
+  }
+}
+function limitDecls2(node) {
+  const decls = [];
+  if (node.limits.minWidth !== null) decls.push(`min-width: ${px2(node.limits.minWidth)}`);
+  if (node.limits.maxWidth !== null) decls.push(`max-width: ${px2(node.limits.maxWidth)}`);
+  if (node.limits.minHeight !== null) decls.push(`min-height: ${px2(node.limits.minHeight)}`);
+  if (node.limits.maxHeight !== null) decls.push(`max-height: ${px2(node.limits.maxHeight)}`);
+  return decls;
+}
+function containingDecls2(node, hosted) {
+  if (node.flow.kind !== "in-flow") return [];
+  if (!hosted.some((child) => child.flow.kind === "out-of-flow")) return [];
+  return ["position: relative"];
+}
+function stackDecls2(stack) {
+  const decls = ["display: flex"];
+  if (stack.direction === "vertical") decls.push("flex-direction: column");
+  if (stack.wrap) decls.push("flex-wrap: wrap");
+  const justify = stackMainCss2(stack.main);
+  if (justify !== "flex-start") decls.push(`justify-content: ${justify}`);
+  const align = stackCrossCss2(stack.cross);
+  if (align !== "flex-start") decls.push(`align-items: ${align}`);
+  decls.push(...gapDecls2(stack), ...paddingDecls2(stack.padding));
+  return decls;
+}
+function stackMainCss2(main) {
+  switch (main) {
+    case "center":
+      return "center";
+    case "end":
+      return "flex-end";
+    case "space-between":
+      return "space-between";
+    case "start":
+      return "flex-start";
+    default: {
+      const _exhaustive = main;
+      return _exhaustive;
+    }
+  }
+}
+function stackCrossCss2(cross) {
+  switch (cross) {
+    case "center":
+      return "center";
+    case "end":
+      return "flex-end";
+    case "baseline":
+      return "baseline";
+    case "start":
+      return "flex-start";
+    default: {
+      const _exhaustive = cross;
+      return _exhaustive;
+    }
+  }
+}
+function gapDecls2(stack) {
+  if (!stack.wrap) return stack.gap > 0 ? [`gap: ${px2(stack.gap)}`] : [];
+  const main = stack.gap > 0 ? stack.gap : 0;
+  const crossRaw = stack.counterGap ?? stack.gap;
+  const cross = crossRaw > 0 ? crossRaw : 0;
+  const decls = [];
+  if (stack.direction === "horizontal") {
+    if (main !== 0) decls.push(`column-gap: ${px2(main)}`);
+    if (cross !== 0) decls.push(`row-gap: ${px2(cross)}`);
+  } else {
+    if (main !== 0) decls.push(`row-gap: ${px2(main)}`);
+    if (cross !== 0) decls.push(`column-gap: ${px2(cross)}`);
+  }
+  return decls;
+}
+function paddingDecls2(padding) {
+  const decls = [];
+  if (padding.top !== 0) decls.push(`padding-top: ${px2(padding.top)}`);
+  if (padding.right !== 0) decls.push(`padding-right: ${px2(padding.right)}`);
+  if (padding.bottom !== 0) decls.push(`padding-bottom: ${px2(padding.bottom)}`);
+  if (padding.left !== 0) decls.push(`padding-left: ${px2(padding.left)}`);
+  return decls;
+}
+function lastInFlowIndex2(nodes) {
+  let last = -1;
+  nodes.forEach((node, index) => {
+    if (node.flow.kind === "in-flow") last = index;
+  });
+  return last;
+}
+function flowMargin2(parent, child, isLastInFlow) {
+  if (parent.stack === null || parent.stack.gap >= 0) return null;
+  if (child.flow.kind !== "in-flow" || isLastInFlow) return null;
+  const prop = parent.stack.direction === "horizontal" ? "margin-right" : "margin-bottom";
+  return `${prop}: ${px2(parent.stack.gap)}`;
 }
 function rasterBleeds2(node) {
   return node.bleed.left !== 0 || node.bleed.top !== 0 || node.bleed.right !== 0 || node.bleed.bottom !== 0;
