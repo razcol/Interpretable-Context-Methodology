@@ -39,7 +39,7 @@ __export(cli_exports, {
 module.exports = __toCommonJS(cli_exports);
 
 // <define:__FIGMA_CLI_BUILD__>
-var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "6f16152", dirty: false, date: "2026-11-03" };
+var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "a3746d4", dirty: false, date: "2026-11-05" };
 
 // src/cli.ts
 var import_promises2 = require("node:readline/promises");
@@ -559,44 +559,103 @@ function chunkIds(ids, overhead) {
 async function getJson(url, token, notFoundId) {
   let retries = 0;
   for (; ; ) {
-    const response = await fetchResponse(url, token);
-    if (response.status === 429) {
-      await drain(response);
-      if (retries === RETRY_LIMIT) throw new ExportError({ kind: "rate-limited" });
+    let fetched;
+    try {
+      fetched = await fetchResponse(url, token);
+    } catch (error) {
+      if (!isHeaderTimeout(error)) throw error;
+      if (retries === RETRY_LIMIT) throw error;
       retries += 1;
-      await delay(retryAfterMs(response, retries));
+      await delay(retryAfterMs(null, retries));
       continue;
     }
-    if (response.status === 403) {
-      await drain(response);
-      throw new ExportError({ kind: "unauthorized" });
+    const { response } = fetched;
+    try {
+      if (response.status === 429) {
+        await drain(response);
+        if (retries === RETRY_LIMIT) throw new ExportError({ kind: "rate-limited" });
+        retries += 1;
+        await delay(retryAfterMs(response, retries));
+        continue;
+      }
+      if (isGateway(response.status)) {
+        const detail = await errorDetail(response, token);
+        if (retries === RETRY_LIMIT) throw httpError(response.status, detail);
+        retries += 1;
+        await delay(retryAfterMs(response, retries));
+        continue;
+      }
+      if (response.status === 403) {
+        await drain(response);
+        throw new ExportError({ kind: "unauthorized" });
+      }
+      if (response.status === 404) {
+        await drain(response);
+        if (notFoundId !== null) throw new ExportError({ kind: "not-found", nodeId: notFoundId });
+        throw new ExportError({ kind: "http", status: 404 });
+      }
+      if (!response.ok) {
+        throw httpError(response.status, await errorDetail(response, token));
+      }
+      return await readJson(response);
+    } finally {
+      fetched.release();
     }
-    if (response.status === 404) {
-      await drain(response);
-      if (notFoundId !== null) throw new ExportError({ kind: "not-found", nodeId: notFoundId });
-      throw new ExportError({ kind: "http", status: 404 });
-    }
-    if (!response.ok) {
-      await drain(response);
-      throw new ExportError({ kind: "http", status: response.status });
-    }
-    return readJson(response);
   }
 }
+var HEADERS_TIMEOUT_MS = 3e4;
 var REQUEST_TIMEOUT_MS = 18e4;
 async function fetchResponse(url, token) {
+  const controller = new AbortController();
+  const headersSignal = AbortSignal.timeout(HEADERS_TIMEOUT_MS);
+  const abortFromHeaders = () => {
+    controller.abort(headersSignal.reason);
+  };
+  if (headersSignal.aborted) abortFromHeaders();
+  else headersSignal.addEventListener("abort", abortFromHeaders, { once: true });
+  const overall = setTimeout(() => {
+    controller.abort(timeoutReason());
+  }, REQUEST_TIMEOUT_MS);
+  const release = () => {
+    clearTimeout(overall);
+    headersSignal.removeEventListener("abort", abortFromHeaders);
+  };
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       method: "GET",
       headers: { "X-Figma-Token": token },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      signal: controller.signal
     });
+    headersSignal.removeEventListener("abort", abortFromHeaders);
+    return { response, release };
   } catch (error) {
-    if (isTimeout(error)) {
+    release();
+    if (headersSignal.aborted && (isTimeout(error) || isTimeout(controller.signal.reason))) {
+      throw new ExportError({
+        kind: "network",
+        message: "The network request timed out.",
+        timeout: "headers"
+      });
+    }
+    if (isTimeout(error) || isTimeout(controller.signal.reason)) {
       throw new ExportError({ kind: "network", message: "The network request timed out." });
     }
     throw new ExportError({ kind: "network", message: networkMessage(error, token) });
   }
+}
+function timeoutReason() {
+  const error = new Error("The operation was aborted due to timeout");
+  error.name = "TimeoutError";
+  return error;
+}
+function isGateway(status) {
+  return status === 502 || status === 503 || status === 504;
+}
+function httpError(status, detail) {
+  return new ExportError(detail === null ? { kind: "http", status } : { kind: "http", status, detail });
+}
+function isHeaderTimeout(error) {
+  return error instanceof ExportError && error.failure.kind === "network" && error.failure.timeout === "headers";
 }
 function isTimeout(error) {
   return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
@@ -608,12 +667,14 @@ function networkMessage(error, token) {
   return error.message;
 }
 function retryAfterMs(response, retry) {
-  const header = response.headers.get("retry-after");
-  if (header !== null) {
-    const seconds = Number(header);
-    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1e3, 6e4);
-    const when = Date.parse(header);
-    if (Number.isFinite(when)) return Math.min(Math.max(0, when - Date.now()), 6e4);
+  if (response !== null) {
+    const header = response.headers.get("retry-after");
+    if (header !== null) {
+      const seconds = Number(header);
+      if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1e3, 6e4);
+      const when = Date.parse(header);
+      if (Number.isFinite(when)) return Math.min(Math.max(0, when - Date.now()), 6e4);
+    }
   }
   return Math.min(200 * 2 ** (retry - 1), 6e4);
 }
@@ -625,10 +686,24 @@ function delay(ms) {
 async function drain(response) {
   await response.arrayBuffer().catch(() => void 0);
 }
+async function errorDetail(response, token) {
+  let raw = "";
+  try {
+    raw = await response.text();
+  } catch {
+    return null;
+  }
+  const collapsed = raw.replace(/\s+/gu, " ").trim();
+  if (collapsed.length === 0 || collapsed.includes(token)) return null;
+  return collapsed.length > 180 ? `${collapsed.slice(0, 180)}\u2026` : collapsed;
+}
 async function readJson(response) {
   try {
     return await response.json();
-  } catch {
+  } catch (error) {
+    if (isTimeout(error)) {
+      throw new ExportError({ kind: "network", message: "The network request timed out." });
+    }
     throw new ExportError({
       kind: "invalid-document",
       message: "Figma returned a body that is not JSON."
@@ -10388,7 +10463,7 @@ function failureBody(failure) {
         "\n"
       );
     case "http":
-      return `Figma returned HTTP ${failure.status}.`;
+      return failure.detail === void 0 ? `Figma returned HTTP ${failure.status}.` : `Figma returned HTTP ${failure.status}. ${failure.detail}`;
     case "network":
       return failure.message;
     default: {

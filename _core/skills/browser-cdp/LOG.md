@@ -111,3 +111,13 @@ Append an entry every time the skill is used, even when it works. Record the com
 - Surprises: no script lists successful requests in a persistent tab (capture.js opens a fresh tab, which loses sessionStorage-based login). Workaround: temporary console.error in app code, read from interact.js consoleErrors. A `--log-requests` flag on interact.js would help.
 - Default port 9333 was occupied by an unrelated Chrome; started on --port 9334.
 - Terms scroll gate (perfect-scrollbar onYReachEnd) passed by clicking the last element inside the scroll area.
+
+## 2026-11-04 ORA button boards (file previews, element restyle)
+- Attempted: screenshot.js + diff.js at 240x154 for three figma-cli previews, then measure.js on the fluid exports at 1920, 1440 and 1100. Reused the already-running headless Chrome on 9333.
+- Outcome: diffs recorded (0.52, 0.72, 0.52). Fluid measure exited 0 with overflow 0, but the fluid pages render blank because both button states are absolutely positioned in a frame with no height.
+- Surprise: sandbox cannot see the CDP port; the scripts need to run outside the sandbox.
+
+## 2026-11-05 ImageGrid hover crop fixture
+- Attempted: screenshot.js of file:///tmp/imagegrid-zoom-check.html, rest crop beside the tall-start hover crop (111.218% by 112.342%).
+- Outcome: Chrome started on port 9333. The hover card's mark is larger than the resting card, so the crop math enlarges the image inside the clipped frame.
+- Surprise: browser.js status exits 0 when Chrome is stopped, so `status || start` does not start it.
