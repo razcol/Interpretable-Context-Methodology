@@ -50,14 +50,14 @@ A run is keyed by the Figma node id. Its records live in `stages/0N-*/output/<no
 
 | Stage | Load These | Do NOT Load |
 |-------|-----------|-------------|
-| 01 | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `targets/repos.md`, the next-section-repo SKILL | Later stages, figma-cli source |
-| 01m | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `stages/01-export/references/viewport-map.md`, the next-section-repo SKILL and `references/mobile-patterns.md` | Later stages, figma-cli source |
+| 01 | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `targets/repos.md`, the next-section-repo SKILL | Later stages, figma-cli source |
+| 01m | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `targets/repos.md`, `stages/01-export/references/viewport-map.md`, D's records, the next-section-repo SKILL and `references/mobile-patterns.md` | Later stages, figma-cli source |
 | 02 | Its CONTEXT and references, the run's export record and profile, the wp-graphql SKILL | Stage 03 to 05 files, other runs' outputs (except the paired M's `inspect.txt` and `figma.png`) |
 | 03 | Its CONTEXT and reference, the run's field plan and profile, the wp-graphql SKILL | Stage 04 and 05 files, the field report |
 | 04 | Its CONTEXT and reference, the run's records and `.gql`, the next-section-repo SKILL and checklist | wp-graphql internals, other runs |
-| 04m | Its CONTEXT, the mobile section of `binding-rules.md`, `mobile-patterns.md`, the run's viewport map and overlay | Stage 02 and 03 references |
+| 04m | Its CONTEXT, the "mobile: overlay" and "Record" sections of `binding-rules.md`, `mobile-patterns.md`, the run's export record, viewport map and overlay, the next-section-repo SKILL and checklist | Stage 02 and 03 references |
 | 05 | Its CONTEXT and reference, the run's records, the browser-cdp SKILL | Stage 02 and 03 references |
-| 05m | Its CONTEXT, the Mobile section of `verify-steps.md`, the browser-cdp SKILL | Stage 02 and 03 references |
+| 05m | Its CONTEXT, the Mobile section of `verify-steps.md`, the run's records, `targets/repos.md`, the browser-cdp SKILL | Stage 02 and 03 references |
 
 ## Stage Handoffs
 

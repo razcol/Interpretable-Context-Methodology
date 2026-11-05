@@ -51,7 +51,7 @@ Before the first write, copy `Styled<Folder>.js` and `Client<Folder>.js` to `sta
 
 Rules:
 
-1. **Desktop is frozen.** No declaration outside a `bps.mobile` block changes. The only exception is gating an existing `:hover` (rule 5).
+1. **Desktop is frozen.** No declaration outside a `bps.mobile` block changes. The exceptions are gating an existing `:hover` (rule 5) and the base `display: none` of an element added for mobile (rule 4).
 2. **Overlay values, not structure.** Nest each block from `mobile-overlay.styled.txt` inside the existing selector the map names as its target. Never copy the mobile scaffold's structure or class names. When the target selector already has a `bps.mobile` block, merge into it.
 3. **Order without new markup.** For `moved` rows use CSS first: `order`, `grid-template-areas`, or `display: contents` on a wrapper. Change JSX only when CSS cannot express the order, and say why in the record. The root stays `ltr` (`section-shape.md`). A mobile grid that reads right to left sets `direction: rtl` on that grid.
 4. **Hidden and decor.** `hidden-on-mobile`: hide it as in mobile-patterns.md "Hiding and showing". `mobile-only-decor`: search the repo's icons first (mobile-patterns.md "Icons"), present the candidates at the checkpoint, then add the element and hide it outside mobile.
@@ -75,7 +75,7 @@ Audit (mobile):
 | Touch | Every hover reveal has its touch path: `design` from the overlay, or the recorded checkpoint decision |
 | Icons | Every new icon lists the repo candidates that were rejected. No SVG was drawn before you said none fits |
 | Untouched | `.gql` and `Server<Folder>.js` unchanged |
-| Checker | `check_section.py --mobile-pass` reports no `fail` (warnings listed in the record) |
+| Checker | `check_section.py --mobile-pass` reports no `fail` on a file this pass changed. A `fail` on a file it may not touch (the `.gql`, `Server<Folder>.js`) that also fails on the `before/` state is listed in the record as pre-existing. Warnings are listed too |
 
 ## Record
 

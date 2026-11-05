@@ -27,7 +27,7 @@ Put the staged scaffold into the repo and bind it to the fragment. On `resync`, 
 3. `resync`: diff the new scaffold against the existing section folder. Apply structure and style changes. Keep every binding, prop name, propTypes entry and hand-written logic that is not Figma output, and every rule from a mobile pass.
 4. `element`: edit only the target file and its styles so the control matches the Figma values in `inspect.txt`, using theme tokens.
 5. Show the binding table, or the drift list, or the control diff. In mobile mode: the drift list per map row, the touch rows that need a decision, and the icon candidates.
-6. From `skills/next-section-repo/`, run `python3 scripts/check_section.py --repo <app root> --folder <Folder> --profile /home/dev/ai-system/workspaces/figma-section-fields/stages/01-export/output/<node-id>/profile.json`, plus `--mobile-pass` in mobile mode. Fix every `fail` row, then rerun. Check the checklist rows marked manual.
+6. From `skills/next-section-repo/`, run `python3 scripts/check_section.py --repo <app root> --folder <Folder> --profile /home/dev/ai-system/workspaces/figma-section-fields/stages/01-export/output/<node-id>/profile.json`, plus `--mobile-pass` in mobile mode. Fix every `fail` row (in mobile mode, only on files the pass may change; see the mobile Checker audit), then rerun. Check the checklist rows marked manual.
 7. Run the audit (mobile mode adds the audit in "mobile: overlay"). Write `output/<node-id>/conform-record.md`.
 8. Continue. Load `../05-verify/CONTEXT.md`.
 

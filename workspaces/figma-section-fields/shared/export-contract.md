@@ -6,7 +6,7 @@ What this workspace relies on from `tools/figma-cli`. `$FIGMA` is the call in `s
 
 | Command | Stage | Writes |
 |---|---|---|
-| `$FIGMA inspect '<url>'` | 01 | stdout: per node its box, flow (in flow, absolute inside auto-layout, free), sizing per axis (fixed, hug, fill), auto-layout, clipping, fills, stroke weight and align, font, and the variant each hover or press changes to |
+| `$FIGMA inspect '<url>'` | 01 | stdout: per node its box, flow (in flow, absolute inside auto-layout, free), sizing per axis (fixed, hug, fill), auto-layout, clipping, fills, stroke weight and align, font, and the variant each hover changes to. Tap (ON_CLICK) reactions show only in the viewport map's `interaction` column |
 | `$FIGMA render '<url>' --out <file>.png --scale 1` | 01 | Figma's own PNG of the node, the Level 1 reference |
 | `$FIGMA export '<url>' --out <file>.html` | 01 | HTML preview at Figma's pixel sizes |
 | `$FIGMA export '<url>' --out <file>.html --fluid` | 05 | HTML preview with the scaffold's fluid sizing |

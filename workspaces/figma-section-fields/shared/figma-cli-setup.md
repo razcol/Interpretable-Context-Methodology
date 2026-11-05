@@ -2,7 +2,7 @@
 
 The exporter is the single executable `tools/figma-cli`, built from `~/cli/figma-cli` with `npm run ship:workspace`. Do not run npm in this workspace and do not read the binary as source. A figma-cli change ends with a commit in `~/cli/figma-cli`, `npm run ship:workspace`, and a commit of the binary here.
 
-Shipped build: figma-cli `ec0f708` (2026-11-05). `--version` prints the commit the binary was built from; a `-dirty` mark means uncommitted source.
+Shipped build: figma-cli `8896b3f` (2026-11-05). `--version` prints the commit the binary was built from; a `-dirty` mark means uncommitted source.
 
 ## Runtime and token
 
