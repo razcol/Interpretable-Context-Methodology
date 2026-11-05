@@ -35,6 +35,7 @@ The section is already bound. The new scaffold is the design truth for structure
 1. Find the control's nodes in `inspect.txt`: fill, stroke weight and align, radius, font, hover and press changes.
 2. Edit only the target file and the styled block it owns. Use theme colors and fonts that match, and keep the control's props and handlers.
 3. Hover and press come from the inspect lines that name the variant the control changes to.
+4. With `--mobile`, change only rules inside `bps.mobile` blocks of the target file.
 
 ## mobile: overlay
 
@@ -53,11 +54,13 @@ Rules:
 1. **Desktop is frozen.** No declaration outside a `bps.mobile` block changes. The only exception is gating an existing `:hover` (rule 5).
 2. **Overlay values, not structure.** Nest each block from `mobile-overlay.styled.txt` inside the existing selector the map names as its target. Never copy the mobile scaffold's structure or class names. When the target selector already has a `bps.mobile` block, merge into it.
 3. **Order without new markup.** For `moved` rows use CSS first: `order`, `grid-template-areas`, or `display: contents` on a wrapper. Change JSX only when CSS cannot express the order, and say why in the record. The root stays `ltr` (`section-shape.md`). A mobile grid that reads right to left sets `direction: rtl` on that grid.
-4. **Hidden and decor.** `hidden-on-mobile`: `display: none` in `bps.mobile`. `mobile-only-decor`: search the repo's icons first (mobile-patterns.md "Icons"), present the candidates at the checkpoint, then add the element and hide it outside mobile.
-5. **Touch as the frame shows it.** A row with `touch.source=design` is applied without a question: `useState` and `.is-open` on the node that carries the prototype tap (`touch.trigger` in the overlay), the desktop reveal mirrored under `.is-open` in `bps.mobile`, and the existing `:hover` gated with the profile's `mobile.hoverGate` (mobile-patterns.md "Hover and touch"). On OND-7 the trigger is the whole card and the chevron is the affordance. Only a row with `touch.source=checkpoint` asks: tap toggle, always shown, or hidden. Apply only the chosen option.
-6. **`useIsMobile` only for content swaps.** Import it from the profile's `mobile.hook`, first entry. Never for layout, order, size or visibility.
-7. **Specificity.** Nested blocks first. A trailing root-level block only when slot selectors (`.grid-card.slot-*`) need it, and the record says why for each one.
+4. **Hidden and decor.** `hidden-on-mobile`: hide it as in mobile-patterns.md "Hiding and showing". `mobile-only-decor`: search the repo's icons first (mobile-patterns.md "Icons"), present the candidates at the checkpoint, then add the element and hide it outside mobile.
+5. **Touch as the frame shows it.** A row with `touch.source=design` gets the tap toggle on `touch.trigger` with no question (recipe and gate: mobile-patterns.md "Hover and touch"). On OND-7 the trigger is the whole card and the chevron is the affordance. Only a row with `touch.source=checkpoint` asks: tap toggle, always shown, or hidden. Apply only the chosen option.
+6. **`useIsMobile` only for content swaps** (mobile-patterns.md "`useIsMobile`"), imported from the profile's `mobile.hook`, first entry.
+7. **Specificity.** Nest as in mobile-patterns.md "Where mobile rules go". The record says why for each trailing root-level block.
 8. **No fields.** A `new-content` row should have stopped the run in 01m. If one shows up here, stop the same way: the group needs a field, and the route is `sync <Folder> <desktop-url> <repo> --mobile <mobile-url>`. Never touch the `.gql` or `Server<Folder>.js`.
+
+On `resync --mobile` (drift mode), apply only what differs between the new overlay and the existing `bps.mobile` rules, under the same rules. Desktop rules and desktop drift are out of scope.
 
 Checkpoint at step 5: the drift list per map row (selector, what changes, rule used), the `touch.source=checkpoint` rows with the three options, and the icon candidates for each decor row. Rows with `touch.source=design` are listed as applied, not asked.
 

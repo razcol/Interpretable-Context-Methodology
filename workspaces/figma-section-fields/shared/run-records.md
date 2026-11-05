@@ -11,7 +11,7 @@ Output folders are git-ignored. Records are history for `status` and for the nex
 | Stage | Files | Holds |
 |---|---|---|
 | 01 | `stages/01-export/output/<D>/`: `export-record.md`, `profile.json`, `inspect.txt`, `figma.png`, `preview.html`, `scaffold/<Folder>/`, `section-map.json`, `nodes.json` (when a pair is known) | Route, Figma URL, node id, repo, app root, folder, figma-cli `--version` line, flags, every `note:` line, viewport, pair |
-| 01m | `stages/01-export/output/<M>/`: `export-record.md`, `profile.json`, `inspect.txt`, `figma.png`, `preview.html`, `nodes.json` (dump), `section-map.json` (the mobile rows), `viewport-map.json`, `viewport-map.md` (edit surface), `mobile-overlay.json`, `mobile-overlay.styled.txt`. No `scaffold/` | The mobile record, the map with your edits, the overlay figma-cli emitted |
+| 01m | `stages/01-export/output/<M>/`: `export-record.md`, `profile.json`, `inspect.txt`, `figma.png`, `preview.html`, `nodes.json` (dump), `section-map.json` (figma-cli's mobile row map, an artifact; the record's `section-map:` line never names it), `viewport-map.json`, `viewport-map.md` (edit surface), `mobile-overlay.json`, `mobile-overlay.styled.txt`. No `scaffold/` | The mobile record, the map with your edits, the overlay figma-cli emitted |
 | 02 | `stages/02-field-plan/output/<D>/`: `field-plan.md`, `field-plan.json` | The plan you approved or are reviewing, the questions and your answers |
 | 03 | `stages/03-fragment/output/<D>/`: `fragment-record.md` | The `.gql` path, `diff-group` result, `check-fragment` summary |
 | 04 | `stages/04-conform-bind/output/<D>/`: `conform-record.md`, `class-map.json` (when it renames scaffold classes) | Files written or changed, the binding table, drift applied, `check_section` result. `class-map.json` maps each renamed scaffold class to its repo selector |
@@ -41,7 +41,7 @@ Output folders are git-ignored. Records are history for `status` and for the nex
 - notes: <each note: line, or none>
 ```
 
-- `section-map:` on a desktop record is `stages/01-export/output/<D>/section-map.json`, written by the scaffold with `--section-map`. On a mobile record it is the desktop map that 01m matched against.
+- `section-map:` on a desktop record is `stages/01-export/output/<D>/section-map.json`, written by the scaffold with `--section-map`. On a mobile record it is still that desktop map, `stages/01-export/output/<D>/section-map.json`, the one 01m matched against. `stages/01-export/output/<M>/section-map.json` is figma-cli's mobile row map, an artifact that no record line names.
 - `class-map:` on a mobile record is `stages/04-conform-bind/output/<D>/class-map.json` when desktop 04 renamed scaffold classes, otherwise `none`.
 
 Later records start with the same `# <Stage> record <node-id>` line and list facts as bullets, then tables.

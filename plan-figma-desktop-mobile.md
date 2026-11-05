@@ -126,7 +126,10 @@ Desktop pass (key D = desktop node id)
         │
         ▼ same run, no extra trigger
 Mobile pass (key M = mobile node id, pair: D)
-  01m figma-cli export M --mobile-of D's section map ── exit 12: CHECKPOINT on the map, rerun with --map
+  01m $FIGMA export '<M url>' --mobile-of stages/01-export/output/<D>/section-map.json
+        --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out stages/01-export/output/<M>
+        --repo-profile stages/01-export/output/<M>/profile.json [--class-map ...] [--font-map ...]
+      ── exit 12: CHECKPOINT on the map, rerun with --map stages/01-export/output/<M>/viewport-map.json
   04m overlay under theme.bps.mobile ── CHECKPOINT: drift list, touch only for rows without a design affordance
   05m verify (mobile widths, 1279/1280 boundary, desktop regression vs baseline, tap)
 ```
@@ -141,8 +144,12 @@ Why preflight M in desktop stage 01: stage 02 decides whether an image field is 
 01m  probe repo, find D:
        D = the export record whose folder == <Folder> and repo == <repo> (newest);
        none found → ask for the desktop URL (figma-cli needs it to rebuild the section map)
-     D has no section-map.json → rerun D's scaffold into stage output with --section-map (no repo write)
-     figma-cli export M --mobile-of D's section map ── exit 12: CHECKPOINT; exit 11: stop
+     D has no section-map.json → rerun D's scaffold into stage output (no repo write):
+       $FIGMA export '<D url>' --dist stages/01-export/output/<D>/scaffold --scaffold next-section
+         --component <Folder> --repo-profile .../profile.json --section-map stages/01-export/output/<D>/section-map.json
+     $FIGMA export '<M url>' --mobile-of stages/01-export/output/<D>/section-map.json --section-dir <section dir>
+       --overlay-out stages/01-export/output/<M> --repo-profile .../profile.json [--class-map ...]
+       ── exit 12: CHECKPOINT; exit 11: stop
 04m  overlay ── CHECKPOINT only for touch.source=checkpoint rows
 05m  verify mobile + desktop regression (the baseline is taken from the repo HEAD before 04m writes)
 ```
@@ -198,10 +205,10 @@ Section ImageGrid (ora, /home/dev/ora-next/.worktrees/OND-7)
 ### 6.1 Stage 01 export (`stages/01-export/CONTEXT.md`)
 
 - Step 1: also read `--mobile <url>` (Case A) or the `mobile` route (Case B), and record `viewport`. Desktop scaffold step: always pass `--section-map stages/01-export/output/<D>/section-map.json` and record the `section-map:` line.
-- New step 3a, mobile preflight (Case A, desktop pass): `$FIGMA inspect`, `render` and `export --dump` for M into `stages/01-export/output/<M>/`, plus `export --dump` for D. No scaffold for M. D's export record gets `pair: <M>`.
+- New step 3a, mobile preflight (Case A, desktop pass): `$FIGMA inspect '<M url>' > stages/01-export/output/<M>/inspect.txt`, `$FIGMA render '<M url>' --out stages/01-export/output/<M>/figma.png --scale 1` and `$FIGMA export '<M url>' --dump stages/01-export/output/<M>/nodes.json`, plus `$FIGMA export '<D url>' --dump stages/01-export/output/<D>/nodes.json`. No scaffold for M. D's export record gets `pair: <M>`.
 - New step 6m (mobile pass, both cases):
-  1. If D has no `section-map.json`, first rerun D's scaffold from its record URL into `stages/01-export/output/<D>/` with `--section-map`. No repo write.
-  2. Run `$FIGMA export '<M url>' --mobile-of <D section-map.json> --section-dir <repo section dir> --overlay-out stages/01-export/output/<M> --repo-profile <profile.json> [--font-map ...]`, with the same `--font-map` as D's record.
+  1. If D has no `section-map.json`, first rerun D's scaffold from its record URL. No repo write: `$FIGMA export '<D url>' --dist stages/01-export/output/<D>/scaffold --scaffold next-section --component <Folder> --repo-profile .../profile.json --section-map stages/01-export/output/<D>/section-map.json [--font-map ...]`.
+  2. Run `$FIGMA export '<M url>' --mobile-of stages/01-export/output/<D>/section-map.json --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out stages/01-export/output/<M> --repo-profile .../profile.json [--class-map stages/04-conform-bind/output/<D>/class-map.json] [--font-map ...]`, with the same `--font-map` as D's record.
   3. Exit 0: continue. Exit 12 (`unmatched` or `target-missing` rows): **checkpoint** on `viewport-map.md`. The user fixes rows there (edit surface), the agent carries the edits into `viewport-map.json`, then reruns step 2 with `--map <edited viewport-map.json>`. Exit 11 (`new-content` rows): stop with the `sync --mobile` message (section 4.2).
 - Step 9 routing: on `viewport: mobile`, load `../04-conform-bind/CONTEXT.md` in mobile mode. Audit additions: the record has `viewport`, `pair` and `section-map`, and the map has no `unmatched` or `target-missing` row left without a user decision.
 - New reference `stages/01-export/references/viewport-map.md` (under 80 lines): how to read and edit the figma-cli output, the columns, the match rules (6.1.1), the statuses and the affordance guess.
@@ -343,7 +350,7 @@ Warning: "`bps.desktop` and `bps.mobile` both match at <N>px" when the ranges ov
 - Touch object: when the D row has `hover.reveals` and the matched M node has a prototype tap (an `ON_CLICK` change-to, as OND-7's `H01 1565:4763` and `H02 1565:4839` have, pointing at the expanded `Variant2`) or an affordance inside it, `touch: { source: "design", trigger: <node carrying the reaction>, mirror: ".is-open" }` plus the hover gate from the profile's `mobile.hoverGate` (default `bps.desktop`). With no affordance, `touch: { source: "checkpoint" }`.
 - Exit codes: 0 ok; 12 files written but `unmatched` or `target-missing` rows exist (checkpoint); 11 `new-content` rows exist (stop). Exit 5 is taken by `rate-limited`, so the checkpoint is 12.
 
-**F4. Tests and ship.** Add `test/section-map.test.ts`, `test/viewport-map.test.ts` and `test/mobile-overlay.test.ts` (node:test with inline wire, like `scaffold.test.ts`) to the explicit list in `package.json` `scripts.test`. Fixtures: `test/fixtures/ond7-desktop.json` and `test/fixtures/ond7-mobile.json`, recorded sessions of `3919-20727` and `1482-11000` (every nodes response, including hover and tap states; dumps carry `imageRef` only, no URLs) captured with `scripts/capture-fixture.ts` and replayed offline through an injectable client (`test/replay-client.ts`). Expected: 6 cards matched by title, the intro matched, 6 chevrons as decor with affordance, the breadcrumbs `same`, and 6 `touch.source=design`. Ship: `npm run ci`, commit in figma-cli, `npm run ship:workspace`, commit the binary in the workspace (`shared/figma-cli-setup.md`). Update `shared/export-contract.md` with `--dump`, `--section-map`, the mobile mode and exits 11 and 12.
+**F4. Tests and ship.** Add `test/section-map.test.ts`, `test/viewport-map.test.ts` and `test/mobile-overlay.test.ts` (node:test with inline wire, like `scaffold.test.ts`) to the explicit list in `package.json` `scripts.test`. Fixtures: `test/fixtures/ond7-desktop.json` and `test/fixtures/ond7-mobile.json`, recorded sessions of `3919-20727` and `1482-11000` (every nodes response, including hover and tap states; dumps carry `imageRef` only, no URLs) captured with `scripts/capture-fixture.ts` and replayed offline through an injectable client (`test/replay-client.ts`). Expected: 6 cards matched by title, the intro matched, 6 chevrons as decor with affordance, the breadcrumbs `same`, and 6 `touch.source=design`. Against the OND-7 section files, exit 12 without a class map (the renamed cards are `target-missing`) and exit 0 with it. Ship: `npm run ci`, commit in figma-cli, `npm run ship:workspace`, commit the binary in the workspace (`shared/figma-cli-setup.md`). Update `shared/export-contract.md` with `--dump`, `--section-map`, the mobile mode and exits 11 and 12.
 
 ### T12 Section harness (promoted from the OND-7 `css-check/`)
 
@@ -406,7 +413,7 @@ The F1 schema and the F3 outputs are fixed up front, so tasks can run in waves. 
 
 1. Create a worktree from `5242142` (the desktop-only state, before `8ccedaa`). Run `mobile ImageGrid '<1482-11000 url>' <that worktree>`.
 2. Pass conditions:
-   - The map comes from figma-cli exit 0 (or 5 with only decor rows to confirm). It matches all 6 cards and the intro with no manual fixes, and lists the chevrons as decor.
+   - The map comes from figma-cli exit 0 after the class-map checkpoint (exit 12 on the first run is expected: OND-7 renamed the card classes). It matches all 6 cards and the intro with no manual fixes, and lists the chevrons as decor.
    - No touch question is asked: the run applies the chevron tap toggle from the design, with the hover gated by `bps.desktop`.
    - The icon search runs before any SVG is drawn.
    - `git diff 5242142` shows changes only inside `bps.mobile` blocks plus the hover gates.

@@ -50,10 +50,10 @@ When none occurs in the repo files, the row is `target-missing`. Desktop 04 ofte
 
 ## Interaction and touch
 
-Only for rows whose desktop target reveals content on hover.
+Only for rows whose desktop target reveals content on hover. What each path means for the code: [mobile-patterns.md "Hover and touch"](../../../skills/next-section-repo/references/mobile-patterns.md#hover-and-touch).
 
-- `design`: the mobile node has a prototype tap (an `ON_CLICK` change-to an expanded variant), or a disclosure affordance (chevron, arrow, plus). The trigger is the node with the reaction, else the affordance's nearest matched card. 04m applies it with no question.
-- `checkpoint`: the frame shows neither. 04m asks the user.
+- `design`: M shows a tap reaction or a chevron, arrow or plus. The trigger is the node with the reaction, else the affordance's nearest matched card. 04m asks nothing.
+- `checkpoint`: M shows neither, so 04m asks the user.
 
 ## Editing at the exit 12 checkpoint
 
@@ -65,4 +65,10 @@ Show the user the `unmatched` and `target-missing` rows. They may edit three col
 
 For a `target-missing` row the usual fix is a class-map entry, scaffold class to repo selector, written to `stages/04-conform-bind/output/<D>/class-map.json`. Create the file when it is absent.
 
-Then carry each edited row into `viewport-map.json` by `id`, and rerun with `--map stages/01-export/output/<M>/viewport-map.json` and `--class-map`. Your edits win over the matcher, and the row's `signal` becomes `user`. figma-cli recomputes `box`, `deltas` and `order` from the frame, so never edit them, or the overlay files, by hand.
+Then carry each edited row into `viewport-map.json` by `id`, and rerun from the workspace root:
+
+```bash
+$FIGMA export '<M url>' --mobile-of stages/01-export/output/<D>/section-map.json --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out stages/01-export/output/<M> --repo-profile stages/01-export/output/<M>/profile.json --class-map stages/04-conform-bind/output/<D>/class-map.json --map stages/01-export/output/<M>/viewport-map.json [--font-map 'Family=export']
+```
+
+Drop `--class-map` when the file does not exist. Your edits win over the matcher, and the row's `signal` becomes `user`. figma-cli recomputes `box`, `deltas` and `order` from the frame, so never edit them, or the overlay files, by hand.

@@ -39,7 +39,7 @@ __export(cli_exports, {
 module.exports = __toCommonJS(cli_exports);
 
 // <define:__FIGMA_CLI_BUILD__>
-var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "93302c6", dirty: false, date: "2026-11-05" };
+var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "ec0f708", dirty: false, date: "2026-11-05" };
 
 // src/cli.ts
 var import_promises3 = require("node:readline/promises");
@@ -474,12 +474,15 @@ function parseRepoProfile(raw) {
   const fonts = Array.isArray(theme.fonts) ? theme.fonts.filter((font) => typeof font === "object" && font !== null && typeof font.export === "string").map((font) => ({ export: font.export, files: strings(font.files) })) : [];
   if (value.eol !== "lf" && value.eol !== "crlf") throw bad("has no eol");
   const mobile = typeof value.mobile === "object" && value.mobile !== null && !Array.isArray(value.mobile) ? value.mobile : null;
+  const gate = mobile?.hoverGate;
+  const hoverGate = gate === "hover-media" || gate === "bps-desktop" ? gate : null;
+  if (typeof gate === "string" && hoverGate === null) throw bad(`has an unknown mobile.hoverGate ${gate}`);
   return {
     schemaVersion: 1,
     scaffold: { files: strings(scaffold2.files) },
     theme: { mixins: strings(theme.mixins), bps: strings(theme.bps), colors, fonts },
     eol: value.eol,
-    ...mobile === null ? {} : { mobile: { hoverGate: typeof mobile.hoverGate === "string" ? mobile.hoverGate : null } }
+    ...mobile === null ? {} : { mobile: { hoverGate } }
   };
 }
 
@@ -10264,6 +10267,7 @@ async function writeAtomic(filePath, data) {
 }
 
 // src/mobile-overlay.ts
+var import_node_fs = require("node:fs");
 var import_promises2 = require("node:fs/promises");
 var import_node_path2 = __toESM(require("node:path"), 1);
 
@@ -11118,6 +11122,7 @@ var classMapSchema = external_exports.record(external_exports.string());
 async function readClassMap(value) {
   let raw;
   if (value.trimStart().startsWith("{")) {
+    if (Buffer.byteLength(value, "utf8") > MAX_INPUT_BYTES) throw new ExportError({ kind: "usage", message: "The --class-map value is too large." });
     try {
       raw = JSON.parse(value);
     } catch {
@@ -11127,6 +11132,15 @@ async function readClassMap(value) {
   const parsed = classMapSchema.safeParse(raw);
   if (!parsed.success) throw new ExportError({ kind: "usage", message: "The --class-map must be a JSON object of strings." });
   return parsed.data;
+}
+async function writableDir(dir) {
+  try {
+    await (0, import_promises2.mkdir)(dir, { recursive: true });
+    if (!(await (0, import_promises2.stat)(dir)).isDirectory()) throw new Error("not a directory");
+    await (0, import_promises2.access)(dir, import_node_fs.constants.W_OK);
+  } catch {
+    throw new ExportError({ kind: "usage", message: "The --overlay-out folder cannot be created or is not writable." });
+  }
 }
 function inside(child, parent) {
   const relative = import_node_path2.default.relative(import_node_path2.default.resolve(parent), import_node_path2.default.resolve(child));
@@ -11142,11 +11156,12 @@ async function exportMobileOverlay(request, client = createFigmaClient(), choose
   const profile = parseRepoProfile(profileRaw);
   const bp = mobileBreakpoint(profile.theme.bps);
   if (bp === null) throw new ExportError({ kind: "usage", message: "The repo profile has no mobile key in theme.bps." });
-  const hoverGate = profile.mobile?.hoverGate === "hover-media" ? "hover-media" : "bps-desktop";
+  const hoverGate = profile.mobile?.hoverGate ?? "bps-desktop";
   const sectionText = request.sectionDir === null ? null : await readSectionText(request.sectionDir);
   const classMap = request.classMap === null ? {} : await readClassMap(request.classMap);
   const edits = request.mapPath === null ? null : parseViewportMap(await readJson2(request.mapPath, "--map"));
   const options = { component: desktop.component, profile, fixed: true, fontMap: request.fontMap };
+  await writableDir(request.overlayDir);
   const { sectionMap: mobile, notices: sceneNotices } = await scaffoldSectionMap(
     {
       fileKey: request.fileKey,

@@ -72,4 +72,4 @@ Each stage writes its record into `output/<node-id>/` and, on the same run, load
 - On `new`, never bind or write a fragment before you say the ACF group is saved.
 - Never edit a repo's main working tree when the user named a worktree. Never push.
 - Never derive a mobile design from a desktop frame or the reverse. A mobile pass needs the mobile URL from the user.
-- The mobile touch path comes from the mobile frame (its tap reactions and affordances). Ask only when the frame shows none.
+- The mobile touch path comes from the mobile frame ([mobile-patterns.md "Hover and touch"](skills/next-section-repo/references/mobile-patterns.md#hover-and-touch)).
