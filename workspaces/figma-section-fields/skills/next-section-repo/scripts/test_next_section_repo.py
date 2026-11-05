@@ -36,6 +36,9 @@ CORE = """const config = {
 """
 
 
+HOVER_OPEN = "const S = styled.div`\n  .card:hover .text {\n    grid-template-rows: 1fr;\n    opacity: 1;\n  }\n`;\n"
+
+
 def write(path: Path, text: str, eol: str = "\n") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(text.replace("\n", eol).encode())
@@ -52,13 +55,23 @@ def ora_like(root: Path, next_installed: str = "16.4.3") -> Path:
     write(app / "ccTemplates" / "section.js", TEMPLATE)
     write(app / "app" / "core.config.js", CORE)
     write(app / "app" / "styles" / "theme" / "index.js", """import buttonsMixins from './mixins/buttonsMixins';
+export const breakPoints = { mobile: 1279, smallerMobile: 320, laptop: 900 };
 const theme = {
-  bps: { desktop: `@media (min-width: 1279px)`, mobile: `@media (max-width: 1279px)` },
+  bps: {
+    desktop: `@media (min-width: ${breakPoints.mobile}px)`,
+    mobile: `@media (max-width: ${breakPoints.mobile}px)`,
+    smallerMobile: `@media (max-width:  ${breakPoints.smallerMobile}px)`,
+    mobilePixels: breakPoints.mobile
+  },
+  layoutHeights: { header: 72, mobileIconsMenu: 66 },
   mixins: { buttons: buttonsMixins },
   colors: { white: '#fff', black: '#000', primaryBlue: '#1E6679', table: { header: '#b4d0de' }, shade: 'rgba(0, 0, 0, 0.5)' }
 };
 export default theme;
 """)
+    write(app / "app" / "styles" / "theme" / "mixins" / "layoutMixins.js", "const mixins = { shrink: css`a`, layout: css`b` };\nexport default mixins;\n")
+    write(app / "app" / "styles" / "theme" / "layout.js", "export const layoutHeights = { header: 80, mobileHeader: 66 };\n")
+    write(app / "app" / "app.js", "import { ThemeProvider } from 'styled-components';\nimport theme from 'styles/theme';\nconst App = ({ children }) => <ThemeProvider theme={theme}>{children}</ThemeProvider>;\nexport default App;\n")
     write(app / "app" / "styles" / "fonts" / "index.js", """import localFont from 'next/font/local';
 export const primary = localFont({ variable: '--f', src: [{ path: './ploni-regular-aaa.woff2', weight: '400' }] });
 """)
@@ -81,14 +94,20 @@ def jaecoo_like(root: Path) -> Path:
     write(app / "app" / "core.config.js", CORE)
     write(app / "app" / "styles" / "theme" / "index.js", """import colors from './colors';
 import mixins from './mixin';
-import { bps } from './layout';
-const theme = { bps, colors, mixins };
+import { bps, layoutHeights } from './layout';
+const theme = { bps, layoutHeights, colors, mixins };
 export default theme;
 """)
     write(app / "app" / "styles" / "theme" / "colors.js", "const colors = { white: '#fff', red: 'red' };\nexport default colors;\n")
     write(app / "app" / "styles" / "theme" / "mixin.js", "import layout from './mixins/layoutMixins';\nconst mixins = { ...layout, buttons: {} };\nexport default mixins;\n")
     write(app / "app" / "styles" / "theme" / "mixins" / "layoutMixins.js", "const mixins = { shrink: css`a`, layout: css`${({ $layout }) => css`b`}`, media: {} };\nexport default mixins;\n")
-    write(app / "app" / "styles" / "theme" / "layout.js", "export const bps = { mobile: `@media (max-width: 1279px)`, desktop: `@media (min-width: 1280px)` };\n")
+    write(app / "app" / "styles" / "theme" / "layout.js", """export const breakPoints = { mobile: 1279, desktop: 1280 };
+export const bps = {
+  mobile: `@media screen and (max-width: ${breakPoints.mobile}px)`,
+  desktop: `@media screen and (min-width:  ${breakPoints.desktop}px)`
+};
+export const layoutHeights = { header: 88, mobileHeader: 66 };
+""")
     write(app / "app" / "styles" / "fonts" / "index.js", "export const jaecoo = localFont({ src: './jaecoo/Rubik-Regular.woff2' });\n")
     write(app / "app" / "fragments" / "global" / "buttonItem.gql", "fragment ButtonItem on TYPE { text }\n")
     write(app / "app" / "fragments" / "global" / "mediaItem.gql", "fragment MediaItem on MediaItem { node { mediaItemUrl } }\n")
@@ -125,7 +144,7 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(profile["fragments"]["backgroundFields"]["name"], "BackgroundFields")
         self.assertIsNone(profile["fragments"]["mediaItemNew"])
         self.assertEqual(profile["theme"]["mixins"], ["buttons"])
-        self.assertEqual(profile["theme"]["bps"], ["desktop", "mobile"])
+        self.assertEqual(profile["theme"]["bps"], ["desktop", "mobile", "smallerMobile", "mobilePixels"])
         self.assertEqual(profile["theme"]["colors"]["white"], "#ffffff")
         self.assertEqual(profile["theme"]["colors"]["primaryBlue"], "#1e6679")
         self.assertEqual(profile["theme"]["colors"]["table.header"], "#b4d0de")
@@ -159,6 +178,73 @@ class ProbeTests(unittest.TestCase):
         self.assertFalse(profile["useWP"])
         self.assertNotIn("theme.mixins.layout", " ".join(result["warnings"]))
 
+    def test_overlapping_breakpoints_warn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ora_like(Path(tmp))
+            result = probe_repo.probe(Path(tmp))
+        theme = result["profile"]["theme"]
+        self.assertEqual(theme["breakpoints"], {"mobile": 1279, "smallerMobile": 320, "laptop": 900})
+        self.assertEqual(theme["bpsMedia"], {
+            "desktop": "@media (min-width: 1279px)",
+            "mobile": "@media (max-width: 1279px)",
+            "smallerMobile": "@media (max-width: 320px)",
+            "mobilePixels": None,
+        })
+        self.assertIn("bps.desktop and bps.mobile both match at 1279px", result["warnings"])
+
+    def test_adjacent_breakpoints_do_not_warn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            jaecoo_like(Path(tmp))
+            result = probe_repo.probe(Path(tmp))
+        theme = result["profile"]["theme"]
+        self.assertEqual(theme["breakpoints"], {"mobile": 1279, "desktop": 1280})
+        self.assertEqual(theme["bpsMedia"]["desktop"], "@media screen and (min-width: 1280px)")
+        self.assertNotIn("both match", " ".join(result["warnings"]))
+
+    def test_theme_keys_come_from_the_theme_provider_theme(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = ora_like(Path(tmp))
+            profile = probe_repo.probe(Path(tmp))["profile"]
+            self.assertEqual(profile["theme"]["layoutHeights"], ["header", "mobileIconsMenu"])
+            self.assertEqual(profile["theme"]["mixins"], ["buttons"])
+            write(app / "app" / "styles" / "altTheme.js", "import { layoutHeights } from './theme/layout';\nimport layout from './theme/mixins/layoutMixins';\nexport default { layoutHeights, mixins: { ...layout } };\n")
+            write(app / "app" / "app.js", "import theme from 'styles/altTheme';\nconst App = () => <ThemeProvider theme={theme} />;\n")
+            profile = probe_repo.probe(Path(tmp))["profile"]
+        self.assertEqual(profile["theme"]["layoutHeights"], ["header", "mobileHeader"])
+        self.assertEqual(profile["theme"]["mixins"], ["shrink", "layout"])
+
+    def test_mobile_facts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = ora_like(Path(tmp))
+            components = app / "app" / "components"
+            for index in range(3):
+                write(components / "Sections" / "Hero" / f"Use{index}.js", "import useIsMobile from '@colmobil/next/core/hooks/useIsMobile';\n")
+            write(components / "Sections" / "Hero" / "Local.js", "import useIsMobile from 'hooks/useIsMobile';\n")
+            write(components / "Sections" / "Hero" / "Relative.js", "import useIsMobile from '../../../hooks/useIsMobile';\n")
+            write(app / "app" / "hooks" / "useIsMobile.js", "export default function useIsMobile() {}\n")
+            write(components / "Core" / "Image" / "ResponsiveImage.js", "const ResponsiveImage = () => null;\n")
+            write(components / "Layout" / "Assets" / "Icons" / "ClockIcon.js", "const ClockIcon = () => <svg />;\n")
+            write(components / "Layout" / "IconFactory.js", "const IconFactory = () => null;\n")
+            (app / "public" / "icons").mkdir(parents=True)
+            mobile = probe_repo.probe(Path(tmp))["profile"]["mobile"]
+        self.assertEqual(mobile["hook"], [{"import": "@colmobil/next/core/hooks/useIsMobile", "count": 3}, {"import": "hooks/useIsMobile", "count": 2}])
+        self.assertEqual(mobile["responsiveImage"], "app/components/Core/Image/ResponsiveImage.js")
+        self.assertEqual(mobile["icons"], {"publicIcons": "public/icons", "inline": ["app/components/Layout/Assets/Icons"]})
+        self.assertIsNone(mobile["hoverGate"])
+
+    def test_hover_gate(self):
+        styled = {
+            "bps-desktop": "const revealCard = (state) => css`\n  &${state} .text { opacity: 1; }\n`;\nconst S = styled.div`\n  .card {\n    ${({ theme }) => theme.bps?.desktop} {\n      ${revealCard(':hover')}\n    }\n  }\n`;\n",
+            "hover-media": "const S = styled.div`\n  @media (hover: hover) and (pointer: fine) {\n    .card:hover { opacity: 1; }\n  }\n`;\n",
+            None: "const S = styled.div`\n  .card:hover { opacity: 1; }\n`;\n",
+        }
+        for gate, text in styled.items():
+            with self.subTest(gate):
+                with tempfile.TemporaryDirectory() as tmp:
+                    app = ora_like(Path(tmp))
+                    write(app / "app" / "components" / "Sections" / "Hero" / "StyledHero.js", text)
+                    self.assertEqual(probe_repo.probe(Path(tmp))["profile"]["mobile"]["hoverGate"], gate)
+
     def test_missing_files_are_warnings_and_a_stale_install_warns(self):
         with tempfile.TemporaryDirectory() as tmp:
             app = ora_like(Path(tmp), next_installed="14.2.35")
@@ -183,7 +269,7 @@ class ProbeTests(unittest.TestCase):
 
 
 class CheckTests(unittest.TestCase):
-    def check(self, mutate=None, repo=ora_like):
+    def check(self, mutate=None, repo=ora_like, mobile_pass=False):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         app = repo(Path(tmp.name))
@@ -191,7 +277,7 @@ class CheckTests(unittest.TestCase):
         if mutate:
             mutate(app, folder)
         profile = probe_repo.probe(Path(tmp.name))["profile"]
-        return check_section.check_section(profile, "Hero", lint=False), app, folder
+        return check_section.check_section(profile, "Hero", lint=False, mobile_pass=mobile_pass), app, folder
 
     def test_good_section_passes(self):
         result, _, _ = self.check()
@@ -214,10 +300,12 @@ class CheckTests(unittest.TestCase):
             "no-page-fields": lambda app, f: write(f / "Hero.gql", "fragment Hero on FieldsFlexibleHeroLayout { title breadcrumbs }\n"),
             "mixins-layout": lambda app, f: write(f / "StyledHero.js", "const S = styled.div`\n  ${({ theme }) => theme.mixins.layout};\n  ${({ theme }) => theme.bps.mobile} {}\n`;\n"),
             "eol": lambda app, f: write(f / "index.js", "import Hero from './ServerHero';\nexport default Hero;\n", "\r\n"),
+            "no-hardcoded-bp": lambda app, f: write(f / "StyledHero.js", "const S = styled.div`\n  @media (max-width: 1279px) { width: 100%; }\n`;\n"),
+            "hover-gated": lambda app, f: write(f / "StyledHero.js", HOVER_OPEN),
         }
         for check_id, mutate in cases.items():
             with self.subTest(check_id):
-                result, _, _ = self.check(mutate)
+                result, _, _ = self.check(mutate, mobile_pass=True)
                 self.assertEqual(statuses(result)[check_id], "fail", result["checks"])
                 failing = [row["id"] for row in result["checks"] if row["status"] == "fail"]
                 self.assertEqual(failing, [check_id])
@@ -228,7 +316,63 @@ class CheckTests(unittest.TestCase):
         result, _, _ = self.check(mutate)
         self.assertTrue(result["pass"])
         self.assertEqual(statuses(result)["theme-colors"], "warn")
-        self.assertEqual(statuses(result)["bps-present"], "warn")
+        self.assertNotIn("bps-present", statuses(result))
+
+    def test_mobile_checks_pass_on_a_good_section(self):
+        for repo in (ora_like, jaecoo_like):
+            with self.subTest(repo.__name__):
+                result, _, _ = self.check(repo=repo, mobile_pass=True)
+                for check_id in ("bps-overlap", "mobile-nested", "hover-gated", "no-hardcoded-bp"):
+                    self.assertEqual(statuses(result)[check_id], "pass", result["checks"])
+
+    def test_bps_overlap_warns_only_where_ranges_overlap(self):
+        def mutate(app, folder):
+            write(folder / "StyledHero.js", "const S = styled.div`\n  ${({ theme }) => theme.bps?.desktop} { width: 50%; }\n`;\n")
+        result, _, _ = self.check(mutate)
+        self.assertEqual(statuses(result)["bps-overlap"], "warn")
+        self.assertIn("1279px", next(row["detail"] for row in result["checks"] if row["id"] == "bps-overlap"))
+        self.assertTrue(result["pass"])
+        result, _, _ = self.check(mutate, repo=jaecoo_like)
+        self.assertEqual(statuses(result)["bps-overlap"], "pass")
+
+    def test_mobile_nested_warns_above_six_selectors(self):
+        def block(count):
+            rules = "".join(f"    .a{index} {{ width: 1px; }}\n" for index in range(count))
+            return f"const S = styled.div`\n  .a0 {{ width: 2px; }}\n  ${{({{ theme }}) => theme.bps.mobile}} {{\n{rules}  }}\n`;\n"
+        result, _, _ = self.check(lambda app, folder: write(folder / "StyledHero.js", block(7)))
+        self.assertEqual(statuses(result)["mobile-nested"], "warn")
+        self.assertTrue(result["pass"])
+        result, _, _ = self.check(lambda app, folder: write(folder / "StyledHero.js", block(6)))
+        self.assertEqual(statuses(result)["mobile-nested"], "pass")
+
+    def test_hover_gated(self):
+        result, _, _ = self.check(lambda app, folder: write(folder / "StyledHero.js", HOVER_OPEN))
+        self.assertEqual(statuses(result)["hover-gated"], "warn")
+        self.assertTrue(result["pass"])
+        gated = {
+            "bps-desktop": "const S = styled.div`\n  ${({ theme }) => theme.bps?.desktop} {\n    .card:hover .text { opacity: 1; }\n  }\n`;\n",
+            "helper": "const reveal = (state) => css`\n  &${state} .text { grid-template-rows: 1fr; }\n`;\nconst S = styled.div`\n  .card {\n    ${({ theme }) => theme.bps?.desktop} {\n      ${reveal(':hover')}\n    }\n  }\n`;\n",
+            "hover-media": "const S = styled.div`\n  @media (hover: hover) {\n    .card:hover .text { display: block; }\n  }\n`;\n",
+            "dim-only": "const S = styled.div`\n  .card:hover { opacity: 0.8; }\n`;\n",
+        }
+        for name, text in gated.items():
+            with self.subTest(name):
+                result, _, _ = self.check(lambda app, folder: write(folder / "StyledHero.js", text), mobile_pass=True)
+                self.assertEqual(statuses(result)["hover-gated"], "pass", result["checks"])
+        helper_open = "const reveal = css`\n  &:hover .text { max-height: 200px; }\n`;\nconst S = styled.div`\n  .card { ${reveal} }\n`;\n"
+        result, _, _ = self.check(lambda app, folder: write(folder / "StyledHero.js", helper_open), mobile_pass=True)
+        self.assertEqual(statuses(result)["hover-gated"], "fail")
+
+    def test_hover_media_repo_needs_hover_media(self):
+        def mutate(app, folder):
+            write(app / "app" / "components" / "Sections" / "Card" / "StyledCard.js", "const S = styled.div`\n  @media (hover: hover) { a:hover { opacity: 1; } }\n`;\n")
+            write(folder / "StyledHero.js", "const S = styled.div`\n  ${({ theme }) => theme.bps.desktop} {\n    .card:hover .text { opacity: 1; }\n  }\n`;\n")
+        result, _, _ = self.check(mutate, mobile_pass=True)
+        self.assertEqual(statuses(result)["hover-gated"], "fail")
+
+    def test_theme_bps_media_is_not_hardcoded(self):
+        result, _, _ = self.check(lambda app, folder: write(folder / "StyledHero.js", "const S = styled.div`\n  @media (hover: hover) { a { color: red; } }\n  ${({ theme }) => theme.bps.mobile} { width: 1px; }\n`;\n"))
+        self.assertEqual(statuses(result)["no-hardcoded-bp"], "pass")
 
     def test_root_rtl_with_ltr_rows_passes(self):
         def mutate(app, folder):

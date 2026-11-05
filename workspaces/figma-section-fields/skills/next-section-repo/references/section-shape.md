@@ -26,7 +26,7 @@ Images come from WordPress through the fragment. The folder holds no image files
 
 - Fonts come from `theme.fonts.<export>` (`profile.theme.fonts`). Colors that match `profile.theme.colors` use `theme.colors.<path>`.
 - The root is fluid: `width: 100%` and a `max-width` at the design width, with no fixed height.
-- Media queries use `theme.bps` keys (`profile.theme.bps`).
+- Mobile rules (breakpoints, nesting, hover and touch, media pairs) follow [mobile-patterns.md](mobile-patterns.md).
 - `theme.mixins.layout` only when `layout` is in `profile.theme.mixins`.
 - The page is right to left (`profile.pageDirection`). The section root is `direction: ltr`, so flex rows keep Figma's order, and Hebrew text sets `direction: rtl` itself.
 - Line endings follow `profile.eol`.

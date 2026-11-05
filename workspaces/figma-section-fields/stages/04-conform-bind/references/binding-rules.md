@@ -17,14 +17,18 @@ The fragment arrives on the Server component's props under the field names it se
 - Do not rename classes to match field names. Do not add a field group, PHP or `acf-json` to the repo.
 - Mount the section only where the user already said. Flexible sections render from WordPress, so usually there is nothing to mount.
 
+### Class map
+
+Whenever this pass renames or restructures scaffold classes in the repo, write `stages/04-conform-bind/output/<D>/class-map.json`, one entry per changed class: `{ "<scaffold class>": "<repo selector>" }`. On OND-7 that is `"card-2": ".grid-card.slot-tall-end"` and `"card-title-3": ".card-title"`. A later mobile pass passes the file to figma-cli `--class-map`, so its map finds the renamed targets. No renamed class, no file.
+
 ## resync: merge drift
 
 The section is already bound. The new scaffold is the design truth for structure and styles, and the existing files are the truth for data and logic.
 
-1. Diff the new `Styled<Folder>.js` against the existing one. Apply changed values, added and removed rules, and order changes. Keep rules the user added by hand (media queries, `theme.bps` blocks, overrides) unless Figma removed the element they style.
+1. Diff the new `Styled<Folder>.js` against the existing one. Apply changed values, added and removed rules, and order changes. Keep rules the user added by hand (media queries, `theme.bps` blocks, overrides) and every rule from a mobile pass (the export record's `pair:` line names it) unless Figma removed the element they style.
 2. Diff the new client markup against the existing one, matching elements by class name. Apply added, removed and moved elements. Keep every binding expression, `.map`, condition and component from the existing file.
 3. Do not touch the `.gql` or `Server<Folder>.js` unless the design added content that needs a new field. Then stop and run `sync` instead.
-4. List every applied change in the record. Nothing changed is a valid result.
+4. List every applied change in the record. Nothing changed is a valid result. When the record has `pair: <M>`, end with the reminder: "mobile pass M may need `resync --mobile`".
 
 ## element: restyle a control
 
@@ -32,6 +36,53 @@ The section is already bound. The new scaffold is the design truth for structure
 2. Edit only the target file and the styled block it owns. Use theme colors and fonts that match, and keep the control's props and handlers.
 3. Hover and press come from the inspect lines that name the variant the control changes to.
 
+## mobile: overlay
+
+The run is M (`viewport: mobile`) and the section is already built from D. The mobile frame is the truth for mobile values, and the existing files are the truth for everything else. How a mobile rule is written is in `skills/next-section-repo/references/mobile-patterns.md`. This section says what to apply and in what order.
+
+Inputs, all in `stages/01-export/output/<M>/`:
+
+- `viewport-map.md`, as you edited it at the 01m checkpoint (`viewport-map.json` carries the same edits). The `desktop target` column names the repo selector for each row.
+- `mobile-overlay.json`: per target selector, the decls, `hide`, order hints, decor and `touch`.
+- `mobile-overlay.styled.txt`: per target selector, the ready `${({ theme }) => theme.bps?.mobile} { ... }` block with the deltas.
+
+Before the first write, copy `Styled<Folder>.js` and `Client<Folder>.js` to `stages/04-conform-bind/output/<M>/before/`. The desktop-frozen audit diffs against these copies. When the export record says `baseline: from-head <sha>`, also check that the repo HEAD is that sha and `git status` shows no change in the section folder, so 05m can rebuild the baseline from it. Stop and say so if either fails.
+
+Rules:
+
+1. **Desktop is frozen.** No declaration outside a `bps.mobile` block changes. The only exception is gating an existing `:hover` (rule 5).
+2. **Overlay values, not structure.** Nest each block from `mobile-overlay.styled.txt` inside the existing selector the map names as its target. Never copy the mobile scaffold's structure or class names. When the target selector already has a `bps.mobile` block, merge into it.
+3. **Order without new markup.** For `moved` rows use CSS first: `order`, `grid-template-areas`, or `display: contents` on a wrapper. Change JSX only when CSS cannot express the order, and say why in the record. The root stays `ltr` (`section-shape.md`). A mobile grid that reads right to left sets `direction: rtl` on that grid.
+4. **Hidden and decor.** `hidden-on-mobile`: `display: none` in `bps.mobile`. `mobile-only-decor`: search the repo's icons first (mobile-patterns.md "Icons"), present the candidates at the checkpoint, then add the element and hide it outside mobile.
+5. **Touch as the frame shows it.** A row with `touch.source=design` is applied without a question: `useState` and `.is-open` on the node that carries the prototype tap (`touch.trigger` in the overlay), the desktop reveal mirrored under `.is-open` in `bps.mobile`, and the existing `:hover` gated with the profile's `mobile.hoverGate` (mobile-patterns.md "Hover and touch"). On OND-7 the trigger is the whole card and the chevron is the affordance. Only a row with `touch.source=checkpoint` asks: tap toggle, always shown, or hidden. Apply only the chosen option.
+6. **`useIsMobile` only for content swaps.** Import it from the profile's `mobile.hook`, first entry. Never for layout, order, size or visibility.
+7. **Specificity.** Nested blocks first. A trailing root-level block only when slot selectors (`.grid-card.slot-*`) need it, and the record says why for each one.
+8. **No fields.** A `new-content` row should have stopped the run in 01m. If one shows up here, stop the same way: the group needs a field, and the route is `sync <Folder> <desktop-url> <repo> --mobile <mobile-url>`. Never touch the `.gql` or `Server<Folder>.js`.
+
+Checkpoint at step 5: the drift list per map row (selector, what changes, rule used), the `touch.source=checkpoint` rows with the three options, and the icon candidates for each decor row. Rows with `touch.source=design` are listed as applied, not asked.
+
+Then run `check_section.py` with `--mobile-pass`, so `no-hardcoded-bp`, `bps-overlap`, `mobile-nested` and `hover-gated` run at their mobile-pass severity.
+
+Audit (mobile):
+
+| Check | Pass condition |
+|---|---|
+| Desktop frozen | `git diff --no-index` of `output/<M>/before/` against the section files shows changes only inside `bps.mobile` blocks, plus the recorded hover gates |
+| Nesting | Every mobile rule is nested, or the record gives the reason for each trailing block |
+| Touch | Every hover reveal has its touch path: `design` from the overlay, or the recorded checkpoint decision |
+| Icons | Every new icon lists the repo candidates that were rejected. No SVG was drawn before you said none fits |
+| Untouched | `.gql` and `Server<Folder>.js` unchanged |
+| Checker | `check_section.py --mobile-pass` reports no `fail` (warnings listed in the record) |
+
 ## Record
 
 `conform-record.md` lists every file written or changed, the binding table (field, prop, where it renders) or the drift list, and the `check_section.py` summary with each warning.
+
+On a mobile pass, `stages/04-conform-bind/output/<M>/conform-record.md` holds instead:
+
+- pair: `<D>`
+- rows applied: map row, target selector, what changed
+- touch: per reveal, the trigger and the source (`design`, or your checkpoint decision)
+- icons: per decor row, the candidates, the one used or "new SVG, none fit"
+- specificity: each trailing block and why
+- check_section: the `--mobile-pass` summary with each warning

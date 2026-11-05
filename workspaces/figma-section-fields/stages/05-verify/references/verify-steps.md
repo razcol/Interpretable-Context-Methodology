@@ -29,6 +29,33 @@ Exit 0 passes. Exit 11 means overflow; `error.details.results` gives `overflowPx
 
 4. Hover: `interact.js --url <route> --steps '[{"action":"screenshot","name":"rest"}]'`, then the same with a hover step on a card, to compare against Figma's hover variant.
 
+## Desktop baseline for the mobile pass
+
+On a desktop PASS, when the export record has `pair: <M>` or `pair: pending`, save the baseline shots. Use the harness (it is deterministic, and 05m uses the same page):
+
+```bash
+python3 skills/next-section-repo/scripts/harness.py --repo <app root> --folder <Folder> --out-dir $R/harness
+node $B/scripts/screenshot.js --url "file://$R/harness/index.html" --viewports 1920x1080,1440x900,1100x800 --name baseline --out-dir $R/shots
+```
+
+This writes `$R/shots/baseline__1440x900.png` (and the other widths). Then ask the pair question once (stage CONTEXT step 7).
+
+## Mobile
+
+On a mobile pass, `S` is `stages/01-export/output/<M>`, `R` is `stages/05-verify/output/<M>`, and `<W>x<H>` is the PNG size of M's `figma.png`. `H` is the harness page: `file://$R/harness/index.html`, built as above with `--out-dir $R/harness`. The 1920/1440/1100 desktop checks above are not rerun; the regression row covers desktop.
+
+| Check | How | Pass |
+|---|---|---|
+| Level 1 mobile | `screenshot.js --url "file://$S/preview.html" --viewports <W>x<H> --name preview`, then `diff.js --baseline $S/figma.png --current $R/shots/preview__<W>x<H>.png --out $R/shots/diff.png --max-diff-ratio 1` | `diffRatio` recorded |
+| Fluid mobile | `$FIGMA export '<M url>' --out $R/fluid.html --fluid`, then `measure.js --url "file://$R/fluid.html" --viewports 320x700,375x812,<W>x900,768x1024,1279x800 --name fluid` | exit 0, no overflow |
+| Level 2 or harness | `measure.js` with `--selector '<section selector>'` at the same widths on the app route (Level 2 steps above). When the app cannot start, on `H` | exit 0 and the selector is found. On `H` the report says "harness: media and breadcrumbs stubbed" and never claims Level 2 |
+| Boundary | `screenshot.js` on the route or `H` with `--viewports 1279x900,1280x900 --name boundary` | 1279 shows mobile, 1280 shows desktop. In ora `bps.desktop` is `min-width: 1279px`, so both apply at 1279: list each `bps.desktop` rule of the section that is active there (the mixed state). Listed, it does not fail |
+| Desktop regression | After 04m: `screenshot.js` on `H` with `--viewports 1440x900 --name regression`. Baseline, Case A: `stages/05-verify/output/<D>/shots/baseline__1440x900.png`. Case B (`baseline: from-head <sha>`): `git -C <repo> worktree add $R/head <sha>`, run the harness with `--repo $R/head/<app dir> --out-dir $R/head-harness`, shoot it with `--name regression__head`, then `git -C <repo> worktree remove $R/head`. Then `diff.js --baseline <baseline> --current $R/shots/regression__1440x900.png --out $R/shots/regression-diff.png --max-diff-ratio 0.001` | `match: true` (ratio ≤ 0.001 for the section), or each difference listed with its cause |
+| Touch | For each reveal in the conform record: `interact.js --url <route or H> --viewport 393x852 --out-dir $R/shots` (or M's `<W>x<H>`) with steps: screenshot `touch-rest`, click the recorded trigger, screenshot `touch-open`, click it again, screenshot `touch-closed` | Matches the recorded decision: tap toggle opens then closes; always shown is visible at rest; hidden is absent |
+| Look | The `touch-rest` and Level 2 (or `H`) shots at M's width against `$S/figma.png` by eye | Order, sizes and decor match, or each difference is listed |
+
+Run browser-cdp scripts with `--out-dir $R/shots` unless the row says otherwise.
+
 ## The report
 
 ```markdown
@@ -38,4 +65,15 @@ Exit 0 passes. Exit 11 means overflow; `error.details.results` gives `overflowPx
 - level 2: route <route>, overflow <none | widths>, or skipped: <why>
 - look: <row order, hover, borders: same as Figma, or each difference>
 - shots: <paths>
+```
+
+A mobile report adds, in place of the level 2 line:
+
+```markdown
+- pair: <D>
+- fluid mobile: overflow <none | widths>
+- level 2: route <route>, overflow <none | widths>, or harness: media and breadcrumbs stubbed
+- boundary: 1279 <mobile | mixed: rules>, 1280 <desktop>
+- desktop regression: baseline <path | from-head sha>, ratio <n>, <match | each difference>
+- touch: <per trigger: decision, result>
 ```

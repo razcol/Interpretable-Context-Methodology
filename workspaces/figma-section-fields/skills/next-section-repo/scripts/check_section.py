@@ -18,6 +18,8 @@ import probe_repo  # noqa: E402
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif"}
 PAGE_FIELDS = {"breadcrumbs", "breadcrumb", "seo", "order"}
 LINT_TIMEOUT = 120
+MOBILE_NESTED_MAX = 6
+HARD_BP = re.compile(r"@media[^{;`]*\(\s*(?:max|min)-width\s*:\s*\d+(?:\.\d+)?px\s*\)")
 
 
 def emit(payload: dict, exit_code: int = 0) -> None:
@@ -187,13 +189,51 @@ def check_styles(checks: Checks, profile: dict, folder: Path) -> None:
         checks.add("no-root-direction", "pass", "The root sets rtl, and rows reset it to ltr.")
     else:
         checks.add("no-root-direction", "pass", "The root does not set rtl.")
-    checks.add("bps-present", "pass" if "theme.bps" in text or "bps." in text else "warn", "Uses theme.bps." if "bps" in text else "No theme.bps media query. Check the mobile layout.")
     uses_layout = "mixins.layout" in text
     registered = "layout" in (profile["theme"].get("mixins") or [])
     if uses_layout and not registered:
         checks.add("mixins-layout", "fail", "theme.mixins.layout is used, but this repo's theme has no layout mixin.")
     else:
         checks.add("mixins-layout", "pass", "Mixins match the theme.")
+
+
+def check_mobile(checks: Checks, profile: dict, folder: Path, mobile_pass: bool) -> None:
+    files = {str(path.relative_to(folder)): jsread.read(path) for path in sorted(folder.rglob("Styled*.js"))}
+    overlap = probe_repo.bps_overlap(profile["theme"].get("bpsMedia") or {})
+    desktop = [name for name, text in files.items() if probe_repo.BPS_DESKTOP.search(text)]
+    if overlap and desktop:
+        checks.add("bps-overlap", "warn", f"bps.desktop and bps.mobile both match at {overlap}, and {', '.join(desktop)} uses bps.desktop. Check that width too.")
+    else:
+        checks.add("bps-overlap", "pass", "No bps.desktop rule at an overlapping width.")
+    nested = []
+    for name, text in files.items():
+        for helper, body in probe_repo.css_templates(text):
+            if helper:
+                continue
+            for block in probe_repo.css_tree(body)["children"]:
+                count = probe_repo.descendants(block)
+                if probe_repo.BPS_MOBILE.search(block["header"]) and count > MOBILE_NESTED_MAX:
+                    nested.append(f"{name} ({count} selectors)")
+    checks.add(
+        "mobile-nested",
+        "warn" if nested else "pass",
+        "Root-level bps.mobile block instead of nested ones: " + ", ".join(nested) + ". Nest them, or record why." if nested else "Mobile rules are nested.",
+    )
+    gate = (profile.get("mobile") or {}).get("hoverGate")
+    open_hover = sorted({
+        name + ": " + " ".join(rule["selector"].split())[:60]
+        for name, text in files.items()
+        for rule in probe_repo.hover_rules(text)
+        if rule["reveals"] and not probe_repo.hover_gated(rule["context"], gate)
+    })
+    wanted = "@media (hover: hover)" if gate == "hover-media" else "theme.bps.desktop or @media (hover: hover)"
+    checks.add(
+        "hover-gated",
+        ("fail" if mobile_pass else "warn") if open_hover else "pass",
+        f"A :hover reveal outside {wanted}, so touch screens never see it: " + "; ".join(open_hover)[:300] if open_hover else "Every :hover reveal is gated.",
+    )
+    literal = sorted({f"{name}: {match.group(0)}" for name, text in files.items() for match in HARD_BP.finditer(text)})
+    checks.add("no-hardcoded-bp", "fail" if literal else "pass", "Use theme.bps instead of " + "; ".join(literal)[:300] if literal else "Breakpoints come from theme.bps.")
 
 
 def check_props(checks: Checks, folder: Path) -> None:
@@ -274,13 +314,14 @@ def check_lint(checks: Checks, profile: dict, folder: Path) -> None:
         checks.add("eslint", "warn", "ESLint could not run on this repo: " + reason[:240])
 
 
-def check_section(profile: dict, folder_arg: str, lint: bool = True) -> dict:
+def check_section(profile: dict, folder_arg: str, lint: bool = True, mobile_pass: bool = False) -> dict:
     folder = resolve_folder(profile, folder_arg)
     checks = Checks()
     check_files(checks, profile, folder)
     check_name(checks, profile, folder)
     check_assets(checks, profile, folder)
     check_styles(checks, profile, folder)
+    check_mobile(checks, profile, folder, mobile_pass)
     check_props(checks, folder)
     check_fragment(checks, profile, folder)
     check_eol(checks, profile, folder)
@@ -308,8 +349,9 @@ def main() -> None:
     parser.add_argument("--folder", required=True, help="Section folder name under the sections directory, or a path.")
     parser.add_argument("--profile", help="Profile JSON from probe_repo.py. Probed when omitted.")
     parser.add_argument("--no-lint", action="store_true", help="Skip ESLint.")
+    parser.add_argument("--mobile-pass", action="store_true", help="After a mobile pass: an ungated :hover reveal fails instead of warning.")
     args = parser.parse_args()
-    result = check_section(load_profile(args.profile, args.repo), args.folder, lint=not args.no_lint)
+    result = check_section(load_profile(args.profile, args.repo), args.folder, lint=not args.no_lint, mobile_pass=args.mobile_pass)
     emit(result, 0 if result["pass"] else 6)
 
 

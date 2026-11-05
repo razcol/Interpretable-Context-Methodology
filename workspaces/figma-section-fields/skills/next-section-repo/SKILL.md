@@ -9,10 +9,12 @@ Two commands. Both read repo files as text. They never import, require or run re
 
 ```bash
 python3 scripts/probe_repo.py --repo /home/dev/ora-next [--out /path/profile.json]
-python3 scripts/check_section.py --repo /home/dev/ora-next --folder ImageGrid [--profile /path/profile.json] [--no-lint]
+python3 scripts/check_section.py --repo /home/dev/ora-next --folder ImageGrid [--profile /path/profile.json] [--no-lint] [--mobile-pass]
 ```
 
 Run them from this skill folder. `--repo` is the repo root or its `code/` folder.
+
+Scripts: `python3 scripts/harness.py --repo <app root with components/> --folder <F> --out-dir <stage output> [--props <json>]` bundles `Client<F>.js` with the repo's real theme (esbuild, and it runs repo code) into `index.html` + `bundle.js` + `harness-record.json` under `--out-dir` only. Media, breadcrumbs, `next/font/local`, `next/image`, `next/link` and `server-only` are stubbed, so it is never Level 2. Without `--props` the component uses its defaults, so cards and lists need a props file. Exits: 0 ok, 1 usage, 3 bundle failed (esbuild errors on stderr), 4 no `node_modules`.
 
 ## probe_repo.py
 
@@ -26,7 +28,7 @@ Read `warnings` before trusting a profile. Examples:
 
 ## check_section.py
 
-Prints `{"ok": true, "folder", "checks": [{"id", "status", "detail"}], "summary": {"pass", "fail", "warn"}, "pass"}`. `status` is `pass`, `fail` or `warn`. Each id, and what it enforces, is listed in [references/conformance-checklist.md](references/conformance-checklist.md). [references/section-shape.md](references/section-shape.md) describes the finished section.
+Prints `{"ok": true, "folder", "checks": [{"id", "status", "detail"}], "summary": {"pass", "fail", "warn"}, "pass"}`. `status` is `pass`, `fail` or `warn`. Each id, and what it enforces, is listed in [references/conformance-checklist.md](references/conformance-checklist.md). [references/section-shape.md](references/section-shape.md) describes the finished section, and [references/mobile-patterns.md](references/mobile-patterns.md) holds the mobile rules.
 
 A `warn` does not fail the section. An `eslint` warning means ESLint could not run (no `node_modules`, or a config that does not load), so lint is still unverified.
 

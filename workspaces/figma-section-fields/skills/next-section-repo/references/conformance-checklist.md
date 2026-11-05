@@ -48,9 +48,19 @@ The bracketed session ids are where you had to fix the item by hand. They come f
 | Class names describe roles (`card`, `card-title`, `card-text`), not layer slugs (`heading-english-7`) | manual |
 | No `font-family` literal. Fonts come from `theme.fonts.*` or the page font [57288d61: `SimplerPro_V3` is not in the repo] | `no-font-literal` |
 | Colors that equal a `theme.colors` value use the token | `theme-colors` (warn) |
-| At least one `theme.bps` block, or your note that mobile is out of scope | `bps-present` (warn) |
 | The root does not set `direction: rtl` unless every row resets it to `ltr` | `no-root-direction` |
-| Hover-only content has a touch fallback. `cursor: pointer` only where there is a link or a handler | manual |
+| `cursor: pointer` only where there is a link or a handler | manual |
+
+## Mobile
+
+The rules are in [mobile-patterns.md](mobile-patterns.md). These rows are what `check_section.py` enforces.
+
+| Item | Check |
+|---|---|
+| Media queries use `theme.bps` keys. No literal `@media (max-width: 1279px)` or similar | `no-hardcoded-bp` |
+| The section uses `bps.desktop` in a repo whose profile warns that `bps.mobile` and `bps.desktop` overlap (ora at 1279) | `bps-overlap` (warn) |
+| `bps.mobile` blocks sit inside the selector they override. A root-level block with many descendant selectors warns unless the record gives the specificity reason | `mobile-nested` (warn) |
+| A `:hover` that reveals content sits inside the repo's hover gate (`profile.mobile.hoverGate`). Fails after a mobile pass, warns before one | `hover-gated` |
 
 ## propTypes and lint
 

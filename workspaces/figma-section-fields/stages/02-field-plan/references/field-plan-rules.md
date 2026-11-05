@@ -10,6 +10,7 @@ These come from the page or the theme, not from the section's group:
 - SEO and meta, the page title, the model or site name used as context.
 - The section order. `order` is a prop the page passes.
 - Margins and padding. Editor-controlled spacing is `...Layout` and only when `patterns.counts.spacing` is above 0.
+- Decorative chevrons, arrows and other affordance icons, on desktop or mobile.
 
 ## Shape the fields the way the repo does
 
@@ -21,6 +22,14 @@ These come from the page or the theme, not from the section's group:
 - **Text.** Plain text is Text. A paragraph with line breaks is Text Area. Rich text is WYSIWYG only when the design has links or bold inside the text.
 - Use the shape and clone source `patterns.examples` shows for each kind. When an example key is absent, use the shapes above. Do not open another section's `.gql`.
 
+## With a mobile frame
+
+Only when the export record has `pair: <M>`. Read M's preflight `figma.png` and `inspect.txt`. Without a pair, never guess a mobile design.
+
+- **Pictures.** When the mobile frame shows the image in a different aspect ratio or crop, the field is a `responsiveMedia` pair (desktop + mobile), and the why column says so ("mobile crop differs"). Otherwise it is a single `mediaItem`, which `ResponsiveImage` uses for both viewports.
+- **Mobile-only text** is a field only if an editor changes it. A fixed label stays in the component.
+- **Mobile-only content** (mobile shows X that desktop lacks) goes to the questions list, not into the plan on your own.
+
 ## Questions the plan must ask
 
 Ask only those that apply:
@@ -29,6 +38,7 @@ Ask only those that apply:
 - Cards or tiles: is each one a link? If yes, add a `link` field (Link type) per card.
 - A fixed slot count: are the slots fixed at that number?
 - A picture: can it be a video too?
+- Mobile shows X that desktop lacks: is X a field the editor changes, fixed in the component, or not wanted?
 - The folder name: is `<Folder>` the Layout Name you will type in ACF?
 
 ## Folder name

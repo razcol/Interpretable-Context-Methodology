@@ -40,6 +40,13 @@ CHROME_CANDIDATES = (
     "/usr/bin/chromium",
     "/usr/bin/chromium-browser",
 )
+IDENT = jsread.IDENT
+BPS_DESKTOP = re.compile(r"\bbps\??\.desktop\b")
+BPS_MOBILE = re.compile(r"\bbps\??\.mobile\b")
+HOVER_MEDIA = re.compile(r"@media[^{]*\(\s*hover\s*:\s*hover\s*\)")
+REVEAL_PROPS = {"opacity", "grid-template-rows", "display", "max-height", "visibility"}
+CSS_TAG = re.compile(r"(?:\bcss|\bstyled(?:\.\w+|\([^()]*\))(?:\.attrs\((?:[^()]|\([^()]*\))*\))?|\bcreateGlobalStyle|\bkeyframes)\s*$")
+CSS_HELPER = re.compile(rf"(?:const|let|var)\s+({IDENT})\s*=\s*(?:(?:\([^()]*\)|{IDENT})\s*=>\s*)?css\s*$")
 
 
 class ProbeError(Exception):
@@ -196,19 +203,104 @@ def flatten_colors(path: Path, text: str, body: str, prefix: str, out: dict, dep
             out[key] = color
 
 
-def theme_info(root: Path, warnings: list[str]) -> dict:
-    path = root / "app" / "styles" / "theme" / "index.js"
+def resolve_spec(root: Path, base: Path, spec: str) -> Path | None:
+    """File an import specifier points to: relative, `@/` (app/components) or baseUrl (app/)."""
+    if spec.startswith("."):
+        return jsread.resolve_module(base, spec)
+    app = root / "app"
+    target = app / "components" / spec[2:] if spec.startswith("@/") else app / spec
+    for candidate in (target.with_name(target.name + ".js"), target / "index.js", target):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def exported_object(path: Path, name: str) -> str | None:
     text = jsread.read(path)
-    info = {"mixins": [], "bps": [], "colors": {}, "fonts": []}
-    if not text:
-        warnings.append("app/styles/theme/index.js was not found.")
-        return info
-    body = jsread.default_export_object(text)
-    if body is None:
-        warnings.append("The theme's default export is not an object literal.")
-        return info
+    if name == "default":
+        return jsread.default_export_object(text)
+    return jsread.object_after(text, rf"export\s+(?:const|let|var)\s+{re.escape(name)}\s*=\s*\{{")
+
+
+def theme_object(root: Path, sources: list[tuple[Path, str]]) -> tuple[Path, str] | None:
+    """(module, object body) of the theme passed to ThemeProvider, else the default export of styles/theme."""
+    for path, text in sources:
+        match = re.search(rf"<ThemeProvider\b[^>]*?\btheme=\{{\s*({IDENT})\s*\}}", text)
+        if not match:
+            continue
+        local = jsread.binding_object(text, match.group(1))
+        if local is not None:
+            return path, local
+        source = jsread.imports(text).get(match.group(1))
+        module = resolve_spec(root, path, source[0]) if source else None
+        body = exported_object(module, source[1]) if module else None
+        if body is not None:
+            return module, body
+    path = root / "app" / "styles" / "theme" / "index.js"
+    body = jsread.default_export_object(jsread.read(path))
+    return (path, body) if body is not None else None
+
+
+def number_entries(path: Path, text: str, name: str) -> dict:
+    resolved = jsread.resolve_value(path, text, name)
+    if resolved is None:
+        return {}
+    numbers = {}
+    for entry in jsread.entries(resolved[1]):
+        if entry["kind"] == "key" and re.fullmatch(r"-?\d+(?:\.\d+)?", entry["value"] or ""):
+            value = float(entry["value"])
+            numbers[entry["key"]] = int(value) if value.is_integer() else value
+    return numbers
+
+
+def bps_media(path: Path, text: str, body: str) -> tuple[dict, dict]:
+    """(bps key to media string with `${obj.key}` substituted, breakpoint numbers the strings use)."""
+    tables: dict[str, dict] = {}
+
+    def lookup(match: re.Match) -> str:
+        table = tables.setdefault(match.group(1), number_entries(path, text, match.group(1)))
+        value = table.get(match.group(2))
+        return str(value) if value is not None else match.group(0)
+
+    media: dict = {}
     for entry in jsread.entries(body):
-        if entry["key"] not in ("mixins", "bps", "colors"):
+        if entry["kind"] != "key":
+            continue
+        value = (entry["value"] or "").strip()
+        if len(value) < 2 or value[0] not in "'\"`" or value[-1] != value[0]:
+            media[entry["key"]] = None
+            continue
+        substituted = re.sub(rf"\$\{{\s*({IDENT})\.({IDENT})\s*\}}", lookup, value[1:-1])
+        media[entry["key"]] = re.sub(r"\s+", " ", substituted).strip()
+    breakpoints: dict = {}
+    for table in tables.values():
+        breakpoints.update(table)
+    return media, breakpoints
+
+
+def bps_overlap(media: dict) -> str | None:
+    """Width range where bps.desktop and bps.mobile both match, for example "1279px", or None."""
+    desktop = re.search(r"min-width\s*:\s*(\d+(?:\.\d+)?)px", (media or {}).get("desktop") or "")
+    mobile = re.search(r"max-width\s*:\s*(\d+(?:\.\d+)?)px", (media or {}).get("mobile") or "")
+    if not desktop or not mobile:
+        return None
+    low, high = float(desktop.group(1)), float(mobile.group(1))
+    if low > high:
+        return None
+    low_text, high_text = f"{low:g}px", f"{high:g}px"
+    return low_text if low == high else f"{low_text}-{high_text}"
+
+
+def theme_info(root: Path, sources: list[tuple[Path, str]], warnings: list[str]) -> dict:
+    info = {"mixins": [], "bps": [], "bpsMedia": {}, "breakpoints": {}, "layoutHeights": [], "colors": {}, "fonts": []}
+    found = theme_object(root, sources)
+    if found is None:
+        warnings.append("No theme object was found for ThemeProvider or in app/styles/theme/index.js.")
+        return info
+    path, body = found
+    text = jsread.read(path)
+    for entry in jsread.entries(body):
+        if entry["key"] not in ("mixins", "bps", "colors", "layoutHeights"):
             continue
         resolved = jsread.resolve_value(path, text, entry["value"] or entry["key"])
         if resolved is None:
@@ -218,8 +310,13 @@ def theme_info(root: Path, warnings: list[str]) -> dict:
         module_text = jsread.read(module)
         if entry["key"] == "colors":
             flatten_colors(module, module_text, part, "", info["colors"])
-        else:
-            info[entry["key"]] = jsread.object_keys(module, module_text, part)
+            continue
+        info[entry["key"]] = jsread.object_keys(module, module_text, part)
+        if entry["key"] == "bps":
+            info["bpsMedia"], info["breakpoints"] = bps_media(module, module_text, part)
+    overlap = bps_overlap(info["bpsMedia"])
+    if overlap:
+        warnings.append(f"bps.desktop and bps.mobile both match at {overlap}")
     info["fonts"] = font_exports(root, warnings)
     return info
 
@@ -279,12 +376,200 @@ def app_sources(root: Path) -> list[Path]:
     return paths
 
 
-def code_facts(root: Path) -> dict:
+def css_templates(text: str) -> list[tuple[str | None, str]]:
+    """(helper name or None, body) of every top-level css`` / styled.x`` template in a file."""
+    found = []
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if text.startswith("//", index) or text.startswith("/*", index):
+            index = jsread.skip_comment(text, index)
+            continue
+        if char in "'\"`":
+            end = jsread.skip_string(text, index)
+            prefix = text[max(0, index - 300) : index]
+            if char == "`" and CSS_TAG.search(prefix):
+                helper = CSS_HELPER.search(prefix)
+                found.append((helper.group(1) if helper else None, text[index + 1 : end - 1]))
+            index = end
+            continue
+        index += 1
+    return found
+
+
+def css_tree(body: str) -> dict:
+    """Nested rule blocks of a template body: {header, decls[(prop, value)], mixins[raw ${}], children}.
+
+    A `${...}` on its own line is a mixin. One in a selector or a value stays in that text."""
+    root = {"header": "", "decls": [], "mixins": [], "children": [], "parent": None}
+    node = root
+    buffer = ""
+    index = 0
+
+    def flush() -> None:
+        part = buffer.strip()
+        if ":" in part:
+            prop, value = part.split(":", 1)
+            node["decls"].append((prop.strip().lower(), value.strip()))
+
+    while index < len(body):
+        char = body[index]
+        if body.startswith("${", index):
+            end = jsread.match_brace(body, index + 1) + 1
+            raw = body[index:end]
+            after = re.match(r"[ \t]*(;|\n|\}|$)", body[end:])
+            if not buffer.strip() and after:
+                node["mixins"].append(raw)
+                if after.group(1) == ";":
+                    end += after.end()
+            else:
+                buffer += raw
+            index = end
+            continue
+        if body.startswith("/*", index):
+            index = jsread.skip_comment(body, index)
+            continue
+        if char in "'\"":
+            end = jsread.skip_string(body, index)
+            buffer += body[index:end]
+            index = end
+            continue
+        if char == "{":
+            child = {"header": buffer.strip(), "decls": [], "mixins": [], "children": [], "parent": node}
+            node["children"].append(child)
+            node = child
+            buffer = ""
+        elif char == ";":
+            flush()
+            buffer = ""
+        elif char == "}":
+            flush()
+            buffer = ""
+            node = node["parent"] or root
+        else:
+            buffer += char
+        index += 1
+    return root
+
+
+def css_walk(node: dict, context: tuple = ()):
+    """Each block with the headers of its ancestors and itself."""
+    here = context + ((node["header"],) if node["header"] else ())
+    yield node, here
+    for child in node["children"]:
+        yield from css_walk(child, here)
+
+
+def descendants(node: dict) -> int:
+    return sum(1 + descendants(child) for child in node["children"])
+
+
+def reveal_decl(prop: str, value: str) -> bool:
+    """Whether a declaration shows something: opacity 1, display not none, and so on. A dim or a fade-out is not a reveal."""
+    value = value.replace("!important", "").strip().lower()
+    if prop not in REVEAL_PROPS or "${" in value:
+        return False
+    if prop == "opacity":
+        return value in ("1", "1.0", "100%")
+    if prop == "display":
+        return value != "none"
+    if prop == "visibility":
+        return value == "visible"
+    if prop == "max-height":
+        return value not in ("0", "0px", "none")
+    return re.search(r"(?<![\d.])(?!0fr)\d*\.?\d+fr|auto|min-content|max-content|px|%", value) is not None
+
+
+def reveals(node: dict, helpers: dict) -> bool:
+    for block, _ in css_walk(node):
+        if any(reveal_decl(prop, value) for prop, value in block["decls"]):
+            return True
+        for raw in block["mixins"]:
+            name = re.match(rf"\$\{{\s*({IDENT})", raw)
+            if name and name.group(1) in helpers and helpers[name.group(1)]["reveals"]:
+                return True
+    return False
+
+
+def hover_rules(text: str) -> list[dict]:
+    """Every :hover rule in a Styled file: {selector, reveals, context (enclosing headers)}.
+
+    Rules inside a named css`` helper count once per place the helper is interpolated."""
+    templates = [(name, css_tree(body)) for name, body in css_templates(text)]
+    helpers: dict = {}
+    for name, tree in templates:
+        if name:
+            helpers[name] = {"tree": tree, "reveals": False}
+    for name in helpers:
+        helpers[name]["reveals"] = reveals(helpers[name]["tree"], helpers)
+    rules = []
+    uses: dict[str, list[tuple]] = {}
+    for name, tree in templates:
+        for block, context in css_walk(tree):
+            if ":hover" in block["header"]:
+                rules.append({"selector": block["header"], "reveals": reveals(block, helpers), "context": context, "helper": name})
+            for raw in block["mixins"]:
+                called = re.match(rf"\$\{{\s*({IDENT})\s*(\()?", raw)
+                if not called or called.group(1) not in helpers:
+                    continue
+                uses.setdefault(called.group(1), []).append(context)
+                if called.group(2) and ":hover" in raw:
+                    rules.append({"selector": raw, "reveals": helpers[called.group(1)]["reveals"], "context": context, "helper": name})
+    expanded = []
+    for rule in rules:
+        if rule["helper"] is None:
+            expanded.append(rule)
+            continue
+        for use in uses.get(rule["helper"], []):
+            expanded.append({**rule, "context": use + rule["context"], "helper": None})
+    return expanded
+
+
+def hover_gated(context: tuple, gate: str | None) -> bool:
+    if any(HOVER_MEDIA.search(header) for header in context):
+        return True
+    return gate != "hover-media" and any(BPS_DESKTOP.search(header) for header in context)
+
+
+def mobile_info(root: Path, sources: list[tuple[Path, str]], sections: Path) -> dict:
+    app = root / "app"
+    hooks: dict[str, int] = {}
+    responsive = []
+    icon_dirs = set()
+    for path, text in sources:
+        for match in re.finditer(r"import\s+([^;]+?)\s+from\s+['\"]([^'\"]+)['\"]", text):
+            if not re.search(r"\buseIsMobile\b", match.group(1)):
+                continue
+            spec = match.group(2)
+            if spec.startswith("."):
+                target = jsread.resolve_module(path, spec)
+                if target is not None and app in target.parents:
+                    spec = re.sub(r"(?:/index)?\.js$", "", str(target.relative_to(app.resolve())))
+            hooks[spec] = hooks.get(spec, 0) + 1
+        if path.name == "ResponsiveImage.js" or (path.name == "index.js" and path.parent.name == "ResponsiveImage"):
+            responsive.append(rel(root, path))
+        if "Icon" in path.stem and "<svg" in text:
+            icon_dirs.add(rel(root, path.parent))
+    styled = [jsread.read(path) for path in sorted(sections.rglob("Styled*.js"))] if sections.is_dir() else []
+    gate = None
+    if any(HOVER_MEDIA.search(text) for text in styled):
+        gate = "hover-media"
+    elif any(any(BPS_DESKTOP.search(h) for h in rule["context"]) for text in styled for rule in hover_rules(text)):
+        gate = "bps-desktop"
+    responsive.sort(key=lambda value: (0 if "/Core/" in value else 1, len(value), value))
+    return {
+        "hook": [{"import": spec, "count": count} for spec, count in sorted(hooks.items(), key=lambda item: (-item[1], item[0]))],
+        "responsiveImage": responsive[0] if responsive else None,
+        "hoverGate": gate,
+        "icons": {"publicIcons": "public/icons" if (root / "public" / "icons").is_dir() else None, "inline": sorted(icon_dirs)},
+    }
+
+
+def code_facts(root: Path, sources: list[tuple[Path, str]]) -> dict:
     breadcrumbs = None
     uses_wp = False
     direction = None
-    for path in app_sources(root):
-        text = jsread.read(path)
+    for path, text in sources:
         if breadcrumbs is None:
             match = re.search(r"rootData\??\.(?:SEO\??\.)?breadcrumbs", text)
             if match:
@@ -332,7 +617,8 @@ def probe(repo: Path) -> dict:
     if not sections.is_dir():
         warnings.append("app/components/Sections was not found.")
     dirs = fragment_dirs(root, warnings)
-    theme = theme_info(root, warnings)
+    sources = [(path, jsread.read(path)) for path in sorted(app_sources(root), key=lambda path: (len(path.parts), str(path)))]
+    theme = theme_info(root, sources, warnings)
     dev, lint = dev_info(root, warnings, next_version)
     profile = {
         "schemaVersion": SCHEMA_VERSION,
@@ -348,7 +634,8 @@ def probe(repo: Path) -> dict:
         "eol": line_endings(root, sections) if sections.is_dir() else "lf",
         "eslint": eslint_info(root, warnings),
         "lintCommand": lint,
-        **code_facts(root),
+        **code_facts(root, sources),
+        "mobile": mobile_info(root, sources, sections),
         "dev": dev,
         "browser": browser_path(),
     }
