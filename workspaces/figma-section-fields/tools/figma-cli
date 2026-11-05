@@ -39,10 +39,10 @@ __export(cli_exports, {
 module.exports = __toCommonJS(cli_exports);
 
 // <define:__FIGMA_CLI_BUILD__>
-var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "a3746d4", dirty: false, date: "2026-11-05" };
+var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "93302c6", dirty: false, date: "2026-11-05" };
 
 // src/cli.ts
-var import_promises2 = require("node:readline/promises");
+var import_promises3 = require("node:readline/promises");
 var import_node_url = require("node:url");
 
 // src/export.ts
@@ -137,15 +137,15 @@ function parseAccessToken(raw) {
     message: "FIGMA_ACCESS_TOKEN is missing or invalid."
   });
 }
-function changeHost(node, target, sets, ancestors) {
+function changeHost(node, target, sets, ancestors2) {
   const destSet = sets.get(target);
   if (destSet === void 0) return node;
-  for (const candidate of [node, ...ancestors]) {
+  for (const candidate of [node, ...ancestors2]) {
     const componentId = componentKey(candidate, sets);
     if (componentId !== null && sets.get(componentId) === destSet) return candidate;
   }
   if (node.kind === "box" && node.component !== null) {
-    for (const candidate of ancestors) {
+    for (const candidate of ancestors2) {
       if (candidate.kind === "box" && candidate.component !== null) return candidate;
     }
   }
@@ -188,9 +188,9 @@ function condenseScene(rawRoot, rawStates, sets = /* @__PURE__ */ new Map()) {
   const kept = /* @__PURE__ */ new Set();
   const trees = [root, ...states.values()];
   const byId = indexNodes(trees);
-  for (const tree of trees) keepScrollTargets(tree, byId, kept);
-  for (const tree of trees) keepChangeHosts(tree, [], sets, kept);
-  for (const tree of trees) bindChanges(tree, states, kept, [], sets);
+  for (const tree2 of trees) keepScrollTargets(tree2, byId, kept);
+  for (const tree2 of trees) keepChangeHosts(tree2, [], sets, kept);
+  for (const tree2 of trees) bindChanges(tree2, states, kept, [], sets);
   const nextStates = /* @__PURE__ */ new Map();
   for (const [id, state] of states) nextStates.set(id, rebuildNode(state, true, kept));
   return { root: rebuildNode(root, true, kept), states: nextStates };
@@ -201,19 +201,19 @@ function indexNodes(trees) {
     if (!byId.has(node.id)) byId.set(node.id, node);
     if (node.kind === "box") for (const child of node.children) walk(child);
   }
-  for (const tree of trees) walk(tree);
+  for (const tree2 of trees) walk(tree2);
   return byId;
 }
-function keepChangeHosts(node, ancestors, sets, kept) {
+function keepChangeHosts(node, ancestors2, sets, kept) {
   for (const reaction of node.reactions) {
     for (const action of reaction.actions) {
       if (action.kind !== "change") continue;
-      const host = changeHost(node, action.target, sets, ancestors);
+      const host = changeHost(node, action.target, sets, ancestors2);
       if (host.kind === "box") kept.add(host);
     }
   }
   if (node.kind === "box") {
-    for (const child of node.children) keepChangeHosts(child, [node, ...ancestors], sets, kept);
+    for (const child of node.children) keepChangeHosts(child, [node, ...ancestors2], sets, kept);
   }
 }
 function keepScrollTargets(node, byId, kept) {
@@ -226,17 +226,17 @@ function keepScrollTargets(node, byId, kept) {
   }
   if (node.kind === "box") for (const child of node.children) keepScrollTargets(child, byId, kept);
 }
-function bindChanges(node, states, kept, ancestors, sets) {
+function bindChanges(node, states, kept, ancestors2, sets) {
   for (const reaction of node.reactions) {
     for (const action of reaction.actions) {
       if (action.kind !== "change") continue;
       const dest = states.get(action.target);
       if (dest === void 0) continue;
-      reconcilePair(changeHost(node, action.target, sets, ancestors), dest, kept);
+      reconcilePair(changeHost(node, action.target, sets, ancestors2), dest, kept);
     }
   }
   if (node.kind === "box") {
-    for (const child of node.children) bindChanges(child, states, kept, [node, ...ancestors], sets);
+    for (const child of node.children) bindChanges(child, states, kept, [node, ...ancestors2], sets);
   }
 }
 function reconcilePair(src, dst, kept) {
@@ -404,7 +404,7 @@ function dropImageHairlines(root, keep, notes) {
 function overlaps(bounds, clip) {
   return bounds.right > clip.x + CLIP_SLOP && bounds.left < clip.x + clip.width - CLIP_SLOP && bounds.bottom > clip.y + CLIP_SLOP && bounds.top < clip.y + clip.height - CLIP_SLOP;
 }
-function clippedAway(tree, hidden) {
+function clippedAway(tree2, hidden) {
   function walk(node, clip) {
     if (clip !== null && !overlaps(paintedBounds(node), clip)) hidden.add(node.id);
     if (node.kind === "box") {
@@ -412,11 +412,11 @@ function clippedAway(tree, hidden) {
       for (const child of node.children) walk(child, next);
     }
   }
-  walk(tree, null);
+  walk(tree2, null);
 }
 function cullClipped(root, states, sets = /* @__PURE__ */ new Map()) {
   const hidden = /* @__PURE__ */ new Set();
-  for (const tree of [root, ...states.values()]) clippedAway(tree, hidden);
+  for (const tree2 of [root, ...states.values()]) clippedAway(tree2, hidden);
   if (hidden.size === 0) return { root, states };
   const keep = /* @__PURE__ */ new Set();
   function pair(src, dst) {
@@ -434,17 +434,17 @@ function cullClipped(root, states, sets = /* @__PURE__ */ new Map()) {
       if (match !== void 0) pair(child, match);
     }
   }
-  function bind(node, ancestors) {
+  function bind(node, ancestors2) {
     for (const reaction of node.reactions) {
       for (const action of reaction.actions) {
         if (action.kind !== "change") continue;
         const dest = states.get(action.target);
-        if (dest !== void 0) pair(changeHost(node, action.target, sets, ancestors), dest);
+        if (dest !== void 0) pair(changeHost(node, action.target, sets, ancestors2), dest);
       }
     }
-    if (node.kind === "box") for (const child of node.children) bind(child, [node, ...ancestors]);
+    if (node.kind === "box") for (const child of node.children) bind(child, [node, ...ancestors2]);
   }
-  for (const tree of [root, ...states.values()]) bind(tree, []);
+  for (const tree2 of [root, ...states.values()]) bind(tree2, []);
   function prune(node) {
     if (node.kind !== "box") return node;
     const children = node.children.filter((child) => !hidden.has(child.id) || keep.has(child) || child.reactions.length > 0).map(prune);
@@ -473,11 +473,13 @@ function parseRepoProfile(raw) {
   }
   const fonts = Array.isArray(theme.fonts) ? theme.fonts.filter((font) => typeof font === "object" && font !== null && typeof font.export === "string").map((font) => ({ export: font.export, files: strings(font.files) })) : [];
   if (value.eol !== "lf" && value.eol !== "crlf") throw bad("has no eol");
+  const mobile = typeof value.mobile === "object" && value.mobile !== null && !Array.isArray(value.mobile) ? value.mobile : null;
   return {
     schemaVersion: 1,
     scaffold: { files: strings(scaffold2.files) },
     theme: { mixins: strings(theme.mixins), bps: strings(theme.bps), colors, fonts },
-    eol: value.eol
+    eol: value.eol,
+    ...mobile === null ? {} : { mobile: { hoverGate: typeof mobile.hoverGate === "string" ? mobile.hoverGate : null } }
   };
 }
 
@@ -1210,8 +1212,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path2, errorMaps, issueData } = params;
-  const fullPath = [...path2, ...issueData.path || []];
+  const { data, path: path3, errorMaps, issueData } = params;
+  const fullPath = [...path3, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -1327,11 +1329,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path2, key) {
+  constructor(parent, value, path3, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path2;
+    this._path = path3;
     this._key = key;
   }
   get path() {
@@ -5030,10 +5032,10 @@ function hasVisibleFill(node) {
 function readFetchedDocument(nodeId, wire) {
   const parsed = envelopeSchema.safeParse(wire);
   if (!parsed.success) {
-    const path2 = parsed.error.issues[0]?.path.join(".");
+    const path3 = parsed.error.issues[0]?.path.join(".");
     throw new ExportError({
       kind: "invalid-document",
-      message: path2 ? `The nodes response is not a Figma document (${path2}).` : "The nodes response is not a Figma document."
+      message: path3 ? `The nodes response is not a Figma document (${path3}).` : "The nodes response is not a Figma document."
     });
   }
   const entry = parsed.data.nodes[nodeId];
@@ -5079,9 +5081,9 @@ function visibleChildren(node) {
 function collectNamed(children, prefix, name, matches) {
   for (const child of children) {
     if (child.visible === false) continue;
-    const path2 = [...prefix, child.name];
-    if (child.name === name) matches.push({ id: nodeIdFromWire(child.id), path: path2 });
-    collectNamed(child.children ?? [], path2, name, matches);
+    const path3 = [...prefix, child.name];
+    if (child.name === name) matches.push({ id: nodeIdFromWire(child.id), path: path3 });
+    collectNamed(child.children ?? [], path3, name, matches);
   }
 }
 var NO_NAMES = /* @__PURE__ */ new Set();
@@ -6595,13 +6597,13 @@ function planHtmlPointer(roots, states, assets, sets, masters, swapHosts) {
   for (const root of roots) walk(root, null, []);
   plan.css = compilePointerCss(plan);
   return plan;
-  function walk(node, parent, ancestors) {
+  function walk(node, parent, ancestors2) {
     for (const reaction of node.reactions) {
       const pseudo = reaction.trigger.kind === "hover" ? ":hover" : reaction.trigger.kind === "press" ? ":active" : null;
       if (pseudo === null) continue;
       for (const action of reaction.actions) {
         if (action.kind !== "change") continue;
-        if (changeHost(node, action.target, sets, ancestors) !== node) continue;
+        if (changeHost(node, action.target, sets, ancestors2) !== node) continue;
         const dest = states.get(action.target);
         if (dest === void 0) continue;
         const master = node.kind === "box" && node.component !== null ? masters.get(node.component) : void 0;
@@ -6609,7 +6611,7 @@ function planHtmlPointer(roots, states, assets, sets, masters, swapHosts) {
       }
     }
     if (node.kind === "box") {
-      for (const child of node.children) walk(child, node.box, [node, ...ancestors]);
+      for (const child of node.children) walk(child, node.box, [node, ...ancestors2]);
     }
   }
 }
@@ -6620,16 +6622,16 @@ function collectChangeHosts(root, sets) {
   const hosts = /* @__PURE__ */ new Map();
   walk(root, []);
   return hosts;
-  function walk(node, ancestors) {
+  function walk(node, ancestors2) {
     for (const reaction of node.reactions) {
       for (const action of reaction.actions) {
         if (action.kind !== "change") continue;
-        const host = changeHost(node, action.target, sets, ancestors);
+        const host = changeHost(node, action.target, sets, ancestors2);
         if (host !== node) hosts.set(hostKey(node.id, action.target), host.id);
       }
     }
     if (node.kind === "box") {
-      for (const child of node.children) walk(child, [node, ...ancestors]);
+      for (const child of node.children) walk(child, [node, ...ancestors2]);
     }
   }
 }
@@ -8137,6 +8139,52 @@ function escapeAttr(value) {
   return escapeText(value).replaceAll('"', "&quot;");
 }
 
+// src/section-map.ts
+var NIQQUD = /[\u0591-\u05C7]/g;
+function normalizeText(text) {
+  return text.normalize("NFC").replace(NIQQUD, "").replace(/\s+/gu, " ").trim();
+}
+var declsSchema = external_exports.record(external_exports.string());
+var sizingSchema = external_exports.enum(["fixed", "hug", "fill"]);
+var rowSchema = external_exports.object({
+  nodeId: external_exports.string(),
+  name: external_exports.string(),
+  className: external_exports.string(),
+  selector: external_exports.string(),
+  role: external_exports.enum(["card", "title", "text", "media", "caption", "row", "column", "group", "root"]),
+  kind: external_exports.enum(["box", "text", "raster"]),
+  parentId: external_exports.string().nullable(),
+  order: external_exports.number().int().nonnegative(),
+  depth: external_exports.number().int().nonnegative(),
+  text: external_exports.string().nullable(),
+  imageRefs: external_exports.array(external_exports.string()),
+  componentId: external_exports.string().nullable(),
+  componentSetId: external_exports.string().nullable(),
+  box: external_exports.object({ w: external_exports.number(), h: external_exports.number(), sizing: external_exports.object({ w: sizingSchema, h: sizingSchema }) }),
+  decls: declsSchema,
+  hover: external_exports.object({ reveals: external_exports.boolean(), rules: external_exports.record(declsSchema) }).nullable(),
+  tap: external_exports.object({ changesTo: external_exports.string() }).nullable(),
+  hiddenAtRest: external_exports.boolean()
+});
+var mapSchema = external_exports.object({
+  schemaVersion: external_exports.literal(1),
+  viewport: external_exports.enum(["desktop", "mobile"]),
+  node: external_exports.string(),
+  component: external_exports.string(),
+  width: external_exports.number(),
+  height: external_exports.number(),
+  rows: external_exports.array(rowSchema)
+});
+function parseSectionMap(raw) {
+  const parsed = mapSchema.safeParse(raw);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const where = issue === void 0 ? "" : ` at ${issue.path.join(".") || "the root"}`;
+    throw new ExportError({ kind: "usage", message: `The section map is not schemaVersion 1${where}.` });
+  }
+  return parsed.data;
+}
+
 // src/react.ts
 var STROKE_RING_LINES = [
   "&[data-stroke]::after,",
@@ -8155,6 +8203,8 @@ var STROKE_RING_LINES = [
 var classByNode = /* @__PURE__ */ new WeakMap();
 var nestByNode = /* @__PURE__ */ new WeakMap();
 var parentByNode = /* @__PURE__ */ new WeakMap();
+var roleByNode = /* @__PURE__ */ new WeakMap();
+var sharedHoverByNode = /* @__PURE__ */ new WeakMap();
 var activePlan = null;
 var scaffold = null;
 var IMAGE_SENTINEL = "__scaffold_image__";
@@ -8187,6 +8237,7 @@ function roleClassName(node, prefix, siblings, used) {
   else if (node.stack?.direction === "horizontal") role = "row";
   else if (node.stack?.direction === "vertical") role = "column";
   else role = "group";
+  roleByNode.set(node, role);
   const base = role === "card" || prefix === "" ? role : `${prefix}-${role}`;
   return classNameFrom(base, used);
 }
@@ -8210,6 +8261,10 @@ function renderReactComponent(input) {
   }
 }
 function renderPlain(input) {
+  const rendered = renderTree(input);
+  return { componentName: rendered.componentName, files: rendered.files };
+}
+function renderTree(input) {
   const states = input.states ?? /* @__PURE__ */ new Map();
   const sets = input.sets ?? /* @__PURE__ */ new Map();
   const masters = /* @__PURE__ */ new Map();
@@ -8237,13 +8292,20 @@ export default ${componentName};
       { name: "index.js", contents: indexContents },
       { name: `${componentName}.js`, contents: componentContents },
       { name: `Styled${componentName}.js`, contents: styledContents }
-    ]
+    ],
+    root: condensed.root,
+    plan
   };
 }
 function renderScaffold(input, options) {
   const state = scaffold;
   if (state === null) throw new Error("scaffold state missing");
-  const plain = renderPlain(input);
+  const plain = renderTree(input);
+  const sectionMap = buildSectionMap(plain.root, plain.plan, input.sets ?? /* @__PURE__ */ new Map(), {
+    viewport: input.sectionMapMeta?.viewport ?? "desktop",
+    node: input.sectionMapMeta?.node ?? input.scene.root.id,
+    component: options.component
+  });
   const name = options.component;
   const styledSource = plain.files.find((file) => file.name.startsWith("Styled"))?.contents ?? "";
   const clientSource = plain.files.find((file) => file.name !== "index.js" && !file.name.startsWith("Styled"))?.contents ?? "";
@@ -8264,8 +8326,86 @@ export default ${name};
   const eol = options.profile.eol === "crlf" ? "\r\n" : "\n";
   return {
     componentName: name,
-    files: files.map((file) => ({ name: file.name, contents: file.contents.replace(/\r?\n/g, eol) }))
+    files: files.map((file) => ({ name: file.name, contents: file.contents.replace(/\r?\n/g, eol) })),
+    sectionMap
   };
+}
+function buildSectionMap(root, plan, sets, meta) {
+  const rows = [];
+  walk(root, null, [], 0, 0);
+  return {
+    schemaVersion: 1,
+    viewport: meta.viewport,
+    node: meta.node,
+    component: meta.component,
+    width: root.box.width,
+    height: root.box.height,
+    rows
+  };
+  function walk(node, parent, path3, order, depth) {
+    const className = classByNode.get(node);
+    if (className === void 0) return;
+    const own = parent === null ? [] : [...path3, `.${className}`];
+    const nest = nestByNode.get(node);
+    rows.push({
+      nodeId: node.id,
+      name: node.name,
+      className,
+      selector: own.join(" "),
+      role: parent === null ? "root" : roleByNode.get(node) ?? "group",
+      kind: node.kind,
+      parentId: parent?.id ?? null,
+      order,
+      depth,
+      text: node.kind === "text" ? normalizeText(node.runs.map((run) => run.text).join("")) : null,
+      imageRefs: node.kind === "box" ? node.paints.flatMap((paint) => paint.kind === "image" ? [paint.ref] : []) : [],
+      componentId: node.kind === "box" ? node.component : null,
+      componentSetId: node.kind === "box" && node.component !== null ? sets.get(node.component) ?? null : null,
+      box: {
+        w: node.box.width,
+        h: node.box.height,
+        sizing: node.flow.kind === "in-flow" ? { w: node.flow.width, h: node.flow.height } : { w: "fixed", h: "fixed" }
+      },
+      decls: declRecord(nest?.declLines ?? []),
+      hover: hoverOf(node, nest),
+      tap: tapOf(node),
+      hiddenAtRest: plan.hiddenUntil.has(node)
+    });
+    if (node.kind !== "box") return;
+    const children = withInsertions(node.children, node.box, plan.insertions.get(node) ?? []).map((entry) => entry.node).filter((child) => classByNode.has(child));
+    for (const [index, child] of children.entries()) walk(child, node, own, index, depth + 1);
+  }
+  function hoverOf(node, nest) {
+    const rules = {};
+    for (const child of nest?.children ?? []) {
+      if (child.selector.startsWith("&:hover") || child.selector.startsWith("&:active")) rules[child.selector] = declRecord(child.declLines);
+    }
+    for (const shared of sharedHoverByNode.get(node) ?? []) rules[shared.selector] = declRecord(shared.declLines);
+    if (Object.keys(rules).length === 0) return null;
+    const targets = [...plan.rules.get(node)?.values() ?? []].flatMap((byTarget) => [...byTarget.keys()]);
+    const reveals = targets.some((target) => plan.hiddenUntil.has(target)) || Object.values(rules).some(
+      (decls) => decls.opacity !== void 0 && Number(decls.opacity) !== 0 || decls["grid-template-rows"] === "1fr" || decls.display !== void 0 && decls.display !== "none"
+    );
+    return { reveals, rules };
+  }
+}
+function tapOf(node) {
+  for (const reaction of node.reactions) {
+    if (reaction.trigger.kind !== "click" && reaction.trigger.kind !== "press") continue;
+    const change = reaction.actions.find((action) => action.kind === "change");
+    if (change !== void 0 && change.kind === "change") return { changesTo: change.target };
+  }
+  return null;
+}
+function declRecord(lines) {
+  const decls = {};
+  for (const line of lines) {
+    const split = line.indexOf(":");
+    if (split === -1) continue;
+    const value = line.slice(split + 1).trim();
+    decls[line.slice(0, split).trim()] = value.endsWith(";") ? value.slice(0, -1).trimEnd() : value;
+  }
+  return decls;
 }
 function scaffoldServer(name, props) {
   const contentNames = props.map((prop) => prop.name);
@@ -8348,21 +8488,24 @@ function scaffoldStyled(source, from, name, options, notes) {
   }
   return themeTokens(text, options, notes);
 }
-function accessor(path2) {
-  return path2.split(".").map((segment) => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(segment) ? `.${segment}` : `[${JSON.stringify(segment)}]`).join("");
+function accessor(path3) {
+  return path3.split(".").map((segment) => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(segment) ? `.${segment}` : `[${JSON.stringify(segment)}]`).join("");
+}
+function themeTokenText(text, options, notes) {
+  return themeTokens(text, options, notes);
 }
 function themeTokens(text, options, notes) {
   const byValue = /* @__PURE__ */ new Map();
-  for (const [path2, value] of Object.entries(options.profile.theme.colors)) {
+  for (const [path3, value] of Object.entries(options.profile.theme.colors)) {
     const current = byValue.get(value);
-    if (current === void 0 || path2.length < current.length) byValue.set(value, path2);
+    if (current === void 0 || path3.length < current.length) byValue.set(value, path3);
   }
   const withColors = text.replace(/rgba\((\d+), (\d+), (\d+), ([0-9.]+)\)/g, (match, r, g, b, a) => {
     const hex = (value) => Number(value).toString(16).padStart(2, "0");
     const alpha = Number(a);
     const key = `#${hex(r)}${hex(g)}${hex(b)}${alpha < 1 ? Math.round(alpha * 255).toString(16).padStart(2, "0") : ""}`;
-    const path2 = byValue.get(key);
-    return path2 === void 0 ? match : `\${({ theme }) => theme.colors${accessor(path2)}}`;
+    const path3 = byValue.get(key);
+    return path3 === void 0 ? match : `\${({ theme }) => theme.colors${accessor(path3)}}`;
   });
   const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
   return withColors.replace(/font-family: '([^']+)'(?:, [a-z-]+)?;/g, (match, family) => {
@@ -8426,13 +8569,13 @@ function emitBox(node, place, assets, isRoot, jsxIndent, className, cascade, mar
     marginEnd,
     rendered.map((entry) => entry.node)
   );
-  let declLines = built.lines;
+  let declLines2 = built.lines;
   let styleAttr = "";
-  if (scaffold !== null && declLines.some((line) => line.includes(IMAGE_SENTINEL))) {
+  if (scaffold !== null && declLines2.some((line) => line.includes(IMAGE_SENTINEL))) {
     const name = propName(className, "image");
     scaffold.props.push({ name, kind: "image", defaultValue: null });
     const variable = `--${isRoot ? "section" : className}-image`;
-    declLines = declLines.map((line) => line.replaceAll(`url('${IMAGE_SENTINEL}')`, `var(${variable}, none)`));
+    declLines2 = declLines2.map((line) => line.replaceAll(`url('${IMAGE_SENTINEL}')`, `var(${variable}, none)`));
     const style = `style={{ '${variable}': cssImage(${name}) }}`;
     if (isRoot) scaffold.rootStyle = ` ${style}`;
     else styleAttr = ` ${style}`;
@@ -8458,7 +8601,7 @@ function emitBox(node, place, assets, isRoot, jsxIndent, className, cascade, mar
   const jsxLines = isRoot ? childJsx : childJsx.length === 0 ? [`${pad}<div className="${className}"${strokeAttr}${styleAttr} />`] : [`${pad}<div className="${className}"${strokeAttr}${styleAttr}>`, ...childJsx, `${pad}</div>`];
   const cssNest = {
     selector: isRoot ? "" : `.${className}`,
-    declLines,
+    declLines: declLines2,
     children: childCss
   };
   nestByNode.set(node, cssNest);
@@ -8470,7 +8613,7 @@ function emitText(node, place, isRoot, jsxIndent, className, cascade, marginEnd)
   if (first === void 0) {
     throw new ExportError({ kind: "invalid-document", message: "A text node has no runs." });
   }
-  const declLines = textDeclLines(node, place, first, cascade, marginEnd);
+  const declLines2 = textDeclLines(node, place, first, cascade, marginEnd);
   const needsLine = node.alignY !== "top";
   const lineClass = `${className}-line`;
   const base = runStyleMap(first);
@@ -8524,7 +8667,7 @@ function emitText(node, place, isRoot, jsxIndent, className, cascade, marginEnd)
   const jsxLines = isRoot ? [content] : [`${pad}<div className="${className}">`, content, `${pad}</div>`];
   const cssNest = {
     selector: isRoot ? "" : `.${className}`,
-    declLines,
+    declLines: declLines2,
     children: runCssChildren
   };
   nestByNode.set(node, cssNest);
@@ -8540,7 +8683,7 @@ function emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade, 
     srcExpr = `{${name}}`;
   }
   const cursor = cursorDecl2(node, cascade);
-  const declLines = cssDeclLines([
+  const declLines2 = cssDeclLines([
     ...layoutDecls(node, place, marginEnd).map((decl) => `${decl};`),
     ...blendDecls2(node.blend).map((decl) => `${decl};`),
     cursor.decl === null ? null : `${cursor.decl};`
@@ -8551,7 +8694,7 @@ function emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade, 
     const jsxLines2 = [
       `${pad}<img className="${className}" alt={${JSON.stringify(node.name)}} src=${srcExpr} />`
     ];
-    const cssNest2 = { selector: `.${className}`, declLines, children: [] };
+    const cssNest2 = { selector: `.${className}`, declLines: declLines2, children: [] };
     nestByNode.set(node, cssNest2);
     return { jsxLines: jsxLines2, cssNest: cssNest2 };
   }
@@ -8560,7 +8703,7 @@ function emitRaster(node, place, assets, isRoot, jsxIndent, className, cascade, 
   const jsxLines = isRoot ? [imgLine] : [`${pad}<div className="${className}">`, imgLine, `${pad}</div>`];
   const cssNest = {
     selector: isRoot ? "" : `.${className}`,
-    declLines,
+    declLines: declLines2,
     children: [
       {
         selector: `.${imageClass}`,
@@ -8653,14 +8796,14 @@ function planPointerCss(root, states, assets, used, sets, masters) {
   const plan = emptyPlan();
   walk(root, null, []);
   return plan;
-  function walk(node, parent, ancestors) {
+  function walk(node, parent, ancestors2) {
     if (parent !== null) parentByNode.set(node, parent);
     for (const reaction of node.reactions) {
       const pseudo = pointerPseudo(reaction.trigger.kind);
       if (pseudo === null) continue;
       for (const action of reaction.actions) {
         if (action.kind !== "change") continue;
-        if (changeHost(node, action.target, sets, ancestors) !== node) continue;
+        if (changeHost(node, action.target, sets, ancestors2) !== node) continue;
         const dest = states.get(action.target);
         if (dest === void 0) continue;
         const master = node.kind === "box" && node.component !== null ? masters.get(node.component) : void 0;
@@ -8668,7 +8811,7 @@ function planPointerCss(root, states, assets, used, sets, masters) {
       }
     }
     if (node.kind === "box") {
-      for (const child of node.children) walk(child, node, [node, ...ancestors]);
+      for (const child of node.children) walk(child, node, [node, ...ancestors2]);
     }
   }
 }
@@ -9102,7 +9245,12 @@ function shareSiblingHovers(plan) {
     if (parentNest === void 0) continue;
     const selectors = entries.map((entry) => `.${classNameOf(entry.hot)}${entry.rest}`);
     parentNest.children.push({ selector: selectors.join(", "), declLines: [...first.rule.declLines], children: [] });
-    for (const entry of entries) entry.nest.children = entry.nest.children.filter((child) => child !== entry.rule);
+    for (const entry of entries) {
+      entry.nest.children = entry.nest.children.filter((child) => child !== entry.rule);
+      const shared = sharedHoverByNode.get(entry.hot) ?? [];
+      shared.push({ selector: `&${entry.rest}`, declLines: entry.rule.declLines });
+      sharedHoverByNode.set(entry.hot, shared);
+    }
   }
 }
 function pointerSelector(hot, target, pseudo) {
@@ -9483,8 +9631,7 @@ function textClips2(node) {
 }
 
 // src/export.ts
-async function exportDocument(request, chooseLayer) {
-  const client = createFigmaClient();
+async function exportDocument(request, chooseLayer, client = createFigmaClient()) {
   if (request.destination.kind === "dump") {
     if (request.layerName !== null) {
       throw new ExportError({ kind: "usage", message: "`--name` cannot be combined with `--dump`." });
@@ -9497,6 +9644,44 @@ async function exportDocument(request, chooseLayer) {
 `);
     return { kind: "dump", dumpPath: request.destination.dumpPath, notices: [] };
   }
+  const { scene, states, sets, masters, notices } = await loadScene(request, chooseLayer, client);
+  const assetStates = request.destination.kind === "react" ? pointerStates(scene.root, states) : states;
+  const assets = await resolveAssets(client, request, scene, assetStates);
+  if (request.destination.kind === "react") {
+    const scaffold2 = request.scaffold === void 0 ? void 0 : await scaffoldOptions(request.scaffold);
+    const mapPath = request.scaffold?.sectionMapPath ?? null;
+    if (scaffold2 !== void 0 && mapPath !== null) {
+      const inside2 = import_node_path.default.relative(import_node_path.default.resolve(request.destination.dir, scaffold2.component), import_node_path.default.resolve(mapPath));
+      if (!inside2.startsWith("..") && !import_node_path.default.isAbsolute(inside2)) {
+        throw new ExportError({ kind: "usage", message: "`--section-map` must be outside the --dist component folder." });
+      }
+    }
+    const rendered = renderReactComponent({
+      scene,
+      assets,
+      states: assetStates,
+      sets,
+      masters,
+      notes: notices,
+      ...scaffold2 === void 0 ? {} : { scaffold: scaffold2 },
+      ...request.scaffold?.viewport === void 0 ? {} : { sectionMapMeta: { viewport: request.scaffold.viewport, node: scene.root.id } }
+    });
+    const componentDir = import_node_path.default.join(request.destination.dir, rendered.componentName);
+    for (const file of rendered.files) {
+      await writeAtomic(import_node_path.default.join(componentDir, file.name), file.contents);
+    }
+    const sectionMapPath = request.scaffold?.sectionMapPath ?? null;
+    if (sectionMapPath !== null && rendered.sectionMap !== void 0) {
+      await writeAtomic(sectionMapPath, JSON.stringify(rendered.sectionMap, null, 2));
+      return { kind: "react", dir: componentDir, notices, sectionMapPath };
+    }
+    return { kind: "react", dir: componentDir, notices };
+  }
+  const html = renderDocument({ scene, assets, states, sets, masters, notes: notices, fluid: request.fluid === true });
+  if (request.destination.kind === "file") await writeAtomic(request.destination.htmlPath, html);
+  return { kind: "document", html, notices };
+}
+async function loadScene(request, chooseLayer, client) {
   const wire = await client.fetchNodeBody(request);
   const focusId = await chosenFocus(request, wire, chooseLayer);
   const notices = [...focusNotices(request, wire, focusId)];
@@ -9518,39 +9703,44 @@ async function exportDocument(request, chooseLayer) {
   scene.root = dropImageHairlines(scene.root, keep, notices);
   for (const [id, state] of states) states.set(id, dropImageHairlines(state, keep, notices));
   const masters = new Map([...loadedMasters].map(([id, master]) => [id, dropImageHairlines(master, keep, notices)]));
-  const assetStates = request.destination.kind === "react" ? pointerStates(scene.root, states) : states;
-  const assets = await resolveAssets(client, request, scene, assetStates);
-  if (request.destination.kind === "react") {
-    const scaffold2 = request.scaffold === void 0 ? void 0 : await scaffoldOptions(request.scaffold);
-    const rendered = renderReactComponent({
-      scene,
-      assets,
-      states: assetStates,
-      sets,
-      masters,
-      notes: notices,
-      ...scaffold2 === void 0 ? {} : { scaffold: scaffold2 }
-    });
-    const componentDir = import_node_path.default.join(request.destination.dir, rendered.componentName);
-    for (const file of rendered.files) {
-      await writeAtomic(import_node_path.default.join(componentDir, file.name), file.contents);
-    }
-    return { kind: "react", dir: componentDir, notices };
-  }
-  const html = renderDocument({ scene, assets, states, sets, masters, notes: notices, fluid: request.fluid === true });
-  if (request.destination.kind === "file") await writeAtomic(request.destination.htmlPath, html);
-  return { kind: "document", html, notices };
+  return { scene, states, sets, masters, notices };
+}
+async function scaffoldSectionMap(request, options, viewport, client, chooseLayer) {
+  const { scene, states, sets, masters, notices } = await loadScene(request, chooseLayer, client);
+  const pointer = pointerStates(scene.root, states);
+  const rendered = renderReactComponent({
+    scene,
+    assets: placeholderAssets(scene, pointer),
+    states: pointer,
+    sets,
+    masters,
+    notes: notices,
+    scaffold: options,
+    sectionMapMeta: { viewport, node: scene.root.id }
+  });
+  if (rendered.sectionMap === void 0) throw new Error("scaffold section map missing");
+  return { sectionMap: rendered.sectionMap, notices };
+}
+function placeholderAssets(scene, states) {
+  const fillRefs = [];
+  const rasterIds = [];
+  const seenFills = /* @__PURE__ */ new Set();
+  const seenRasters = /* @__PURE__ */ new Set();
+  collect(scene.root, fillRefs, rasterIds, seenFills, seenRasters);
+  for (const state of states.values()) collect(state, fillRefs, rasterIds, seenFills, seenRasters);
+  return { fills: new Map(fillRefs.map((ref) => [ref, ""])), rasters: new Map(rasterIds.map((id) => [id, ""])) };
 }
 async function scaffoldOptions(request) {
-  let raw;
+  return { component: request.component, profile: parseRepoProfile(await readRepoProfileJson(request.profilePath)), fixed: request.fixed, fontMap: request.fontMap };
+}
+async function readRepoProfileJson(profilePath) {
   try {
-    const text = await (0, import_promises.readFile)(request.profilePath, "utf8");
+    const text = await (0, import_promises.readFile)(profilePath, "utf8");
     if (text.length > 2 * 1024 * 1024) throw new Error("too large");
-    raw = JSON.parse(text);
+    return JSON.parse(text);
   } catch {
     throw new ExportError({ kind: "usage", message: "The --repo-profile file is not readable JSON." });
   }
-  return { component: request.component, profile: parseRepoProfile(raw), fixed: request.fixed, fontMap: request.fontMap };
 }
 async function inspectDocument(request, chooseLayer) {
   const client = createFigmaClient();
@@ -9594,14 +9784,14 @@ function focusNotices(request, wire, focusId) {
   if (parent === null) return [];
   return [`Parent ${parent.name} (${parent.id}) has a fill this layer does not.`];
 }
-function collectColorDeltas(node, ancestors, states, sets, deltas) {
+function collectColorDeltas(node, ancestors2, states, sets, deltas) {
   for (const reaction of node.reactions) {
     if (reaction.trigger.kind !== "hover" && reaction.trigger.kind !== "press") continue;
     for (const action of reaction.actions) {
       if (action.kind !== "change") continue;
       const dest = states.get(action.target);
       if (dest === void 0) continue;
-      const host = changeHost(node, action.target, sets, ancestors);
+      const host = changeHost(node, action.target, sets, ancestors2);
       const lines = colorDelta(reaction.trigger.kind, host, dest);
       const existing = deltas.get(host.id) ?? [];
       for (const line of lines) {
@@ -9611,7 +9801,7 @@ function collectColorDeltas(node, ancestors, states, sets, deltas) {
     }
   }
   if (node.kind === "box") {
-    for (const child of node.children) collectColorDeltas(child, [node, ...ancestors], states, sets, deltas);
+    for (const child of node.children) collectColorDeltas(child, [node, ...ancestors2], states, sets, deltas);
   }
 }
 function colorDelta(trigger, host, dest) {
@@ -9833,11 +10023,11 @@ async function loadMasters(client, request, root, sets, states) {
   }
   return masters;
 }
-function collectMasters(node, ancestors, sets, states, masters, pending, seen) {
+function collectMasters(node, ancestors2, sets, states, masters, pending, seen) {
   for (const reaction of node.reactions) {
     for (const action of reaction.actions) {
       if (action.kind !== "change") continue;
-      const host = changeHost(node, action.target, sets, ancestors);
+      const host = changeHost(node, action.target, sets, ancestors2);
       if (host.kind !== "box" || host.component === null || seen.has(host.component)) continue;
       seen.add(host.component);
       const known = states.get(host.component);
@@ -9846,7 +10036,7 @@ function collectMasters(node, ancestors, sets, states, masters, pending, seen) {
     }
   }
   if (node.kind === "box") {
-    for (const child of node.children) collectMasters(child, [node, ...ancestors], sets, states, masters, pending, seen);
+    for (const child of node.children) collectMasters(child, [node, ...ancestors2], sets, states, masters, pending, seen);
   }
 }
 function pointerStates(root, states) {
@@ -10073,6 +10263,933 @@ async function writeAtomic(filePath, data) {
   }
 }
 
+// src/mobile-overlay.ts
+var import_promises2 = require("node:fs/promises");
+var import_node_path2 = __toESM(require("node:path"), 1);
+
+// src/viewport-map.ts
+var GENERIC_NAME = /^(Frame|Group|Rectangle|Vector|Ellipse|Line) ?\d*$/;
+var DECOR_NAME = /chevron|arrow|^>$|plus|\+|icon/i;
+var DECOR_SIZE = 32;
+var ROLE_FALLBACK = ["media", "title", "text", "caption"];
+var WEAK_NOTE = "weak: role only";
+var LAYOUT_PROPS = /* @__PURE__ */ new Set([
+  "font-size",
+  "line-height",
+  "letter-spacing",
+  "font-weight",
+  "text-align",
+  "padding",
+  "margin",
+  "gap",
+  "row-gap",
+  "column-gap",
+  "border-radius",
+  "flex-direction",
+  "flex-wrap",
+  "justify-content",
+  "align-items",
+  "display",
+  "order",
+  "width",
+  "height",
+  "max-width",
+  "min-height",
+  "grid-template-columns",
+  "grid-template-rows",
+  "color",
+  "background-color",
+  "opacity"
+]);
+function isLayoutProp(prop) {
+  return LAYOUT_PROPS.has(prop) || prop.startsWith("padding-") || prop.startsWith("margin-");
+}
+function overlayDeltas(desktop, mobile) {
+  const deltas = {};
+  const props = /* @__PURE__ */ new Set([...Object.keys(desktop), ...Object.keys(mobile)]);
+  for (const prop of props) {
+    if (!isLayoutProp(prop)) continue;
+    const d = Object.hasOwn(desktop, prop) ? desktop[prop] : null;
+    const m = Object.hasOwn(mobile, prop) ? mobile[prop] : null;
+    if (d !== m) deltas[prop] = { desktop: d, mobile: m };
+  }
+  return deltas;
+}
+function tree(map) {
+  const byId = new Map(map.rows.map((row) => [row.nodeId, row]));
+  const up = /* @__PURE__ */ new Map();
+  for (const row of map.rows) {
+    const chain = [];
+    const seen = /* @__PURE__ */ new Set([row.nodeId]);
+    let parent = row.parentId;
+    while (parent !== null && !seen.has(parent) && byId.has(parent)) {
+      chain.push(parent);
+      seen.add(parent);
+      parent = byId.get(parent)?.parentId ?? null;
+    }
+    up.set(row.nodeId, chain);
+  }
+  const roots = map.rows.filter((row) => row.role === "root");
+  const root = roots.length === 1 ? roots[0].nodeId : null;
+  return {
+    rows: map.rows,
+    body: map.rows.filter((row) => row.nodeId !== root),
+    root,
+    byId,
+    index: new Map(map.rows.map((row, i) => [row.nodeId, i])),
+    up
+  };
+}
+function ancestors(t, id) {
+  return t.up.get(id) ?? [];
+}
+function within(t, id, ancestor) {
+  return id === ancestor || ancestors(t, id).includes(ancestor);
+}
+function hasContent(row) {
+  return row.text !== null || row.imageRefs.length > 0;
+}
+function textKey(row) {
+  if (row.text === null) return [];
+  const text = normalizeText(row.text);
+  return text === "" ? [] : [text];
+}
+function componentKey2(row) {
+  const key = row.componentSetId ?? row.componentId;
+  return key === null ? [] : [key];
+}
+var Matches = class {
+  m2d = /* @__PURE__ */ new Map();
+  d2m = /* @__PURE__ */ new Map();
+  link(m, d, signal) {
+    this.unlinkMobile(m);
+    this.unlinkDesktop(d);
+    this.m2d.set(m, { d, signal });
+    this.d2m.set(d, m);
+  }
+  unlinkMobile(m) {
+    const match = this.m2d.get(m);
+    if (match === void 0) return;
+    this.m2d.delete(m);
+    this.d2m.delete(match.d);
+  }
+  unlinkDesktop(d) {
+    const m = this.d2m.get(d);
+    if (m === void 0) return;
+    this.d2m.delete(d);
+    this.m2d.delete(m);
+  }
+};
+function groupBy(rows, keyOf) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    for (const key of new Set(keyOf(row))) {
+      const group = groups.get(key);
+      if (group === void 0) groups.set(key, [row]);
+      else group.push(row);
+    }
+  }
+  return groups;
+}
+function pairByKey(mobile, desktop, keyOf, signal, matches, ambiguity) {
+  const desktopGroups = groupBy(desktop.body, keyOf);
+  for (const [key, ms] of groupBy(mobile.body, keyOf)) {
+    const ds = desktopGroups.get(key);
+    if (ds === void 0) continue;
+    const freeM = ms.filter((row) => !matches.m2d.has(row.nodeId));
+    const freeD = ds.filter((row) => !matches.d2m.has(row.nodeId));
+    if (freeM.length === 0 || freeD.length === 0) continue;
+    if (freeM.length === freeD.length) {
+      freeM.forEach((row, i) => matches.link(row.nodeId, freeD[i].nodeId, signal));
+      continue;
+    }
+    if (ambiguity === null) continue;
+    const note = `ambiguous ${signal} "${key}": ${freeM.length} on mobile, ${freeD.length} on desktop`;
+    for (const row of freeM) ambiguity.mobile.set(row.nodeId, note);
+    for (const row of freeD) ambiguity.desktop.add(row.nodeId);
+  }
+}
+function counterpartsIn(mobile, matches, top, includeTop) {
+  const out = [];
+  for (const row of mobile.body) {
+    if (!includeTop && row.nodeId === top) continue;
+    const match = matches.m2d.get(row.nodeId);
+    if (match !== void 0 && within(mobile, row.nodeId, top)) out.push(match.d);
+  }
+  return out;
+}
+function matchCards(mobile, desktop, matches) {
+  const boxes = mobile.body.filter((row) => row.kind === "box");
+  for (const card of desktop.body.filter((row) => row.role === "card")) {
+    const inside2 = /* @__PURE__ */ new Map();
+    for (const box of boxes) {
+      const found = counterpartsIn(mobile, matches, box.nodeId, true);
+      if (found.length > 0 && found.every((d) => within(desktop, d, card.nodeId))) inside2.set(box.nodeId, found.length);
+    }
+    const outermost = [...inside2.keys()].filter((id) => {
+      const parent = mobile.byId.get(id)?.parentId ?? null;
+      return parent === null || !inside2.has(parent);
+    });
+    if (outermost.length !== 1) continue;
+    const top = outermost[0];
+    const size = inside2.get(top);
+    const chain = mobile.body.filter((row) => inside2.get(row.nodeId) === size && within(mobile, row.nodeId, top));
+    chain.sort((a, b) => a.depth - b.depth);
+    const pick = chain.find((row) => row.imageRefs.length > 0 || row.role === "card") ?? mobile.byId.get(top);
+    matches.link(pick.nodeId, card.nodeId, "descendants");
+  }
+}
+function matchByDescendants(mobile, desktop, matches) {
+  const boxes = mobile.body.filter((row) => row.kind === "box" && !hasContent(row)).sort((a, b) => b.depth - a.depth || Number(b.role === "card") - Number(a.role === "card"));
+  for (const box of boxes) {
+    if (matches.m2d.has(box.nodeId)) continue;
+    const counterparts = counterpartsIn(mobile, matches, box.nodeId, false);
+    if (counterparts.length === 0) continue;
+    const tally = /* @__PURE__ */ new Map();
+    for (const d of counterparts) {
+      for (const up of ancestors(desktop, d)) if (up !== desktop.root) tally.set(up, (tally.get(up) ?? 0) + 1);
+    }
+    const candidates = [];
+    for (const [id, count] of tally) {
+      const row = desktop.byId.get(id);
+      if (row === void 0 || row.kind !== "box" || count * 2 <= counterparts.length || matches.d2m.has(id)) continue;
+      const own = desktop.body.filter((d) => d.nodeId !== id && matches.d2m.has(d.nodeId) && within(desktop, d.nodeId, id));
+      const back = own.filter((d) => within(mobile, matches.d2m.get(d.nodeId) ?? "", box.nodeId));
+      if (back.length * 2 > own.length) candidates.push(row);
+    }
+    const sameRole = candidates.filter((row) => row.role === box.role);
+    const pool = sameRole.length > 0 ? sameRole : candidates;
+    const deepest = pool.sort((a, b) => b.depth - a.depth)[0];
+    if (deepest !== void 0) matches.link(box.nodeId, deepest.nodeId, "descendants");
+  }
+}
+function matchByNameOrder(mobile, desktop, matches) {
+  const named = (row) => row.name !== "" && !GENERIC_NAME.test(row.name);
+  const freeD = desktop.body.filter((row) => !matches.d2m.has(row.nodeId) && named(row));
+  const freeM = mobile.body.filter((row) => !matches.m2d.has(row.nodeId) && named(row));
+  for (const m of freeM) {
+    const ds = freeD.filter((d) => d.name === m.name && d.order === m.order && !matches.d2m.has(d.nodeId));
+    const rivals = freeM.filter((other) => other.name === m.name && other.order === m.order);
+    if (ds.length === 1 && rivals.length === 1) matches.link(m.nodeId, ds[0].nodeId, "name-order");
+  }
+}
+function nearestMatched(t, id, matched) {
+  return ancestors(t, id).find((up) => matched.has(up)) ?? null;
+}
+function matchByRole(mobile, desktop, matches) {
+  for (const [m, { d }] of [...matches.m2d]) {
+    const freeM = mobile.body.filter(
+      (row) => !matches.m2d.has(row.nodeId) && hasContent(row) && nearestMatched(mobile, row.nodeId, matches.m2d) === m
+    );
+    const freeD = desktop.body.filter(
+      (row) => !matches.d2m.has(row.nodeId) && !row.hiddenAtRest && hasContent(row) && nearestMatched(desktop, row.nodeId, matches.d2m) === d
+    );
+    for (const role of ROLE_FALLBACK) {
+      const ms = freeM.filter((row) => row.role === role);
+      const ds = freeD.filter((row) => row.role === role);
+      if (ms.length === 1 && ds.length === 1) matches.link(ms[0].nodeId, ds[0].nodeId, "role");
+    }
+  }
+}
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+var CLASS_ATTRIBUTE = /className=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\})/g;
+function classPresence(sectionText) {
+  const selectorLines = sectionText.split("\n").filter((line) => /[{,]$/.test(line.trim()));
+  const attributeTokens = /* @__PURE__ */ new Set();
+  for (const hit of sectionText.matchAll(CLASS_ATTRIBUTE)) {
+    const value = (hit[1] ?? hit[2] ?? hit[3] ?? "").replace(/\$\{[^}]*\}/g, " ");
+    for (const token of value.split(/\s+/)) if (token !== "") attributeTokens.add(token);
+  }
+  return (name) => {
+    if (attributeTokens.has(name)) return true;
+    const selector = new RegExp(`\\.${escapeRegExp(name)}(?![\\w-])`);
+    return selectorLines.some((line) => selector.test(line));
+  };
+}
+function targetResolver(sectionText, classMap) {
+  const present = sectionText === null ? null : classPresence(sectionText);
+  return (className) => {
+    if (Object.hasOwn(classMap, className)) return classMap[className];
+    if (className === "") return null;
+    if (present === null || present(className)) return `.${className}`;
+    const stripped = className.replace(/-\d+$/, "");
+    if (stripped !== className && stripped !== "" && present(stripped)) return `.${stripped}`;
+    return null;
+  };
+}
+function sideOf(row) {
+  return { nodeId: row.nodeId, name: row.name, className: row.className, selector: row.selector };
+}
+function desktopHover(row) {
+  return row?.hover != null && (row.hover.reveals || Object.keys(row.hover.rules).length > 0);
+}
+function rowDeltas(d, m) {
+  const deltas = overlayDeltas(d.decls, m.decls);
+  if (m.box.sizing.w !== "fixed") delete deltas.width;
+  if (m.box.sizing.h !== "fixed") delete deltas.height;
+  return deltas;
+}
+function isDecor(row) {
+  if (row.kind === "text" || row.text !== null) return false;
+  return row.box.w <= DECOR_SIZE && row.box.h <= DECOR_SIZE || DECOR_NAME.test(row.name);
+}
+function affordanceOf(row, mobile) {
+  if (/arrow/i.test(row.name)) return "arrow";
+  if (/plus|\+/i.test(row.name)) return "plus";
+  if (/chevron|^>$|down|caret/i.test(row.name)) return "chevron";
+  const tapped = [row.nodeId, ...ancestors(mobile, row.nodeId)].some((id) => mobile.byId.get(id)?.tap != null);
+  return tapped ? "chevron" : null;
+}
+function hasBackdrop(decls) {
+  return Object.keys(decls).some((prop) => prop.startsWith("background") || prop.startsWith("border"));
+}
+function touchOf(hover, tap, affordanceInside) {
+  if (!hover) return null;
+  return tap !== null || affordanceInside ? "design" : "checkpoint";
+}
+function boxOf2(row) {
+  return { w: row.box.w, h: row.box.h, sizing: { w: row.box.sizing.w, h: row.box.sizing.h } };
+}
+function desktopOnly(d, target, status, signal, note) {
+  const hover = desktopHover(d);
+  return {
+    id: `d:${d.nodeId}`,
+    mobile: null,
+    desktop: sideOf(d),
+    target,
+    status,
+    signal,
+    order: { mobile: null, desktop: d.order },
+    box: null,
+    deltas: {},
+    affordance: null,
+    interaction: { desktopHover: hover, mobileTap: null, touch: touchOf(hover, null, false) },
+    note
+  };
+}
+function buildViewportMap(input) {
+  const desktop = tree(input.desktop);
+  const mobile = tree(input.mobile);
+  const matches = new Matches();
+  const ambiguity = { mobile: /* @__PURE__ */ new Map(), desktop: /* @__PURE__ */ new Set() };
+  if (mobile.root !== null && desktop.root !== null) matches.link(mobile.root, desktop.root, "root");
+  pairByKey(mobile, desktop, textKey, "text", matches, ambiguity);
+  pairByKey(mobile, desktop, (row) => row.imageRefs, "imageRef", matches, ambiguity);
+  pairByKey(mobile, desktop, componentKey2, "component", matches, null);
+  matchCards(mobile, desktop, matches);
+  matchByDescendants(mobile, desktop, matches);
+  matchByNameOrder(mobile, desktop, matches);
+  matchByRole(mobile, desktop, matches);
+  for (const id of ambiguity.mobile.keys()) if (matches.m2d.has(id)) ambiguity.mobile.delete(id);
+  const anchorOf2 = (id) => nearestMatched(mobile, id, matches.m2d);
+  const desktopAnchorOf = (id) => nearestMatched(desktop, id, matches.d2m);
+  const resolve = targetResolver(input.sectionText, input.classMap);
+  const target = (d) => d.nodeId === desktop.root ? "&" : resolve(d.className);
+  const siblings = /* @__PURE__ */ new Map();
+  for (const row of mobile.rows) {
+    if (!matches.m2d.has(row.nodeId)) continue;
+    const anchor = anchorOf2(row.nodeId);
+    const group = siblings.get(anchor);
+    if (group === void 0) siblings.set(anchor, [row.nodeId]);
+    else group.push(row.nodeId);
+  }
+  const placement2 = (m, d) => {
+    const anchor = anchorOf2(m);
+    const expected = anchor === null ? null : matches.m2d.get(anchor)?.d ?? null;
+    if (expected !== desktopAnchorOf(d)) return "moved";
+    const group = siblings.get(anchor) ?? [];
+    const counterparts = group.map((id) => matches.m2d.get(id)?.d ?? "").sort((a, b) => (desktop.index.get(a) ?? 0) - (desktop.index.get(b) ?? 0));
+    return group.indexOf(m) === counterparts.indexOf(d) ? "same" : "moved";
+  };
+  const decor = /* @__PURE__ */ new Map();
+  for (const m of mobile.body) {
+    if (matches.m2d.has(m.nodeId) || ambiguity.mobile.has(m.nodeId) || !isDecor(m)) continue;
+    const anchor = anchorOf2(m.nodeId);
+    if (anchor !== null) decor.set(m.nodeId, { anchor, affordance: affordanceOf(m, mobile) });
+  }
+  const affordanceInside = (id) => [...decor].some(([decorId, entry]) => entry.affordance !== null && ancestors(mobile, decorId).includes(id));
+  const rows = [];
+  for (const m of mobile.rows) {
+    const match = matches.m2d.get(m.nodeId);
+    const mobileTap = m.tap?.changesTo ?? null;
+    if (match !== void 0) {
+      const d = desktop.byId.get(match.d);
+      const resolved = target(d);
+      const hover = desktopHover(d);
+      const textDiffers = m.text !== null && d.text !== null && normalizeText(m.text) !== normalizeText(d.text);
+      const notes = [
+        resolved === null ? `no selector for class "${d.className}" in the section` : null,
+        match.signal === "role" ? WEAK_NOTE : null,
+        textDiffers ? "text differs" : null
+      ].filter((note) => note !== null);
+      rows.push({
+        id: m.nodeId,
+        mobile: sideOf(m),
+        desktop: sideOf(d),
+        target: resolved,
+        status: resolved === null ? "target-missing" : placement2(m.nodeId, d.nodeId),
+        signal: match.signal,
+        order: { mobile: m.order, desktop: d.order },
+        box: boxOf2(m),
+        deltas: rowDeltas(d, m),
+        affordance: null,
+        interaction: { desktopHover: hover, mobileTap, touch: touchOf(hover, mobileTap, affordanceInside(m.nodeId)) },
+        note: notes.length === 0 ? null : notes.join("; ")
+      });
+      continue;
+    }
+    const anchor = anchorOf2(m.nodeId);
+    const unmatchedRow = (status, note, affordance = null, rowTarget = null) => ({
+      id: m.nodeId,
+      mobile: sideOf(m),
+      desktop: null,
+      target: rowTarget,
+      status,
+      signal: null,
+      order: { mobile: m.order, desktop: null },
+      box: boxOf2(m),
+      deltas: {},
+      affordance,
+      interaction: { desktopHover: false, mobileTap, touch: null },
+      note
+    });
+    const anchorNote = anchor === null ? null : `inside ${anchor}`;
+    const decorEntry = decor.get(m.nodeId);
+    if (decorEntry !== void 0) {
+      const anchorDesktop = desktop.byId.get(matches.m2d.get(decorEntry.anchor)?.d ?? "");
+      const anchorTarget = anchorDesktop === void 0 ? null : target(anchorDesktop);
+      rows.push(unmatchedRow("mobile-only-decor", anchorNote, decorEntry.affordance, anchorTarget));
+    } else if (ambiguity.mobile.has(m.nodeId)) {
+      rows.push(unmatchedRow("unmatched", ambiguity.mobile.get(m.nodeId) ?? null));
+    } else if (hasContent(m) || m.kind !== "box") {
+      rows.push(unmatchedRow("new-content", anchorNote));
+    } else if (hasBackdrop(m.decls)) {
+      rows.push(unmatchedRow("unmatched", "box with a background or border and no desktop match"));
+    }
+  }
+  const revealed = /* @__PURE__ */ new Map();
+  for (const d of desktop.body) {
+    if (matches.d2m.has(d.nodeId) || ambiguity.desktop.has(d.nodeId) || !hasContent(d)) continue;
+    if (d.hiddenAtRest) {
+      const card = ancestors(desktop, d.nodeId).map((id) => desktop.byId.get(id)).find((row) => row?.role === "card");
+      const cardMobile = card === void 0 ? void 0 : matches.d2m.get(card.nodeId);
+      if (card?.hover?.reveals === true && cardMobile !== void 0) {
+        revealed.set(`d:${d.nodeId}`, cardMobile);
+        rows.push(desktopOnly(d, resolve(d.className), "same", null, null));
+        continue;
+      }
+    }
+    const anchorD = desktopAnchorOf(d.nodeId);
+    const anchorM = anchorD === null ? void 0 : mobile.byId.get(matches.d2m.get(anchorD) ?? "");
+    const anchorRow = anchorD === null ? void 0 : desktop.byId.get(anchorD);
+    const imagesUnder = anchorD === null ? [] : desktop.body.filter(
+      (row) => row.imageRefs.length > 0 && !matches.d2m.has(row.nodeId) && desktopAnchorOf(row.nodeId) === anchorD
+    );
+    if (d.imageRefs.length > 0 && anchorM !== void 0 && anchorM.imageRefs.length > 0 && anchorRow !== void 0 && anchorRow.imageRefs.length === 0 && imagesUnder.length === 1) {
+      const shared = d.imageRefs.some((ref) => anchorM.imageRefs.includes(ref));
+      const note = `image on mobile ${anchorM.nodeId}${shared ? "" : `; ${WEAK_NOTE}`}`;
+      rows.push(desktopOnly(d, resolve(d.className), "same", shared ? "imageRef" : "role", note));
+      continue;
+    }
+    rows.push(desktopOnly(d, resolve(d.className), "hidden-on-mobile", null, null));
+  }
+  const edits = new Map((input.edits?.rows ?? []).map((row) => [row.id, row]));
+  for (const row of rows) {
+    const edit = edits.get(row.id);
+    if (edit === void 0) continue;
+    const matchChanged = (edit.desktop?.nodeId ?? null) !== (row.desktop?.nodeId ?? null);
+    if (matchChanged) {
+      const d = edit.desktop === null ? void 0 : desktop.byId.get(edit.desktop.nodeId);
+      const m = mobile.byId.get(row.id);
+      row.desktop = edit.desktop;
+      row.order.desktop = d?.order ?? edit.order.desktop;
+      row.deltas = d !== void 0 && m !== void 0 ? rowDeltas(d, m) : edit.deltas;
+      row.interaction.desktopHover = d === void 0 ? edit.interaction.desktopHover : desktopHover(d);
+    }
+    if (matchChanged || edit.target !== row.target) row.signal = "user";
+    row.target = edit.target;
+    row.status = edit.status;
+    row.interaction.touch = edit.interaction.touch;
+    if (edit.note !== null) row.note = edit.note;
+  }
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  for (const [id, entry] of decor) {
+    const row = byId.get(id);
+    const anchorRow = byId.get(entry.anchor);
+    if (row !== void 0 && anchorRow !== void 0 && !edits.has(id)) row.target = anchorRow.target;
+  }
+  for (const [id, cardMobile] of revealed) {
+    const row = byId.get(id);
+    if (row === void 0 || edits.has(id)) continue;
+    const touch = byId.get(cardMobile)?.interaction.touch ?? null;
+    if (touch === "design") row.note = "revealed on tap";
+    else if (touch === "checkpoint") row.note = "revealed on tap or shown, checkpoint";
+    else row.status = "hidden-on-mobile";
+  }
+  return { schemaVersion: 1, mobile: input.mobile.node, desktop: input.desktop.node, component: input.mobile.component, rows };
+}
+var STATUSES = ["same", "moved", "hidden-on-mobile", "mobile-only-decor", "new-content", "unmatched", "target-missing"];
+function viewportExit(map) {
+  if (map.rows.some((row) => row.status === "new-content")) return 11;
+  if (map.rows.some((row) => row.status === "unmatched" || row.status === "target-missing")) return 12;
+  return 0;
+}
+var CELL_MAX = 200;
+function cell(text) {
+  const flat = text.replace(/\s+/g, " ").replace(/\|/g, "\\|");
+  return flat.length > CELL_MAX ? `${flat.slice(0, CELL_MAX - 3)}...` : flat;
+}
+function nodeLabel(side) {
+  return side === null ? "-" : `${side.name} (${side.nodeId})`;
+}
+function viewportMapMarkdown(map) {
+  const counts = STATUSES.map((status) => [status, map.rows.filter((row) => row.status === status).length]).filter(([, count]) => count > 0).map(([status, count]) => `${status} ${count}`);
+  const lines = [
+    `# Viewport map: ${map.component}`,
+    "",
+    `Mobile node ${map.mobile}, desktop node ${map.desktop}. ${map.rows.length} rows: ${counts.join(", ") || "none"}.`,
+    "",
+    "| id | mobile node | desktop target | status | signal | order m/d | box | deltas | interaction |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+  ];
+  for (const row of map.rows) {
+    const target = `${row.target ?? "-"}${row.desktop === null ? "" : ` <- ${nodeLabel(row.desktop)}`}`;
+    const status = row.note === null ? row.status : `${row.status} (${row.note})`;
+    const order = `${row.order.mobile ?? "-"}/${row.order.desktop ?? "-"}`;
+    const box = row.box === null ? "-" : `${row.box.w}x${row.box.h} ${row.box.sizing.w}/${row.box.sizing.h}`;
+    const deltas = Object.entries(row.deltas).map(([prop, delta]) => `${prop} ${delta.desktop ?? "-"}->${delta.mobile ?? "-"}`).join("; ");
+    const interaction = [
+      row.interaction.desktopHover ? "hover" : null,
+      row.interaction.mobileTap === null ? null : `tap->${row.interaction.mobileTap}`,
+      row.interaction.touch === null ? null : `touch:${row.interaction.touch}`,
+      row.affordance === null ? null : `affordance:${row.affordance}`
+    ].filter((part) => part !== null).join(", ");
+    const cells = [row.id, nodeLabel(row.mobile), target, status, row.signal ?? "-", order, box, deltas || "-", interaction || "-"];
+    lines.push(`| ${cells.map(cell).join(" | ")} |`);
+  }
+  return `${lines.join("\n")}
+`;
+}
+var sideSchema = external_exports.object({ nodeId: external_exports.string(), name: external_exports.string(), className: external_exports.string(), selector: external_exports.string() });
+var viewportRowSchema = external_exports.object({
+  id: external_exports.string(),
+  mobile: sideSchema.nullable(),
+  desktop: sideSchema.nullable(),
+  target: external_exports.string().nullable(),
+  status: external_exports.enum(STATUSES),
+  signal: external_exports.enum(["text", "imageRef", "component", "descendants", "name-order", "root", "role", "user"]).nullable(),
+  order: external_exports.object({ mobile: external_exports.number().int().nullable(), desktop: external_exports.number().int().nullable() }),
+  box: external_exports.object({ w: external_exports.number(), h: external_exports.number(), sizing: external_exports.object({ w: external_exports.string(), h: external_exports.string() }) }).nullable(),
+  deltas: external_exports.record(external_exports.object({ desktop: external_exports.string().nullable(), mobile: external_exports.string().nullable() })),
+  affordance: external_exports.enum(["chevron", "arrow", "plus"]).nullable(),
+  interaction: external_exports.object({
+    desktopHover: external_exports.boolean(),
+    mobileTap: external_exports.string().nullable(),
+    touch: external_exports.enum(["design", "checkpoint"]).nullable()
+  }),
+  note: external_exports.string().nullable()
+});
+var viewportMapSchema = external_exports.object({
+  schemaVersion: external_exports.literal(1),
+  mobile: external_exports.string(),
+  desktop: external_exports.string(),
+  component: external_exports.string(),
+  rows: external_exports.array(viewportRowSchema)
+});
+function parseViewportMap(raw) {
+  const parsed = viewportMapSchema.safeParse(raw);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const where = issue === void 0 ? "" : ` at ${issue.path.join(".") || "the root"}`;
+    throw new ExportError({ kind: "usage", message: `The viewport map is not schemaVersion 1${where}.` });
+  }
+  return parsed.data;
+}
+
+// src/mobile-overlay.ts
+var MAX_INPUT_BYTES = 2 * 1024 * 1024;
+var MAX_SECTION_FILE_BYTES = 1024 * 1024;
+var SECTION_FILE = /^(Styled|Client).*\.js$/;
+var ROOT_SIZE_PROPS = /* @__PURE__ */ new Set(["width", "height", "min-height", "max-width"]);
+var DECOR_MAX_WIDTH = 64;
+var WIDTH_PROPS = /* @__PURE__ */ new Set(["width", "max-width"]);
+function mobileBreakpoint(bps) {
+  if (bps.includes("mobile")) return "mobile";
+  return bps.find((key) => /mobile/i.test(key)) ?? null;
+}
+function themedDecl(prop, value, options, notes) {
+  const line = themeTokenText(`${prop}: ${value};`, options, notes);
+  return line.slice(line.indexOf(":") + 1).trim().replace(/;$/, "");
+}
+function themedDecls(decls, options, notes) {
+  const out = {};
+  for (const [prop, value] of Object.entries(decls)) out[prop] = roundPx(themedDecl(prop, value, options, notes));
+  return out;
+}
+var PX = /(-?\d*\.?\d+)px/g;
+var PX_TOLERANCE = 0.5;
+function roundPx(value) {
+  return value.replace(PX, (_, raw) => {
+    const rounded = Math.round(Number(raw) * 2) / 2;
+    return `${rounded === 0 ? 0 : rounded}px`;
+  });
+}
+function sameValue(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || a.replace(PX, "px") !== b.replace(PX, "px")) return false;
+  const as = [...a.matchAll(PX)].map((match) => Number(match[1]));
+  const bs = [...b.matchAll(PX)].map((match) => Number(match[1]));
+  return as.length === bs.length && as.every((n, i) => Math.abs(n - (bs[i] ?? Number.NaN)) <= PX_TOLERANCE);
+}
+function cardTargets(map, desktop, mobile) {
+  const rowById = new Map(map.rows.map((row) => [row.id, row]));
+  const rowByDesktop = new Map(map.rows.flatMap((row) => row.desktop === null ? [] : [[row.desktop.nodeId, row]]));
+  const mobileById = new Map(mobile.rows.map((row) => [row.nodeId, row]));
+  const desktopById = new Map(desktop.rows.map((row) => [row.nodeId, row]));
+  const isCard = (row, own) => own?.role === "card" || row?.desktop != null && desktopById.get(row.desktop.nodeId)?.role === "card" || row?.mobile != null && mobileById.get(row.mobile.nodeId)?.role === "card";
+  const climb = (start, byId, rowOf) => {
+    const seen = /* @__PURE__ */ new Set([start]);
+    for (let at = byId.get(start)?.parentId ?? null; at !== null && !seen.has(at); at = byId.get(at)?.parentId ?? null) {
+      seen.add(at);
+      const row = rowOf(at);
+      if (isCard(row, byId.get(at)) && row?.target != null) return row.target;
+    }
+    return null;
+  };
+  return (row) => {
+    if (row.mobile !== null) return climb(row.mobile.nodeId, mobileById, (id) => rowById.get(id));
+    if (row.desktop !== null) return climb(row.desktop.nodeId, desktopById, (id) => rowByDesktop.get(id));
+    return null;
+  };
+}
+function descendants(mobile, id) {
+  const found = [];
+  const queue = [id];
+  while (queue.length > 0) {
+    const parent = queue.shift();
+    for (const row of mobile.rows) {
+      if (row.parentId !== parent || row.nodeId === id || found.includes(row)) continue;
+      found.push(row);
+      queue.push(row.nodeId);
+    }
+  }
+  return found;
+}
+var SELECTOR_CLASS = /\.(-?[A-Za-z_][\w-]*)/g;
+function translateSelector(selector, resolve, missing) {
+  return selector.replace(SELECTOR_CLASS, (match, className) => {
+    const resolved = resolve(className);
+    if (resolved !== null) return resolved;
+    if (!missing.includes(className)) missing.push(className);
+    return match;
+  });
+}
+function revealOf(desktopRow, resolve, options, notes, missing) {
+  const reveal = {};
+  for (const [selector, decls] of Object.entries(desktopRow?.hover?.rules ?? {})) {
+    if (!selector.startsWith("&:hover")) continue;
+    const rest = translateSelector(selector.slice("&:hover".length), resolve, missing);
+    const relative = rest === "" || rest.startsWith(":") ? `&${rest}` : rest.trim();
+    reveal[relative] = themedDecls(decls, options, notes);
+  }
+  return reveal;
+}
+function touchOf2(row, map, desktop, mobile, resolve, options, notes, missing) {
+  if (row.interaction.touch === null || row.target === null) return null;
+  const mobileRows = new Map(mobile.rows.map((entry) => [entry.nodeId, entry]));
+  const own = mobileRows.get(row.id);
+  const tapped = own?.tap != null ? own : descendants(mobile, row.id).find((entry) => entry.tap !== null);
+  const tappedTarget = tapped === void 0 ? null : map.rows.find((entry) => entry.id === tapped.nodeId)?.target ?? null;
+  const desktopRow = desktop.rows.find((entry) => entry.nodeId === row.desktop?.nodeId);
+  return {
+    target: row.target,
+    trigger: tappedTarget ?? row.target,
+    source: row.interaction.touch,
+    mirror: ".is-open",
+    reveal: revealOf(desktopRow, resolve, options, notes, missing),
+    changesTo: tapped?.tap?.changesTo ?? row.interaction.mobileTap
+  };
+}
+function buildMobileOverlay(input) {
+  const { map, options, notes } = input;
+  const resolve = targetResolver(input.sectionText ?? null, input.classMap ?? {});
+  const rootIds = new Set(input.mobile.rows.filter((row) => row.role === "root").map((row) => row.nodeId));
+  const cardTarget = cardTargets(map, input.desktop, input.mobile);
+  const blocks = /* @__PURE__ */ new Map();
+  const setBy = /* @__PURE__ */ new Map();
+  const unplaced = [];
+  const blockFor = (target) => {
+    let block = blocks.get(target);
+    if (block === void 0) {
+      block = { target, rows: [], decls: {}, resets: [], hide: false, order: null, decor: [], note: null };
+      blocks.set(target, block);
+      setBy.set(block, /* @__PURE__ */ new Map());
+    }
+    return block;
+  };
+  const addNote = (block, note) => {
+    block.note = block.note === null ? note : `${block.note}; ${note}`;
+  };
+  const addRow = (block, id) => {
+    if (!block.rows.includes(id)) block.rows.push(id);
+  };
+  const setProp3 = (block, rowId, prop, value) => {
+    const owners = setBy.get(block);
+    const first = owners.get(prop);
+    if (first !== void 0) {
+      const current = Object.hasOwn(block.decls, prop) ? block.decls[prop] : null;
+      if (!sameValue(current, value)) addNote(block, `${prop} differs between rows; ${first} kept, ${rowId} dropped`);
+      return;
+    }
+    owners.set(prop, rowId);
+    if (value === null) block.resets.push(prop);
+    else block.decls[prop] = value;
+  };
+  const groups = /* @__PURE__ */ new Map();
+  for (const row of map.rows) {
+    if (row.target === null) {
+      unplaced.push({ id: row.id, status: row.status, reason: row.note ?? row.status });
+      continue;
+    }
+    const props = /* @__PURE__ */ new Map();
+    const frameSize = [];
+    const leftToLayout = [];
+    const isRoot = rootIds.has(row.id);
+    const followsLayout = row.box !== null && row.box.w > DECOR_MAX_WIDTH;
+    if (row.status === "hidden-on-mobile") props.set("display", "none");
+    else {
+      for (const [prop, delta] of Object.entries(row.deltas)) {
+        if (isRoot && ROOT_SIZE_PROPS.has(prop)) {
+          if (delta.mobile !== null) frameSize.push(`${prop} ${roundPx(delta.mobile)}`);
+        } else if (followsLayout && WIDTH_PROPS.has(prop) && delta.mobile !== null) {
+          leftToLayout.push(`${prop} ${roundPx(delta.mobile)} left to the layout`);
+        } else if (delta.mobile !== null) props.set(prop, roundPx(themedDecl(prop, delta.mobile, options, notes)));
+        else if (delta.desktop !== null) props.set(prop, null);
+      }
+    }
+    const moved = row.status === "moved" && row.order.mobile !== null && row.order.mobile !== row.order.desktop;
+    if (moved && !props.has("order")) props.set("order", String(row.order.mobile));
+    const decor = row.status === "mobile-only-decor";
+    if (props.size === 0 && !decor && leftToLayout.length === 0) continue;
+    const group = groups.get(row.target);
+    const entry = { row, props, decor, frameSize, leftToLayout };
+    if (group === void 0) groups.set(row.target, [entry]);
+    else group.push(entry);
+  }
+  for (const [target, group] of groups) {
+    const withProps = group.filter((entry) => entry.props.size > 0);
+    const shared = /* @__PURE__ */ new Map();
+    for (const [prop, value] of withProps[0]?.props ?? []) {
+      if (withProps.every((entry) => entry.props.has(prop) && sameValue(entry.props.get(prop) ?? null, value))) shared.set(prop, value);
+    }
+    const base = blockFor(target);
+    const split = /* @__PURE__ */ new Map();
+    for (const entry of group) {
+      const { row } = entry;
+      if (entry.decor) {
+        addRow(base, row.id);
+        base.decor.push({ rowId: row.id, affordance: row.affordance, box: row.box });
+      }
+      if (entry.frameSize.length > 0) addNote(base, `the root stays fluid; frame size left out: ${entry.frameSize.join(", ")}`);
+      if (entry.leftToLayout.length > 0) {
+        addRow(base, row.id);
+        addNote(base, entry.leftToLayout.join(", "));
+      }
+      for (const [prop, value] of shared) {
+        addRow(base, row.id);
+        setProp3(base, row.id, prop, value);
+      }
+      const own = [...entry.props].filter(([prop]) => !shared.has(prop));
+      if (own.length === 0) {
+        if (row.note !== null && !entry.decor && entry.props.size > 0) addNote(base, `${row.id}: ${row.note}`);
+        continue;
+      }
+      const card = withProps.length > 1 && target !== "&" ? cardTarget(row) : null;
+      const block = card === null || card === target ? base : blockFor(`${card} ${target}`);
+      addRow(block, row.id);
+      for (const [prop, value] of own) {
+        setProp3(block, row.id, prop, value);
+        if (block !== base) {
+          const targets = split.get(prop) ?? /* @__PURE__ */ new Set();
+          targets.add(block.target);
+          split.set(prop, targets);
+        }
+      }
+      if (row.note !== null && !entry.decor) addNote(block, `${row.id}: ${row.note}`);
+    }
+    if (split.size > 0) {
+      const qualified = [...new Set([...split.values()].flatMap((targets) => [...targets]))];
+      addNote(base, `split by card: ${[...split.keys()].join(", ")} differ between rows, see ${qualified.join(", ")}`);
+      for (const name of qualified) addNote(blockFor(name), `split from ${target}`);
+    }
+  }
+  const rowById = new Map(map.rows.map((row) => [row.id, row]));
+  for (const block of blocks.values()) {
+    block.resets = block.resets.filter((prop) => !Object.hasOwn(block.decls, prop));
+    block.hide = block.decls.display === "none" && block.rows.some((id) => rowById.get(id)?.status === "hidden-on-mobile");
+    block.order = Object.hasOwn(block.decls, "order") && /^-?\d+$/.test(block.decls.order) ? Number(block.decls.order) : null;
+  }
+  const touch = [];
+  for (const row of map.rows) {
+    const missing = [];
+    const entry = touchOf2(row, map, input.desktop, input.mobile, resolve, options, notes, missing);
+    if (entry === null) continue;
+    touch.push(entry);
+    for (const className of missing) addNote(blockFor(entry.target), `reveal class ${className} not in the section`);
+  }
+  return {
+    schemaVersion: 1,
+    mobile: map.mobile,
+    desktop: map.desktop,
+    component: map.component,
+    bp: input.bp,
+    hoverGate: input.hoverGate,
+    blocks: [...blocks.values()].filter((block) => block.rows.length > 0 || block.note !== null),
+    touch,
+    unplaced
+  };
+}
+function declLines(decls, indent2) {
+  return Object.entries(decls).map(([prop, value]) => `${indent2}${prop}: ${value};`);
+}
+function mobileOverlayStyled(overlay) {
+  const media = `\${({ theme }) => theme.bps?.${overlay.bp}}`;
+  const gate = overlay.hoverGate === "hover-media" ? "@media (hover: hover)" : "${({ theme }) => theme.bps?.desktop}";
+  const designTouch = overlay.touch.filter((entry) => entry.source === "design");
+  const targets = [.../* @__PURE__ */ new Set([...overlay.blocks.map((block) => block.target), ...designTouch.map((entry) => entry.target)])];
+  const lines = [];
+  for (const target of targets) {
+    const block = overlay.blocks.find((candidate) => candidate.target === target);
+    const touches = designTouch.filter((entry) => entry.target === target);
+    lines.push(`# ${target}  rows: ${block?.rows.join(", ") || "-"}`);
+    if (block !== void 0 && block.resets.length > 0) lines.push(`# resets: ${block.resets.join(", ")} (set on desktop, not in the mobile frame)`);
+    for (const entry of touches) {
+      if (entry.trigger !== target) lines.push(`# touch: tapping ${entry.trigger} toggles .is-open on ${target}`);
+    }
+    if (block?.note != null) lines.push(`# note: ${block.note}`);
+    const body = [];
+    if (block !== void 0) {
+      body.push(...declLines(block.decls, "    "));
+      if (block.order !== null && !Object.hasOwn(block.decls, "order")) body.push(`    order: ${block.order};`);
+    }
+    for (const entry of touches) {
+      for (const [selector, decls] of Object.entries(entry.reveal)) {
+        const nested = selector.startsWith("&") ? selector.slice(1) : ` ${selector}`;
+        body.push(`    &${entry.mirror}${nested} {`, ...declLines(decls, "      "), "    }");
+      }
+    }
+    if (body.length > 0) lines.push(`  ${media} {`, ...body, "  }");
+    if (touches.length > 0) lines.push(`# gate: wrap the existing :hover rules of ${target} in ${gate}`);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+async function readCapped(file, cap, what) {
+  try {
+    const text = await (0, import_promises2.readFile)(file, "utf8");
+    if (text.length > cap) throw new Error("too large");
+    return text;
+  } catch {
+    throw new ExportError({ kind: "usage", message: `The ${what} file is not readable or is too large.` });
+  }
+}
+async function readJson2(file, what) {
+  const text = await readCapped(file, MAX_INPUT_BYTES, what);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new ExportError({ kind: "usage", message: `The ${what} file is not JSON.` });
+  }
+}
+async function readSectionText(dir) {
+  let names;
+  try {
+    names = (await (0, import_promises2.readdir)(dir)).filter((name) => SECTION_FILE.test(name)).sort();
+  } catch {
+    throw new ExportError({ kind: "usage", message: "The --section-dir folder is not readable." });
+  }
+  if (names.length === 0) throw new ExportError({ kind: "usage", message: "The --section-dir folder has no Styled*.js or Client*.js file." });
+  const texts = await Promise.all(names.map((name) => readCapped(import_node_path2.default.join(dir, name), MAX_SECTION_FILE_BYTES, `--section-dir ${name}`)));
+  return texts.join("\n");
+}
+var classMapSchema = external_exports.record(external_exports.string());
+async function readClassMap(value) {
+  let raw;
+  if (value.trimStart().startsWith("{")) {
+    try {
+      raw = JSON.parse(value);
+    } catch {
+      throw new ExportError({ kind: "usage", message: "The --class-map value is not JSON." });
+    }
+  } else raw = await readJson2(value, "--class-map");
+  const parsed = classMapSchema.safeParse(raw);
+  if (!parsed.success) throw new ExportError({ kind: "usage", message: "The --class-map must be a JSON object of strings." });
+  return parsed.data;
+}
+function inside(child, parent) {
+  const relative = import_node_path2.default.relative(import_node_path2.default.resolve(parent), import_node_path2.default.resolve(child));
+  return relative === "" || !relative.startsWith("..") && !import_node_path2.default.isAbsolute(relative);
+}
+async function exportMobileOverlay(request, client = createFigmaClient(), chooseLayer) {
+  const desktop = parseSectionMap(await readJson2(request.desktopMapPath, "--mobile-of"));
+  if (desktop.viewport !== "desktop") throw new ExportError({ kind: "usage", message: "The --mobile-of section map is not a desktop map." });
+  if (request.sectionDir !== null && inside(request.overlayDir, request.sectionDir)) {
+    throw new ExportError({ kind: "usage", message: "`--overlay-out` must be outside the --section-dir folder." });
+  }
+  const profileRaw = await readRepoProfileJson(request.profilePath);
+  const profile = parseRepoProfile(profileRaw);
+  const bp = mobileBreakpoint(profile.theme.bps);
+  if (bp === null) throw new ExportError({ kind: "usage", message: "The repo profile has no mobile key in theme.bps." });
+  const hoverGate = profile.mobile?.hoverGate === "hover-media" ? "hover-media" : "bps-desktop";
+  const sectionText = request.sectionDir === null ? null : await readSectionText(request.sectionDir);
+  const classMap = request.classMap === null ? {} : await readClassMap(request.classMap);
+  const edits = request.mapPath === null ? null : parseViewportMap(await readJson2(request.mapPath, "--map"));
+  const options = { component: desktop.component, profile, fixed: true, fontMap: request.fontMap };
+  const { sectionMap: mobile, notices: sceneNotices } = await scaffoldSectionMap(
+    {
+      fileKey: request.fileKey,
+      nodeId: request.nodeId,
+      token: request.token,
+      destination: { kind: "stdout" },
+      layerName: request.layerName,
+      exclude: request.exclude,
+      ...request.keepHairlines === true ? { keepHairlines: true } : {}
+    },
+    options,
+    "mobile",
+    client,
+    chooseLayer
+  );
+  const notices = [...sceneNotices];
+  const map = buildViewportMap({ desktop, mobile, sectionText, classMap, edits });
+  const overlay = buildMobileOverlay({ map, desktop, mobile, options, bp, hoverGate, notes: notices, sectionText, classMap });
+  const outputs = [
+    ["section-map.json", JSON.stringify(mobile, null, 2)],
+    ["viewport-map.json", `${JSON.stringify(map, null, 2)}
+`],
+    ["viewport-map.md", viewportMapMarkdown(map)],
+    ["mobile-overlay.json", `${JSON.stringify(overlay, null, 2)}
+`],
+    ["mobile-overlay.styled.txt", mobileOverlayStyled(overlay)]
+  ];
+  const files = [];
+  for (const [name, contents] of outputs) {
+    const file = import_node_path2.default.join(request.overlayDir, name);
+    await writeAtomic(file, contents);
+    files.push(import_node_path2.default.resolve(file));
+  }
+  const count = (status) => map.rows.filter((row) => row.status === status).length;
+  return {
+    overlayDir: import_node_path2.default.resolve(request.overlayDir),
+    files,
+    exit: viewportExit(map),
+    counts: { unmatched: count("unmatched"), targetMissing: count("target-missing"), newContent: count("new-content") },
+    notices
+  };
+}
+
 // src/cli.ts
 function buildStamp() {
   if (typeof define_FIGMA_CLI_BUILD_default === "undefined" || define_FIGMA_CLI_BUILD_default === void 0) return "dev";
@@ -10123,6 +11240,15 @@ build ${buildStamp()}
 `);
       return 0;
     }
+    if (parsed.command === "mobile") {
+      const overlay = await exportMobileOverlay(parsed.request, input.client, chooseLayer);
+      for (const notice of overlay.notices) write(notice);
+      const { unmatched, targetMissing, newContent } = overlay.counts;
+      if (overlay.exit !== 0) write(`note: viewport-map ${unmatched} unmatched, ${targetMissing} target-missing, ${newContent} new-content`);
+      writeOut(`${overlay.overlayDir}
+`);
+      return overlay.exit;
+    }
     const output = await exportDocument(parsed.request, chooseLayer);
     for (const notice of output.notices) write(notice);
     if (output.kind === "document" && parsed.request.destination.kind === "stdout") {
@@ -10163,7 +11289,7 @@ function layerLine(match) {
   return `${match.path.join(" / ")} (${match.id})`;
 }
 async function readStdinLine() {
-  const prompts = (0, import_promises2.createInterface)({ input: process.stdin, output: process.stderr });
+  const prompts = (0, import_promises3.createInterface)({ input: process.stdin, output: process.stderr });
   try {
     return await prompts.question("");
   } finally {
@@ -10179,6 +11305,7 @@ function wantsHelp(argv) {
 var HELP = `Usage: figma-cli export <file-or-url> [node-id] [--name layer] [--exclude layer [--index n]] [--stdout] [--out file.html] [--assets dir] [--dist dir] [--dump file.json]
        figma-cli inspect <file-or-url> [node-id] [--name layer]
        figma-cli render <file-or-url> [node-id] --out file.png [--scale 1-4]
+       figma-cli export <mobile-url> [node-id] --mobile-of desktop-section-map.json --overlay-out dir --repo-profile profile.json [--section-dir dir] [--class-map json] [--map viewport-map.json] [--font-map 'Family=export']
 
 Set FIGMA_ACCESS_TOKEN in the environment. It is not a flag. \`figma-cli help\` prints this text and exits 0. \`figma-cli --version\` prints the build stamp.
 
@@ -10209,11 +11336,27 @@ Download images into this directory. Requires --out or --dist. Paths in the outp
 --dist dir
 Write a React component with styled-components under \`<dir>/<ComponentName>/\`: \`index.js\`, \`<ComponentName>.js\`, and \`Styled<ComponentName>.js\`. ComponentName is the PascalCase form of the export root layer. Image fills and rasters stay as the Figma URLs unless --assets is set. Those URLs expire. Cannot be combined with --stdout, --out, or --dump.
 
---scaffold next-section --component Name --repo-profile profile.json [--fixed] [--font-map 'Family=export']
+--scaffold next-section --component Name --repo-profile profile.json [--fixed] [--font-map 'Family=export'] [--section-map file.json]
 With --dist, write the section in the repo's own shape instead of one client file: the files listed in the profile's scaffold.files (index.js, ServerName.js with 'server-only', ClientName.js with 'use client' and propTypes, StyledName.js). The profile comes from the next-section-repo skill's probe_repo.py. Text becomes props with the Figma text as the default, and images become props with no URL written. Class names describe roles (card, card-title, card-media). The root is fluid: width 100% up to the Figma width, and fixed children of a row shrink with it; --fixed keeps Figma's pixel sizes. Colors equal to a theme color and fonts that match a theme font export become theme tokens; --font-map names the export for a Figma family, and an unmatched font writes a note: font-unmatched line. Line endings follow the profile. --assets is rejected.
+
+--section-map file.json
+With --scaffold next-section, also write the section map: one row per classed layer with its class name (the same as in the files), selector path, role, text, image refs, component, size, resting declarations, hover rules, click or press change-to, and whether it is hidden at rest. The file must be outside the --dist component folder.
 
 --fluid
 With --out or --stdout, write the HTML preview with the scaffold preset's fluid sizing, to check in a browser how the section reflows below the Figma width.
+
+--mobile-of desktop-section-map.json --overlay-out dir --repo-profile profile.json
+Mobile mode. Renders the mobile frame's scaffold in memory (fixed sizes, the desktop map's component name, no image download, no repo write), pairs its rows with the desktop section map, and writes into --overlay-out only: section-map.json (the mobile map), viewport-map.json, viewport-map.md (the edit surface), mobile-overlay.json (per repo selector: mobile declarations, resets, hide, order, decor, and the touch path of each hover card) and mobile-overlay.styled.txt (ready-to-nest \`theme.bps.mobile\` blocks, tap reveals under \`&.is-open\`, and a \`# gate:\` line from the profile's mobile.hoverGate, default bps.desktop). Colors and fonts become theme tokens as in the scaffold. Cannot be combined with --dist, --out, --stdout, --dump, --scaffold, --fluid, --assets, --component, --fixed, or --section-map. The section map must be a desktop map, and --overlay-out must be outside --section-dir.
+Exits 0 when every row is placed, 12 when rows are unmatched or their target is missing (a checkpoint on viewport-map.md), and 11 when the mobile frame adds content (stop; 11 wins over 12). The files are written in all three cases, stderr gets a \`note: viewport-map <n> unmatched, <n> target-missing, <n> new-content\` line on 11 and 12, and the last stdout line is the --overlay-out path.
+
+--section-dir dir
+With --mobile-of, the repo section folder. Its Styled*.js and Client*.js files are read as text, never written, to resolve each target; a class absent from them is target-missing. Without it every class is its own target.
+
+--class-map json
+With --mobile-of, a JSON object (inline or a file path) of scaffold class to repo selector, for classes desktop stage 04 renamed. It wins over the class itself.
+
+--map viewport-map.json
+With --mobile-of, a human-edited viewport-map.json. Its rows win over the matcher.
 
 --keep-hairlines
 Keep strokes of 1px or less, inside or centered, on frames with an image fill. By default they are dropped, because Figma shows them as no visible border, and each one is reported as a \`note: hairline-dropped\` line on stderr. Strokes with no alpha or a weight of 0 are always dropped.
@@ -10264,6 +11407,7 @@ function parseRenderArgs(argv, env) {
   if (tokenRaw === void 0 || tokenRaw === "") throw usage("FIGMA_ACCESS_TOKEN is missing or invalid.");
   return { fileKey: target.fileKey, nodeId, token: parseAccessToken(tokenRaw), outPath, scale };
 }
+var MOBILE_FLAGS = ["--mobile-of", "--overlay-out", "--section-dir", "--class-map", "--map"];
 function parseArgs(argv, env) {
   const usageLine = "Usage: figma-cli export <file-or-url> [node-id] [--name layer] [--exclude layer [--index n]] [--stdout] [--out file.html] [--assets dir] [--dist dir] [--dump file.json]";
   const [command, fileArg, ...rest] = argv;
@@ -10293,7 +11437,9 @@ function parseArgs(argv, env) {
   let componentArg = null;
   let profilePath = null;
   let fixed = false;
+  let sectionMapPath = null;
   let fluidPreview = false;
+  const mobileFlags = /* @__PURE__ */ new Map();
   const fontMap = /* @__PURE__ */ new Map();
   let layerName = null;
   const exclude = [];
@@ -10307,7 +11453,7 @@ function parseArgs(argv, env) {
       fixed = true;
       continue;
     }
-    if (flag === "--scaffold" || flag === "--component" || flag === "--repo-profile" || flag === "--font-map") {
+    if (flag === "--scaffold" || flag === "--component" || flag === "--repo-profile" || flag === "--font-map" || flag === "--section-map") {
       if (command === "inspect") throw usage(`\`inspect\` does not take ${flag}.`);
       const value2 = flags[index + 1];
       if (value2 === void 0 || value2.startsWith("--")) throw usage(`Expected a value for ${flag}.`);
@@ -10321,13 +11467,25 @@ function parseArgs(argv, env) {
         }
         componentArg = value2;
       } else if (flag === "--repo-profile") profilePath = value2;
-      else {
+      else if (flag === "--section-map") {
+        if (sectionMapPath !== null) throw usage("`--section-map` was given more than once.");
+        sectionMapPath = value2;
+      } else {
         const split = value2.indexOf("=");
         if (split <= 0 || !/^[A-Za-z_$][A-Za-z0-9_$.]*$/u.test(value2.slice(split + 1))) {
           throw usage("`--font-map` takes 'Figma Family=themeFontsExport'.");
         }
         fontMap.set(value2.slice(0, split), value2.slice(split + 1));
       }
+      continue;
+    }
+    if (flag !== void 0 && MOBILE_FLAGS.includes(flag)) {
+      if (command === "inspect") throw usage(`\`inspect\` does not take ${flag}.`);
+      const value2 = flags[index + 1];
+      if (value2 === void 0 || value2.startsWith("--")) throw usage(`Expected a value for ${flag}.`);
+      index += 1;
+      if (mobileFlags.has(flag)) throw usage(`\`${flag}\` was given more than once.`);
+      mobileFlags.set(flag, value2);
       continue;
     }
     if (flag === "--keep-hairlines") {
@@ -10377,6 +11535,36 @@ function parseArgs(argv, env) {
       request: { fileKey: target.fileKey, nodeId, token, layerName }
     };
   }
+  const mobileOf = mobileFlags.get("--mobile-of") ?? null;
+  if (mobileOf === null && mobileFlags.size > 0) throw usage(`\`${[...mobileFlags.keys()].join("`, `")}\` need${mobileFlags.size === 1 ? "s" : ""} \`--mobile-of\`.`);
+  if (mobileOf !== null) {
+    if (distDir !== null || htmlPath !== null || stdoutFlag || dumpPath !== null || scaffoldKind !== null || fluidPreview) {
+      throw usage("`--mobile-of` cannot be combined with `--dist`, `--out`, `--stdout`, `--dump`, `--scaffold`, or `--fluid`.");
+    }
+    if (assetsDir !== null || componentArg !== null || fixed || sectionMapPath !== null) {
+      throw usage("`--mobile-of` does not take `--assets`, `--component`, `--fixed`, or `--section-map`.");
+    }
+    const overlayDir = mobileFlags.get("--overlay-out") ?? null;
+    if (overlayDir === null || profilePath === null) throw usage("`--mobile-of` needs `--overlay-out` and `--repo-profile`.");
+    return {
+      command: "mobile",
+      request: {
+        fileKey: target.fileKey,
+        nodeId,
+        token,
+        layerName,
+        exclude,
+        ...keepHairlines ? { keepHairlines } : {},
+        desktopMapPath: mobileOf,
+        overlayDir,
+        profilePath,
+        fontMap,
+        sectionDir: mobileFlags.get("--section-dir") ?? null,
+        classMap: mobileFlags.get("--class-map") ?? null,
+        mapPath: mobileFlags.get("--map") ?? null
+      }
+    };
+  }
   if (stdoutFlag && htmlPath !== null) throw usage("`--stdout` cannot be combined with `--out`.");
   if (distDir !== null && (htmlPath !== null || stdoutFlag || dumpPath !== null)) {
     throw usage("`--dist` cannot be combined with `--out`, `--stdout`, or `--dump`.");
@@ -10400,6 +11588,7 @@ function parseArgs(argv, env) {
   if (scaffoldKind === null && (componentArg !== null || profilePath !== null || fixed || fontMap.size > 0)) {
     throw usage("`--component`, `--repo-profile`, `--fixed`, and `--font-map` need `--scaffold next-section`.");
   }
+  if (scaffoldKind === null && sectionMapPath !== null) throw usage("`--section-map` needs `--scaffold next-section`.");
   if (fluidPreview && (distDir !== null || dumpPath !== null)) {
     throw usage("`--fluid` is for the HTML preview (--out or --stdout). The scaffold preset is fluid already.");
   }
@@ -10422,7 +11611,7 @@ function parseArgs(argv, env) {
       exclude,
       ...keepHairlines ? { keepHairlines } : {},
       ...fluidPreview ? { fluid: true } : {},
-      ...scaffoldKind !== null && componentArg !== null && profilePath !== null ? { scaffold: { component: componentArg, profilePath, fixed, fontMap } } : {}
+      ...scaffoldKind !== null && componentArg !== null && profilePath !== null ? { scaffold: { component: componentArg, profilePath, fixed, fontMap, sectionMapPath } } : {}
     }
   };
 }

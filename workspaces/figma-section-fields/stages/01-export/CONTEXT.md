@@ -36,7 +36,7 @@ D's record is the one M's `pair:` names (Case A), or the newest whose folder and
 1. Run `$FIGMA --version`, then `inspect`, `render` and `export --out preview.html` for M into `stages/01-export/output/<M>/` (`inspect.txt`, `figma.png`, `preview.html`). 05m Level 1 reads them.
 2. If D's record has no `section-map.json`, rerun D's scaffold from D's record URL and flags (or the URL the user gave, after probing into `output/<D>/`) into `stages/01-export/output/<D>/scaffold/` with `--section-map` as in step 6. Never into the repo.
 3. Run `$FIGMA export '<M url>' --mobile-of stages/01-export/output/<D>/section-map.json --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out stages/01-export/output/<M> --repo-profile stages/01-export/output/<M>/profile.json`. Add `--class-map stages/04-conform-bind/output/<D>/class-map.json` when it exists, and the same `--font-map` as D's record.
-4. Exit 0: go to step 8. Exit 5 (`unmatched` or `target-missing` rows): stop at the checkpoint, then rerun step 3 with `--map stages/01-export/output/<M>/viewport-map.json` (`references/viewport-map.md`). Exit 11 (`new-content` rows): stop. Say the group needs a field and the route is `sync <Folder> <desktop-url> <repo> --mobile <mobile-url>`. Never add a field in a mobile pass.
+4. Exit 0: go to step 8. Exit 12 (`unmatched` or `target-missing` rows): stop at the checkpoint, then rerun step 3 with `--map stages/01-export/output/<M>/viewport-map.json` (`references/viewport-map.md`). Exit 11 (`new-content` rows): stop. Say the group needs a field and the route is `sync <Folder> <desktop-url> <repo> --mobile <mobile-url>`. Never add a field in a mobile pass.
 
 ## Checkpoints
 
@@ -45,7 +45,7 @@ D's record is the one M's `pair:` names (Case A), or the newest whose folder and
 | 6 | A `font-unmatched` family and the theme's font exports | Which export to map it to |
 | 7 | The paths from exit 10, or the children from exit 9 | Which layer to export |
 | 6m | No D record for the folder | The desktop URL |
-| 6m.4 | Exit 5: the `unmatched` and `target-missing` rows of `viewport-map.md` | Each row's target, status or touch. A `target-missing` row is usually a `class-map.json` entry |
+| 6m.4 | Exit 12: the `unmatched` and `target-missing` rows of `viewport-map.md` | Each row's target, status or touch. A `target-missing` row is usually a `class-map.json` entry |
 | 6m.4 | Exit 11: the `new-content` rows | Run `sync ... --mobile` to add the field |
 
 ## Audit

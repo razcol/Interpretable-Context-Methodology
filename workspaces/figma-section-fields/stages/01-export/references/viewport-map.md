@@ -25,8 +25,8 @@ How to read and edit the map figma-cli writes in mobile mode (`export --mobile-o
 | `hidden-on-mobile` | In D, not in M | 0 |
 | `mobile-only-decor` | A small vector or image in a matched card with no desktop counterpart (icon, divider). No field. Carries an `affordance: chevron, arrow or plus` guess | 0 |
 | `new-content` | Content in M that no field holds. The run stops | 11 |
-| `unmatched` | No signal paired the node | 5 |
-| `target-missing` | Matched, but the target class is not in the repo's `Styled<Folder>.js` or `Client<Folder>.js` | 5 |
+| `unmatched` | No signal paired the node | 12 |
+| `target-missing` | Matched, but the target class is not in the repo's `Styled<Folder>.js` or `Client<Folder>.js` | 12 |
 
 ## Match signals, strongest first
 
@@ -55,7 +55,7 @@ Only for rows whose desktop target reveals content on hover.
 - `design`: the mobile node has a prototype tap (an `ON_CLICK` change-to an expanded variant), or a disclosure affordance (chevron, arrow, plus). The trigger is the node with the reaction, else the affordance's nearest matched card. 04m applies it with no question.
 - `checkpoint`: the frame shows neither. 04m asks the user.
 
-## Editing at the exit 5 checkpoint
+## Editing at the exit 12 checkpoint
 
 Show the user the `unmatched` and `target-missing` rows. They may edit three columns, and nothing else:
 
