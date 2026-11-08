@@ -80,3 +80,5 @@ Search the repo before drawing one: `public/icons/*.svg` (used through `Image` o
 ## Overlay from figma-cli
 
 On the mobile pass, `figma-cli export --mobile-of` writes `mobile-overlay.styled.txt`: `bps.mobile` blocks keyed by the desktop selectors. They are values to nest into the existing selectors of `Styled<F>.js`, following the rules above. Never copy them as a structure, and never change desktop rules to fit them.
+
+With `--section-dir`, the tap reveals under `&.is-open` copy the section's own `:hover` rules, so nest them as they are and add only the state and handler. Background and shade blocks set paint on existing elements (for example `.card-shade`); photos still come from WordPress.

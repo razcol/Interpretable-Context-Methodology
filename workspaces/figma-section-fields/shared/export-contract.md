@@ -12,7 +12,7 @@ What this workspace relies on from `tools/figma-cli`. `$FIGMA` is the call in `s
 | `$FIGMA export '<url>' --out <file>.html --fluid` | 05 | HTML preview with the scaffold's fluid sizing |
 | `$FIGMA export '<url>' --dist <dir> --scaffold next-section --component <Folder> --repo-profile <profile.json> --section-map <file.json> [--font-map 'Family=export']` | 01 | `<dir>/<Folder>/` in the repo's shape, and the section map (one row per classed layer, outside `<dir>/<Folder>/`) |
 | `$FIGMA export '<url>' --dump <file>.json` | 01 | The raw Figma nodes response, for a paired desktop or mobile frame |
-| `$FIGMA export '<M url>' --mobile-of <D section-map.json> --overlay-out <dir> --repo-profile <profile.json> [--section-dir <dir>] [--class-map <json>] [--map <viewport-map.json>] [--font-map …]` | 01m | Into `<dir>` only: `section-map.json` (mobile), `viewport-map.json`, `viewport-map.md`, `mobile-overlay.json`, `mobile-overlay.styled.txt`. Never writes the repo |
+| `$FIGMA export '<M url>' --mobile-of <D section-map.json> --overlay-out <dir> --repo-profile <profile.json> [--section-dir <dir>] [--class-map <json>] [--map <viewport-map.json>] [--font-map …]` | 01m | Into `<dir>` only: `section-map.json` (mobile), `viewport-map.json`, `viewport-map.md`, `mobile-overlay.json`, `mobile-overlay.styled.txt`. Never writes the repo. The overlay follows the repo tree and, with `--section-dir`, the section's own rules (direction, `:hover` reveals, shade element); `$FIGMA help` lists the rules |
 
 Use `--name LAYER` or `--exclude LAYER [--index N]` only when the user asks. `--fixed` keeps pixel sizes and is only for a pixel comparison the user asks for. `--assets` is never used: images come from WordPress.
 

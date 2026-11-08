@@ -12,7 +12,7 @@ Put the staged scaffold into the repo and bind it to the fragment. On `resync`, 
 | Inspect | `../01-export/output/<node-id>/inspect.txt` | Nodes of the target (`element`) | Figma values for the control |
 | Fragment | `<app root>/<sectionsDir>/<Folder>/<Folder>.gql` | Full file | Fields to bind (`new`, `sync`) |
 | Mobile map | `../01-export/output/<M>/viewport-map.md` and `.json` | Full file, with your edits (mobile) | Which repo selector each mobile row targets |
-| Overlay | `../01-export/output/<M>/mobile-overlay.json` and `mobile-overlay.styled.txt` | Full file (mobile) | Deltas, hide, order, decor, touch per selector |
+| Overlay | `../01-export/output/<M>/mobile-overlay.json` and `mobile-overlay.styled.txt` | Full file (mobile) | Deltas, hide, order, reparented, decor, touch per selector |
 | Rules | `references/binding-rules.md` | The section for this route, or "mobile: overlay" | How to bind, merge drift, edit a control, nest the overlay |
 | Mobile rules | `../../skills/next-section-repo/references/mobile-patterns.md` | Full file (mobile) | How a mobile rule is written |
 | Repo skill | `../../skills/next-section-repo/SKILL.md` | `check_section.py` section | The audit |

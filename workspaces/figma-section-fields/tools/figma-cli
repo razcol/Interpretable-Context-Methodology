@@ -39,7 +39,7 @@ __export(cli_exports, {
 module.exports = __toCommonJS(cli_exports);
 
 // <define:__FIGMA_CLI_BUILD__>
-var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "6098676", dirty: false, date: "2026-11-08" };
+var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "9da06e8", dirty: false, date: "2026-11-08" };
 
 // src/cli.ts
 var import_promises3 = require("node:readline/promises");
@@ -8349,7 +8349,7 @@ function buildSectionMap(root, plan, sets, meta) {
     const className = classByNode.get(node);
     if (className === void 0) return;
     const own = parent === null ? [] : [...path3, `.${className}`];
-    const nest = nestByNode.get(node);
+    const nest2 = nestByNode.get(node);
     rows.push({
       nodeId: node.id,
       name: node.name,
@@ -8369,8 +8369,8 @@ function buildSectionMap(root, plan, sets, meta) {
         h: node.box.height,
         sizing: node.flow.kind === "in-flow" ? { w: node.flow.width, h: node.flow.height } : { w: "fixed", h: "fixed" }
       },
-      decls: declRecord(nest?.declLines ?? []),
-      hover: hoverOf(node, nest),
+      decls: declRecord(nest2?.declLines ?? []),
+      hover: hoverOf(node, nest2),
       tap: tapOf(node),
       hiddenAtRest: plan.hiddenUntil.has(node)
     });
@@ -8378,9 +8378,9 @@ function buildSectionMap(root, plan, sets, meta) {
     const children = withInsertions(node.children, node.box, plan.insertions.get(node) ?? []).map((entry) => entry.node).filter((child) => classByNode.has(child));
     for (const [index, child] of children.entries()) walk(child, node, own, index, depth + 1);
   }
-  function hoverOf(node, nest) {
+  function hoverOf(node, nest2) {
     const rules = {};
-    for (const child of nest?.children ?? []) {
+    for (const child of nest2?.children ?? []) {
       if (child.selector.startsWith("&:hover") || child.selector.startsWith("&:active")) rules[child.selector] = declRecord(child.declLines);
     }
     for (const shared of sharedHoverByNode.get(node) ?? []) rules[shared.selector] = declRecord(shared.declLines);
@@ -8444,9 +8444,9 @@ function scaffoldClient(source, from, name, state, options) {
   }
   for (const late2 of state.lateImages) {
     const pattern = new RegExp(`(className="${late2.className}"[^>]*?)( style=\\{\\{ (.*?) \\}\\})?(\\s*/?>)`);
-    body = body.replace(pattern, (_match, head, _style, inner, tail) => {
+    body = body.replace(pattern, (_match, head, _style, inner, tail2) => {
       const entry = `'${late2.variable}': cssImage(${late2.prop})`;
-      return `${head} style={{ ${inner === void 0 ? entry : `${inner}, ${entry}`} }}${tail}`;
+      return `${head} style={{ ${inner === void 0 ? entry : `${inner}, ${entry}`} }}${tail2}`;
     });
   }
   const strokeAttr = source.includes(`<Styled${from} data-stroke=""`) ? ' data-stroke=""' : "";
@@ -9144,34 +9144,34 @@ function rememberTransition2(plan, node, prop, motion) {
 }
 function applyPointerCss(plan) {
   for (const [node, fills] of plan.restFills) {
-    const nest = nestByNode.get(node);
-    if (nest === void 0) continue;
+    const nest2 = nestByNode.get(node);
+    if (nest2 === void 0) continue;
     for (const [prop, value] of fills) {
-      if (nest.declLines.some((line) => line.startsWith(`${prop}:`))) continue;
-      nest.declLines.push(`${prop}: ${value};`);
+      if (nest2.declLines.some((line) => line.startsWith(`${prop}:`))) continue;
+      nest2.declLines.push(`${prop}: ${value};`);
     }
   }
   for (const node of plan.hiddenUntil) {
-    const nest = nestByNode.get(node);
-    if (nest === void 0) continue;
+    const nest2 = nestByNode.get(node);
+    if (nest2 === void 0) continue;
     if (plan.collapsed.has(node)) {
-      nest.declLines = collapsedDecls(nest.declLines, plan.collapsed.get(node) ?? null).map(
+      nest2.declLines = collapsedDecls(nest2.declLines, plan.collapsed.get(node) ?? null).map(
         (decl) => decl.endsWith(";") ? decl : `${decl};`
       );
       continue;
     }
-    nest.declLines = nest.declLines.filter((line) => !line.startsWith("opacity:"));
-    nest.declLines.push("opacity: 0;");
+    nest2.declLines = nest2.declLines.filter((line) => !line.startsWith("opacity:"));
+    nest2.declLines.push("opacity: 0;");
   }
   for (const [node, props] of plan.transitions) {
-    const nest = nestByNode.get(node);
-    if (nest === void 0 || props.size === 0) continue;
+    const nest2 = nestByNode.get(node);
+    if (nest2 === void 0 || props.size === 0) continue;
     const list = [...props.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([prop, timing]) => `${prop} ${timing}`);
-    nest.declLines.push(`transition: ${list.join(", ")};`);
+    nest2.declLines.push(`transition: ${list.join(", ")};`);
   }
   for (const [hot, pseudos] of plan.rules) {
-    const nest = nestByNode.get(hot);
-    if (nest === void 0) continue;
+    const nest2 = nestByNode.get(hot);
+    if (nest2 === void 0) continue;
     const hoverSelector = pseudos.has(":active") ? ":hover:not(:active)" : ":hover";
     for (const pseudo of [":hover", ":active"]) {
       const targets = pseudos.get(pseudo);
@@ -9180,7 +9180,7 @@ function applyPointerCss(plan) {
       for (const [target, props] of targets) {
         if (props.size === 0) continue;
         const selector = pointerSelector(hot, target, written);
-        nest.children.push({
+        nest2.children.push({
           selector,
           declLines: [...props.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([prop, value]) => `${prop}: ${value};`),
           children: []
@@ -9190,9 +9190,9 @@ function applyPointerCss(plan) {
   }
   shareSiblingHovers(plan);
   for (const [node, veil] of plan.veils) {
-    const nest = nestByNode.get(node);
+    const nest2 = nestByNode.get(node);
     const hotNest = nestByNode.get(veil.hot);
-    if (nest === void 0 || hotNest === void 0) continue;
+    if (nest2 === void 0 || hotNest === void 0) continue;
     const veilLines = [
       "content: '';",
       "position: absolute;",
@@ -9203,7 +9203,7 @@ function applyPointerCss(plan) {
       "opacity: 0;"
     ];
     if (veil.timing !== null) veilLines.push(`transition: opacity ${veil.timing};`);
-    nest.children.push({ selector: "&::before", declLines: veilLines, children: [] });
+    nest2.children.push({ selector: "&::before", declLines: veilLines, children: [] });
     const selector = veil.pseudos.map((pseudo) => {
       const hoverSelector = plan.rules.get(veil.hot)?.has(":active") ? ":hover:not(:active)" : ":hover";
       const written = pseudo === ":hover" ? hoverSelector : pseudo;
@@ -9226,16 +9226,16 @@ function shareSiblingHovers(plan) {
   for (const hot of plan.rules.keys()) {
     if (hot.kind !== "box" || hot.component === null) continue;
     const parent = parentByNode.get(hot);
-    const nest = nestByNode.get(hot);
-    if (parent === void 0 || nest === void 0) continue;
-    for (const rule of nest.children) {
+    const nest2 = nestByNode.get(hot);
+    if (parent === void 0 || nest2 === void 0) continue;
+    for (const rule of nest2.children) {
       if (!rule.selector.startsWith("&:hover") && !rule.selector.startsWith("&:active")) continue;
       if (rule.children.length > 0) continue;
       const rest = rule.selector.slice(1);
       const shape = rest.replace(/-[0-9]+(?=[\s.:]|$)/g, "");
       const key = [classNameOf(parent), shape, rule.declLines.join("|")].join("\0");
       const list = groups.get(key) ?? [];
-      list.push({ hot, nest, rule, rest });
+      list.push({ hot, nest: nest2, rule, rest });
       groups.set(key, list);
     }
   }
@@ -9309,18 +9309,18 @@ function formatStyledFile(componentName, rootNest, hasBoxStroke) {
     ""
   ].join("\n");
 }
-function flattenCssNest(nest, depth) {
+function flattenCssNest(nest2, depth) {
   const pad = "  ".repeat(depth);
   const lines = [];
-  if (nest.selector.length === 0) {
-    for (const decl of nest.declLines) lines.push(`${pad}${decl}`);
-    for (const child of nest.children) lines.push(...flattenCssNest(child, depth));
+  if (nest2.selector.length === 0) {
+    for (const decl of nest2.declLines) lines.push(`${pad}${decl}`);
+    for (const child of nest2.children) lines.push(...flattenCssNest(child, depth));
     return lines;
   }
-  if (nest.declLines.length === 0 && nest.children.length === 0) return [];
-  lines.push(`${pad}${nest.selector} {`);
-  for (const decl of nest.declLines) lines.push(`${pad}  ${decl}`);
-  for (const child of nest.children) lines.push(...flattenCssNest(child, depth + 1));
+  if (nest2.declLines.length === 0 && nest2.children.length === 0) return [];
+  lines.push(`${pad}${nest2.selector} {`);
+  for (const decl of nest2.declLines) lines.push(`${pad}  ${decl}`);
+  for (const child of nest2.children) lines.push(...flattenCssNest(child, depth + 1));
   lines.push(`${pad}}`);
   return lines;
 }
@@ -10271,6 +10271,165 @@ var import_node_fs = require("node:fs");
 var import_promises2 = require("node:fs/promises");
 var import_node_path2 = __toESM(require("node:path"), 1);
 
+// src/section-css.ts
+var MAX_EXPANSION_DEPTH = 4;
+var SPLIT = "\0";
+var OPEN = "";
+var CLOSE = "";
+var STRING_CONST = /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:'([^'\\\n]*)'|"([^"\\\n]*)"|`([^`$\\]*)`)\s*;/g;
+var CSS_CONST = /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\(([^)]*)\)\s*=>\s*)?css`/g;
+var STYLED_START = /\bstyled(?:\.[A-Za-z]\w*|\([^)]*\))(?:\.attrs\([^)]*\))?`/g;
+var BPS_EXPR = /^\(\s*\{\s*theme\s*\}\s*\)\s*=>\s*theme\.bps\??\.([A-Za-z]\w*)$/;
+var CALL_EXPR = /^([A-Za-z_$][\w$]*)\(([^)]*)\)$/;
+function templateEnd(text, open) {
+  for (let at = open; at < text.length; at += 1) {
+    const ch = text[at];
+    if (ch === "\\") at += 1;
+    else if (ch === "`") return at;
+    else if (ch === "$" && text[at + 1] === "{") at = braceEnd(text, at + 1);
+  }
+  return text.length;
+}
+function braceEnd(text, open) {
+  let depth = 0;
+  for (let at = open; at < text.length; at += 1) {
+    const ch = text[at];
+    if (ch === "`") at = templateEnd(text, at + 1);
+    else if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return at;
+    }
+  }
+  return text.length;
+}
+function stringArgs(raw) {
+  const args = [];
+  for (const part of raw.split(",")) {
+    const literal = /^\s*(?:'([^']*)'|"([^"]*)")\s*$/.exec(part);
+    if (literal === null) return raw.trim() === "" ? [] : null;
+    args.push(literal[1] ?? literal[2] ?? "");
+  }
+  return args;
+}
+function scope(text) {
+  const strings = /* @__PURE__ */ new Map();
+  for (const hit of text.matchAll(STRING_CONST)) strings.set(hit[1], hit[2] ?? hit[3] ?? hit[4] ?? "");
+  const mixins = /* @__PURE__ */ new Map();
+  for (const hit of text.matchAll(CSS_CONST)) {
+    const start = (hit.index ?? 0) + hit[0].length;
+    const params = (hit[2] ?? "").split(",").map((param) => param.trim()).filter((param) => param !== "");
+    mixins.set(hit[1], { params, body: text.slice(start, templateEnd(text, start)) });
+  }
+  return { strings, mixins };
+}
+function expand(body, ctx, args, depth) {
+  let out = "";
+  for (let at = 0; at < body.length; at += 1) {
+    if (body[at] !== "$" || body[at + 1] !== "{") {
+      out += body[at];
+      continue;
+    }
+    const close = braceEnd(body, at + 1);
+    const expr = body.slice(at + 2, close).trim();
+    at = close;
+    const bps = BPS_EXPR.exec(expr);
+    const call = CALL_EXPR.exec(expr);
+    const mixin = ctx.mixins.get(call?.[1] ?? expr);
+    if (bps !== null) out += `@bps.${bps[1]}`;
+    else if (args.has(expr)) out += args.get(expr);
+    else if (ctx.strings.has(expr)) out += ctx.strings.get(expr);
+    else if (mixin !== void 0 && depth < MAX_EXPANSION_DEPTH) {
+      const values = call === null ? [] : stringArgs(call[2]);
+      if (values === null) out += SPLIT;
+      else {
+        const bound = new Map(mixin.params.map((param, i) => [param, values[i] ?? ""]));
+        out += `${SPLIT}${expand(mixin.body, ctx, bound, depth + 1)}${SPLIT}`;
+      }
+    } else out += inValue(out) ? `$${OPEN}${expr.replaceAll("{", OPEN).replaceAll("}", CLOSE)}${CLOSE}` : SPLIT;
+  }
+  return out;
+}
+function inValue(text) {
+  const boundary = Math.max(text.lastIndexOf(";"), text.lastIndexOf("{"), text.lastIndexOf("}"), text.lastIndexOf(SPLIT));
+  return /^\s*-{0,2}[a-z][\w-]*\s*:/i.test(text.slice(boundary + 1));
+}
+function stripComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+function tail(buffer) {
+  return (buffer.split(SPLIT).at(-1) ?? "").trim();
+}
+function nest(parents, selector) {
+  const children = selector.split(",").map((part) => part.trim()).filter((part) => part !== "");
+  return parents.flatMap((parent) => children.map((child) => child.includes("&") ? child.replaceAll("&", parent) : `${parent} ${child}`));
+}
+function flatten(selector) {
+  const collapsed = selector.replace(/&+/g, "&").replace(/\s+/g, " ").trim();
+  if (collapsed === "&") return "&";
+  return collapsed.startsWith("& ") ? collapsed.slice(2) : collapsed;
+}
+function rulesOf(body) {
+  const rules = [];
+  const stack = [{ selectors: ["&"], media: null }];
+  const blocks = [[]];
+  let buffer = "";
+  const declare = () => {
+    const line = tail(buffer);
+    buffer = "";
+    const colon = line.indexOf(":");
+    if (colon <= 0) return;
+    const prop = line.slice(0, colon).trim();
+    const value = line.slice(colon + 1).replace(/\s+/g, " ").trim().replaceAll(OPEN, "{").replaceAll(CLOSE, "}");
+    if (!/^-{0,2}[a-z][\w-]*$/i.test(prop) || value === "") return;
+    const top = stack[stack.length - 1];
+    for (const rule of blocks[blocks.length - 1]) rule.decls[prop] = value;
+    if (blocks[blocks.length - 1].length === 0) {
+      for (const selector of top.selectors) {
+        const rule = { selector: flatten(selector), media: top.media, decls: { [prop]: value } };
+        blocks[blocks.length - 1].push(rule);
+        rules.push(rule);
+      }
+    }
+  };
+  for (const ch of body) {
+    if (ch === ";") declare();
+    else if (ch === "{") {
+      const head = tail(buffer);
+      buffer = "";
+      const top = stack[stack.length - 1];
+      if (head.startsWith("@bps.")) stack.push({ selectors: top.selectors, media: head.slice("@bps.".length) });
+      else if (head.startsWith("@")) stack.push({ selectors: top.selectors, media: head });
+      else stack.push({ selectors: nest(top.selectors, head), media: top.media });
+      blocks.push([]);
+    } else if (ch === "}") {
+      declare();
+      if (stack.length > 1) {
+        stack.pop();
+        blocks.pop();
+      }
+    } else buffer += ch;
+  }
+  declare();
+  return rules;
+}
+function parseSectionCss(text) {
+  const source = stripComments(text);
+  const ctx = scope(source);
+  const rules = [];
+  for (const hit of source.matchAll(STYLED_START)) {
+    const start = (hit.index ?? 0) + hit[0].length;
+    rules.push(...rulesOf(expand(source.slice(start, templateEnd(source, start)), ctx, /* @__PURE__ */ new Map(), 0)));
+  }
+  return rules;
+}
+function compoundClasses(compound) {
+  return [...compound.matchAll(/\.(-?[A-Za-z_][\w-]*)/g)].map((hit) => hit[1]);
+}
+function selectorCompounds(selector) {
+  return selector.split(/\s*[\s>+~]\s*/).filter((part) => part !== "");
+}
+
 // src/viewport-map.ts
 var GENERIC_NAME = /^(Frame|Group|Rectangle|Vector|Ellipse|Line) ?\d*$/;
 var DECOR_NAME = /chevron|arrow|^>$|plus|\+|icon/i;
@@ -10298,15 +10457,49 @@ var LAYOUT_PROPS = /* @__PURE__ */ new Set([
   "width",
   "height",
   "max-width",
+  "max-height",
   "min-height",
   "grid-template-columns",
   "grid-template-rows",
   "color",
   "background-color",
+  "background",
+  "box-shadow",
   "opacity"
 ]);
 function isLayoutProp(prop) {
   return LAYOUT_PROPS.has(prop) || prop.startsWith("padding-") || prop.startsWith("margin-");
+}
+var IMAGE_LAYER = /var\(--[\w-]*image\b/;
+function paintLayers(value) {
+  const layers = [];
+  let depth = 0;
+  let start = 0;
+  for (let at = 0; at < value.length; at += 1) {
+    if (value[at] === "(") depth += 1;
+    else if (value[at] === ")") depth -= 1;
+    else if (value[at] === "," && depth === 0) {
+      layers.push(value.slice(start, at).trim());
+      start = at + 1;
+    }
+  }
+  layers.push(value.slice(start).trim());
+  return layers.filter((layer) => layer !== "");
+}
+function backgroundPaint(value) {
+  if (value === null) return null;
+  const layers = paintLayers(value).filter((layer) => !IMAGE_LAYER.test(layer));
+  return layers.length === 0 ? null : layers.join(", ");
+}
+var PAINT_NUMBER = /(-?\d*\.?\d+)(px|deg|%)?/g;
+function samePaint(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  const skeleton = (value) => value.replace(/\s+/g, " ").replace(PAINT_NUMBER, (_, __, unit = "") => `#${unit}`);
+  if (skeleton(a) !== skeleton(b)) return false;
+  const as = [...a.matchAll(PAINT_NUMBER)];
+  const bs = [...b.matchAll(PAINT_NUMBER)];
+  return as.every((hit, i) => Math.abs(Number(hit[1]) - Number(bs[i]?.[1])) <= (hit[2] === void 0 ? 5e-3 : 0.5));
 }
 function overlayDeltas(desktop, mobile) {
   const deltas = {};
@@ -10315,7 +10508,10 @@ function overlayDeltas(desktop, mobile) {
     if (!isLayoutProp(prop)) continue;
     const d = Object.hasOwn(desktop, prop) ? desktop[prop] : null;
     const m = Object.hasOwn(mobile, prop) ? mobile[prop] : null;
-    if (d !== m) deltas[prop] = { desktop: d, mobile: m };
+    if (prop === "background") {
+      const paint = { desktop: backgroundPaint(d), mobile: backgroundPaint(m) };
+      if (!samePaint(paint.desktop, paint.mobile)) deltas[prop] = paint;
+    } else if (d !== m) deltas[prop] = { desktop: d, mobile: m };
   }
   return deltas;
 }
@@ -10529,10 +10725,16 @@ function sideOf(row) {
 function desktopHover(row) {
   return row?.hover != null && (row.hover.reveals || Object.keys(row.hover.rules).length > 0);
 }
+var PX_LENGTH = /^-?\d*\.?\d+px$/;
 function rowDeltas(d, m) {
   const deltas = overlayDeltas(d.decls, m.decls);
-  if (m.box.sizing.w !== "fixed") delete deltas.width;
-  if (m.box.sizing.h !== "fixed") delete deltas.height;
+  for (const [prop, axis] of [["width", "w"], ["height", "h"]]) {
+    const delta = deltas[prop];
+    if (m.box.sizing[axis] === "fixed" || delta === void 0) continue;
+    if (delta.mobile !== null && !PX_LENGTH.test(delta.mobile)) continue;
+    if (delta.desktop !== null && PX_LENGTH.test(delta.desktop)) deltas[prop] = { desktop: delta.desktop, mobile: null };
+    else delete deltas[prop];
+  }
   return deltas;
 }
 function isDecor(row) {
@@ -10832,6 +11034,52 @@ var SECTION_FILE = /^(Styled|Client).*\.js$/;
 var ROOT_SIZE_PROPS = /* @__PURE__ */ new Set(["width", "height", "min-height", "max-width"]);
 var DECOR_MAX_WIDTH = 64;
 var WIDTH_PROPS = /* @__PURE__ */ new Set(["width", "max-width"]);
+var CARD_PAINT_PROPS = /* @__PURE__ */ new Set(["background", "box-shadow"]);
+var SIZE_AXIS = { width: "w", "max-width": "w", height: "h", "min-height": "h", "max-height": "h" };
+var PURE_COMPOUND = /^(\.-?[A-Za-z_][\w-]*)+$/;
+var PX_SIZE = /^\d*\.?\d+px$/;
+function isGradient(value) {
+  return /gradient\(/.test(value);
+}
+function initialValue(prop, box) {
+  if (prop === "height" || prop === "min-height") return "auto";
+  if (prop === "max-width" || prop === "max-height") return "none";
+  if (prop === "width" && box?.sizing.w === "hug") return "auto";
+  return null;
+}
+function fillNote(prop, box) {
+  const axis = SIZE_AXIS[prop];
+  if (box === null || axis === void 0 || box.sizing[axis] !== "fill" || prop !== "width" && prop !== "height") return null;
+  return `${prop} fills its parent on mobile (${roundPx(`${box[axis]}px`)} in the frame)`;
+}
+function repoSizes(target, rules) {
+  if (!PURE_COMPOUND.test(target)) return [];
+  const classes = compoundClasses(target);
+  const found = /* @__PURE__ */ new Map();
+  for (const rule of rules) {
+    if (rule.media !== null || !PURE_COMPOUND.test(rule.selector)) continue;
+    const own = compoundClasses(rule.selector);
+    if (!own.every((name) => classes.includes(name))) continue;
+    for (const [prop, value] of Object.entries(rule.decls)) {
+      if (SIZE_AXIS[prop] === void 0 || !PX_SIZE.test(value) || (found.get(prop)?.weight ?? 0) > own.length) continue;
+      found.set(prop, { prop, value, selector: rule.selector, weight: own.length });
+    }
+  }
+  return [...found.values()];
+}
+function shadeTarget(card, rules) {
+  const classes = compoundClasses(selectorCompounds(card).at(-1) ?? "");
+  const covers = (compound) => compound !== void 0 && PURE_COMPOUND.test(compound) && compoundClasses(compound).every((name) => classes.includes(name));
+  const shades = rules.filter((rule) => (rule.media === null || rule.media === "desktop") && isGradient(rule.decls.background ?? "")).map((rule) => ({ background: rule.decls.background, parts: selectorCompounds(rule.selector) }));
+  const inner = shades.find(({ parts }) => parts.length === 2 && covers(parts[0]) && PURE_COMPOUND.test(parts[1]))?.parts[1] ?? null;
+  let current = null;
+  for (const { background, parts } of shades) {
+    const matches = inner === null ? parts.length === 1 && covers(parts[0]) : parts.length === 2 && covers(parts[0]) && parts[1] === inner;
+    const weight = compoundClasses(parts[0]).length;
+    if (matches && (current === null || weight >= current.weight)) current = { background, weight };
+  }
+  return { target: inner === null ? card : `${card} ${inner}`, inner, current: current?.background ?? null };
+}
 function mobileBreakpoint(bps) {
   if (bps.includes("mobile")) return "mobile";
   return bps.find((key) => /mobile/i.test(key)) ?? null;
@@ -10894,6 +11142,214 @@ function descendants(mobile, id) {
   }
   return found;
 }
+var INHERITED_PROPS = ["font-size", "font-weight", "line-height", "letter-spacing", "text-align", "color"];
+var INHERITED = new Set(INHERITED_PROPS);
+var INITIAL = { "font-weight": "400", "letter-spacing": "0px" };
+var SIZE_PROPS = /* @__PURE__ */ new Set(["width", "min-width", "max-width", "height", "min-height", "max-height"]);
+var HEIGHT_PROPS = /* @__PURE__ */ new Set(["height", "min-height"]);
+function sideOf2(map) {
+  const children = /* @__PURE__ */ new Map();
+  for (const row of map.rows) {
+    if (row.parentId === null) continue;
+    const list = children.get(row.parentId);
+    if (list === void 0) children.set(row.parentId, [row]);
+    else list.push(row);
+  }
+  return { byId: new Map(map.rows.map((row) => [row.nodeId, row])), index: new Map(map.rows.map((row, i) => [row.nodeId, i])), children };
+}
+function ancestorsOf(side, id) {
+  const chain = [];
+  for (let at = side.byId.get(id)?.parentId ?? null; at !== null && at !== id && !chain.includes(at); at = side.byId.get(at)?.parentId ?? null) chain.push(at);
+  return chain;
+}
+function within2(side, id, top) {
+  return id === top || ancestorsOf(side, id).includes(top);
+}
+function inheritedValue(side, id, prop, overrides = /* @__PURE__ */ new Map()) {
+  if (id === null) return null;
+  for (const at of [id, ...ancestorsOf(side, id)]) {
+    if (overrides.has(at)) return overrides.get(at) ?? null;
+    const decls = side.byId.get(at)?.decls;
+    if (decls !== void 0 && Object.hasOwn(decls, prop)) return decls[prop];
+  }
+  return null;
+}
+function topmost(side, ids) {
+  return ids.filter((id) => !ancestorsOf(side, id).some((up) => ids.includes(up)));
+}
+function pairingOf(map, desktopMap, mobileMap) {
+  const desktop = sideOf2(desktopMap);
+  const mobile = sideOf2(mobileMap);
+  const paired = map.rows.filter(
+    (row) => row.mobile !== null && row.desktop !== null && mobile.byId.has(row.mobile.nodeId) && desktop.byId.has(row.desktop.nodeId)
+  );
+  const byMobile = new Map(paired.map((row) => [row.mobile.nodeId, row]));
+  const byDesktop = new Map(paired.map((row) => [row.desktop.nodeId, row]));
+  const desktopTargets = new Map(map.rows.flatMap((row) => row.desktop === null || row.target === null ? [] : [[row.desktop.nodeId, row.target]]));
+  const targetOf = (id) => desktopTargets.get(id) ?? `.${desktop.byId.get(id)?.className ?? id}`;
+  const shown = new Set(map.rows.flatMap((row) => row.mobile === null && row.desktop !== null && row.status !== "hidden-on-mobile" ? [row.desktop.nodeId] : []));
+  const regrouped = /* @__PURE__ */ new Map();
+  for (const row of paired) {
+    const m = row.mobile.nodeId;
+    const d = row.desktop.nodeId;
+    const leftOut = paired.filter((other) => other !== row && within2(desktop, other.desktop.nodeId, d) && !within2(mobile, other.mobile.nodeId, m));
+    const broughtIn = paired.filter((other) => other !== row && within2(mobile, other.mobile.nodeId, m) && !within2(desktop, other.desktop.nodeId, d));
+    const differ = [
+      ...topmost(desktop, leftOut.map((other) => other.desktop.nodeId)),
+      ...topmost(mobile, broughtIn.map((other) => other.mobile.nodeId)).map((id) => byMobile.get(id).desktop.nodeId)
+    ];
+    if (differ.length > 0) regrouped.set(m, [...new Set(differ.map(targetOf))]);
+  }
+  return { desktop, mobile, byMobile, byDesktop, shown, targetOf, regrouped };
+}
+function planProps(plan, rowId) {
+  let props = plan.props.get(rowId);
+  if (props === void 0) {
+    props = /* @__PURE__ */ new Map();
+    plan.props.set(rowId, props);
+  }
+  return props;
+}
+function carries(p, row) {
+  return row !== void 0 && row.target !== null && row.status !== "hidden-on-mobile" && !p.regrouped.has(row.mobile.nodeId);
+}
+function inheritedPlan(p) {
+  const plan = { props: /* @__PURE__ */ new Map(), notes: [] };
+  const topDown = [...p.desktop.byId.values()].sort((a, b) => a.depth - b.depth);
+  for (const prop of INHERITED_PROPS) {
+    const initial = (value) => value === null || value === "normal" ? INITIAL[prop] ?? value : value;
+    const same = (a, b) => sameValue(initial(a), initial(b));
+    const want = /* @__PURE__ */ new Map();
+    for (const d of topDown) {
+      if (d.kind !== "text") continue;
+      const row = p.byDesktop.get(d.nodeId);
+      if (row !== void 0) want.set(d.nodeId, inheritedValue(p.mobile, row.mobile.nodeId, prop));
+      else if (p.shown.has(d.nodeId)) want.set(d.nodeId, inheritedValue(p.desktop, d.nodeId, prop));
+    }
+    const reachedFrom = (id) => {
+      const found = want.has(id) ? [id] : [];
+      const queue = [...p.desktop.children.get(id) ?? []];
+      for (let child = queue.shift(); child !== void 0; child = queue.shift()) {
+        if (Object.hasOwn(child.decls, prop)) continue;
+        if (want.has(child.nodeId)) found.push(child.nodeId);
+        queue.push(...p.desktop.children.get(child.nodeId) ?? []);
+      }
+      return found;
+    };
+    const set = /* @__PURE__ */ new Map();
+    for (const d of topDown) {
+      const reached = reachedFrom(d.nodeId);
+      if (reached.length === 0) continue;
+      const row = p.byDesktop.get(d.nodeId);
+      const current = inheritedValue(p.desktop, d.nodeId, prop, set);
+      const value = initial(want.get(reached[0]) ?? null);
+      const uniform = reached.every((id) => same(want.get(id) ?? null, value));
+      const settable = value !== null || Object.hasOwn(d.decls, prop) && same(inheritedValue(p.desktop, d.parentId, prop, set), null);
+      if (uniform && settable && !same(value, current) && carries(p, row)) {
+        set.set(d.nodeId, value);
+        planProps(plan, row.id).set(prop, value);
+        continue;
+      }
+      const mobileDecls = row === void 0 ? void 0 : p.mobile.byId.get(row.mobile.nodeId)?.decls;
+      if (row?.target == null || mobileDecls === void 0 || !Object.hasOwn(mobileDecls, prop)) continue;
+      const mobileValue = mobileDecls[prop];
+      if (same(mobileValue, current)) continue;
+      const others = [...new Set(reached.filter((id) => !same(want.get(id) ?? null, mobileValue)).map(p.targetOf))];
+      if (others.length > 0) plan.notes.push([row.target, `${prop} ${roundPx(mobileValue)} not set: it would also reach ${others.join(", ")}`]);
+    }
+  }
+  return plan;
+}
+function sizePlan(p) {
+  const plan = { props: /* @__PURE__ */ new Map(), notes: [], dropped: /* @__PURE__ */ new Set() };
+  const fillHeight = (row) => {
+    const own = p.mobile.byId.get(row.mobile.nodeId);
+    if (own === void 0 || row.target === null || own.box.sizing.h !== "fill" || Object.hasOwn(own.decls, "height")) return null;
+    const height = roundPx(`${own.box.h}px`);
+    const desktopHeight = p.desktop.byId.get(row.desktop.nodeId)?.decls.height ?? null;
+    return sameValue(desktopHeight, height) ? null : height;
+  };
+  for (const [m, row] of p.byMobile) {
+    const differ = p.regrouped.get(m);
+    const sizes = Object.entries(row.deltas).filter(([prop]) => SIZE_PROPS.has(prop));
+    if (differ === void 0 || row.target === null || sizes.length === 0) continue;
+    plan.dropped.add(row.id);
+    const set = [];
+    if (sizes.some(([prop, delta]) => HEIGHT_PROPS.has(prop) && delta.mobile !== null)) {
+      for (const child of p.mobile.children.get(m) ?? []) {
+        const childRow = p.byMobile.get(child.nodeId);
+        if (childRow === void 0) continue;
+        const parent = ancestorsOf(p.desktop, childRow.desktop.nodeId).find((id) => p.byDesktop.has(id));
+        const height = parent === row.desktop.nodeId ? fillHeight(childRow) : null;
+        if (height === null || childRow.target === null) continue;
+        planProps(plan, childRow.id).set("height", height);
+        set.push(childRow.target);
+      }
+    }
+    const left = sizes.map(([prop, delta]) => delta.mobile === null ? `${prop} reset` : `${prop} ${roundPx(delta.mobile)}`);
+    const onChildren = set.length === 0 ? "" : `; height set on ${set.join(", ")}`;
+    plan.notes.push([row.target, `${left.join(", ")} not set: the repo ${row.target} holds other children than the mobile frame (${differ.join(", ")})${onChildren}`]);
+  }
+  for (const [m, row] of p.byMobile) {
+    const parentId = p.mobile.byId.get(m)?.parentId ?? null;
+    const parent = parentId === null ? void 0 : p.mobile.byId.get(parentId);
+    if (parent === void 0 || p.byMobile.has(parent.nodeId) || parent.kind !== "box" || parent.box.sizing.h === "hug" || plan.props.has(row.id)) continue;
+    const height = fillHeight(row);
+    if (height === null || row.target === null) continue;
+    planProps(plan, row.id).set("height", height);
+    plan.notes.push([row.target, `height ${height} from mobile ${parent.nodeId}, a wrapper with no repo element`]);
+  }
+  return plan;
+}
+function orderPlan(p) {
+  const plan = { props: /* @__PURE__ */ new Map(), notes: [], reparented: [] };
+  const pairedUp = (side, id, has) => ancestorsOf(side, id).filter(has);
+  const inDesktop = (id) => p.byDesktop.has(id);
+  const siblings = /* @__PURE__ */ new Map();
+  const moves = /* @__PURE__ */ new Map();
+  for (const [m, row] of p.byMobile) {
+    const anchor = pairedUp(p.mobile, m, (id) => p.byMobile.has(id))[0];
+    const from = pairedUp(p.desktop, row.desktop.nodeId, inDesktop)[0];
+    if (anchor === void 0 || from === void 0) continue;
+    const to = p.byMobile.get(anchor).desktop.nodeId;
+    if (from === to) {
+      const group = siblings.get(from);
+      if (group === void 0) siblings.set(from, [row]);
+      else group.push(row);
+      continue;
+    }
+    if (row.target === null) continue;
+    plan.reparented.push({ id: row.id, target: row.target, from: p.targetOf(from), to: p.targetOf(to) });
+    const fromChain = [from, ...pairedUp(p.desktop, from, inDesktop)];
+    const toChain = [to, ...pairedUp(p.desktop, to, inDesktop)];
+    const common = fromChain.find((id) => toChain.includes(id));
+    if (common === void 0) continue;
+    const key = `${from} ${to}`;
+    const between = [...fromChain.slice(0, fromChain.indexOf(common)), ...toChain.slice(0, toChain.indexOf(common))];
+    const move = moves.get(key) ?? { common, from, to, targets: [], between };
+    move.targets.push(row.target);
+    moves.set(key, move);
+  }
+  for (const group of siblings.values()) {
+    const byMobile = [...group].sort((a, b) => (p.mobile.index.get(a.mobile.nodeId) ?? 0) - (p.mobile.index.get(b.mobile.nodeId) ?? 0));
+    const byDesktop = [...group].sort((a, b) => (p.desktop.index.get(a.desktop.nodeId) ?? 0) - (p.desktop.index.get(b.desktop.nodeId) ?? 0));
+    if (byMobile.every((row, i) => row === byDesktop[i])) continue;
+    byMobile.forEach((row, i) => planProps(plan, row.id).set("order", String(i)));
+  }
+  const byCommon = /* @__PURE__ */ new Map();
+  for (const move of moves.values()) {
+    const entry = byCommon.get(move.common) ?? { lines: [], between: /* @__PURE__ */ new Set() };
+    entry.lines.push(`${move.targets.join(", ")} from ${p.targetOf(move.from)} to ${p.targetOf(move.to)}`);
+    for (const id of move.between) entry.between.add(p.targetOf(id));
+    byCommon.set(move.common, entry);
+  }
+  for (const [common, entry] of byCommon) {
+    const target = p.targetOf(common);
+    const contents = entry.between.size === 0 ? "" : ` with display: contents on ${[...entry.between].join(", ")}`;
+    plan.notes.push([target, `moved across parents, order cannot express it: ${entry.lines.join("; ")}; hint: grid areas on ${target}${contents}`]);
+  }
+  return plan;
+}
 var SELECTOR_CLASS = /\.(-?[A-Za-z_][\w-]*)/g;
 function translateSelector(selector, resolve, missing) {
   return selector.replace(SELECTOR_CLASS, (match, className) => {
@@ -10903,17 +11359,170 @@ function translateSelector(selector, resolve, missing) {
     return match;
   });
 }
-function revealOf(desktopRow, resolve, options, notes, missing) {
+var CLASS_ATTRIBUTE2 = /className=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\})/g;
+var COMBINATOR = /(\s*[>+~]\s*|\s+)/;
+var PSEUDO_ELEMENT = /::?(?:before|after)$/;
+var FLEX_EDGE = /\bflex-(start|end)\b/g;
+var INLINE_AXIS = { "justify-content": "row", "align-items": "column", "align-self": "column" };
+function repoSection(sectionText, bp) {
+  const attributes = /* @__PURE__ */ new Map();
+  for (const hit of (sectionText ?? "").matchAll(CLASS_ATTRIBUTE2)) {
+    const tokens = (hit[1] ?? hit[2] ?? hit[3] ?? "").replace(/\$\{[^}]*\}/g, " ").split(/\s+/).filter((token) => token !== "");
+    if (tokens.length > 0) attributes.set(tokens.join(" "), tokens);
+  }
+  return {
+    rules: sectionText === null ? [] : parseSectionCss(sectionText),
+    bp,
+    classesOf: (compound) => {
+      const own = compoundClasses(compound);
+      const named = own.filter((name) => [...attributes.values()].some((tokens) => tokens.includes(name)));
+      const holders = named.length === 0 ? [] : [...attributes.values()].filter((tokens) => named.every((name) => tokens.includes(name)));
+      return holders.length === 1 ? [.../* @__PURE__ */ new Set([...own, ...holders[0]])] : own;
+    }
+  };
+}
+function classesWithin(names, of) {
+  return names.length > 0 && names.every((name) => of.includes(name));
+}
+function styles(repo, selector, target) {
+  if (selector === "&" || target === "&") return selector === target;
+  if (selector.includes(":")) return false;
+  const ruleParts = selectorCompounds(selector);
+  const targetParts = selectorCompounds(target);
+  if (!classesWithin(compoundClasses(ruleParts.at(-1) ?? ""), repo.classesOf(targetParts.at(-1) ?? ""))) return false;
+  return ruleParts.length === 1 || targetParts.length > 1 && classesWithin(compoundClasses(ruleParts[0]), repo.classesOf(targetParts[0]));
+}
+function repoValue(repo, target, prop) {
+  for (const media of [repo.bp, null]) {
+    const hits = repo.rules.filter((rule) => rule.media === media && Object.hasOwn(rule.decls, prop) && styles(repo, rule.selector, target));
+    if (hits.length > 0) return hits[hits.length - 1].decls[prop];
+  }
+  return null;
+}
+function flexAxis(display, direction) {
+  if (display == null || !/^(inline-)?flex$/.test(display)) return null;
+  return direction?.startsWith("column") === true ? "column" : "row";
+}
+function frameDirection(mobileById, id) {
+  const seen = /* @__PURE__ */ new Set();
+  for (let at = id; at !== null && !seen.has(at); at = mobileById.get(at)?.parentId ?? null) {
+    seen.add(at);
+    const direction = mobileById.get(at)?.decls.direction;
+    if (direction !== void 0) return direction;
+  }
+  return "ltr";
+}
+function ancestorTargets(map, desktop, mobile) {
+  const rowById = new Map(map.rows.map((row) => [row.id, row]));
+  const rowByDesktop = new Map(map.rows.flatMap((row) => row.desktop === null ? [] : [[row.desktop.nodeId, row]]));
+  const mobileById = new Map(mobile.rows.map((row) => [row.nodeId, row]));
+  const desktopById = new Map(desktop.rows.map((row) => [row.nodeId, row]));
+  const climb = (start, byId, rowOf) => {
+    const targets = [];
+    const seen = /* @__PURE__ */ new Set([start]);
+    for (let at = byId.get(start)?.parentId ?? null; at !== null && !seen.has(at); at = byId.get(at)?.parentId ?? null) {
+      seen.add(at);
+      const target = rowOf(at)?.target;
+      if (target != null && !targets.includes(target)) targets.push(target);
+    }
+    return targets;
+  };
+  return (row) => {
+    if (row.desktop !== null) return climb(row.desktop.nodeId, desktopById, (id) => rowByDesktop.get(id));
+    if (row.mobile !== null) return climb(row.mobile.nodeId, mobileById, (id) => rowById.get(id));
+    return [];
+  };
+}
+function inlineFlips(block, setter, repo, above, mobileById) {
+  const flips = [];
+  for (const [prop, inlineOn] of Object.entries(INLINE_AXIS)) {
+    const value = block.decls[prop];
+    if (value === void 0 || value.match(FLEX_EDGE) === null) continue;
+    const row = setter(prop);
+    const frameRow = row?.mobile == null ? void 0 : mobileById.get(row.mobile.nodeId);
+    const frame = frameDirection(mobileById, frameRow?.nodeId ?? null);
+    const chain = [block.target, ...row === void 0 ? [] : above(row), "&"];
+    const repoDir = chain.map((target) => repoValue(repo, target, "direction")).find((dir) => dir !== null) ?? frame;
+    if (repoDir === frame || ![repoDir, frame].every((dir) => dir === "ltr" || dir === "rtl")) continue;
+    const own = (name) => {
+      if (Object.hasOwn(block.decls, name)) return block.decls[name];
+      if (block.resets.includes(name)) return frameRow?.decls[name] ?? null;
+      return repoValue(repo, block.target, name) ?? frameRow?.decls[name] ?? null;
+    };
+    const parent = frameRow?.parentId == null ? void 0 : mobileById.get(frameRow.parentId);
+    const axis = prop === "align-self" ? flexAxis(parent?.decls.display, parent?.decls["flex-direction"]) : flexAxis(own("display"), own("flex-direction"));
+    if (axis !== inlineOn) continue;
+    const to = value.replace(FLEX_EDGE, (_, edge) => edge === "start" ? "flex-end" : "flex-start");
+    block.decls[prop] = to;
+    flips.push({ prop, from: value, to, repo: repoDir, frame });
+  }
+  return flips;
+}
+function stateRules(repo, card, strip, inMedia) {
+  const cardClasses = repo.classesOf(selectorCompounds(card).at(-1) ?? "");
+  const found = /* @__PURE__ */ new Map();
+  for (const rule of repo.rules) {
+    if (!inMedia(rule.media)) continue;
+    const parts = rule.selector.split(COMBINATOR);
+    const at = parts.findIndex((part, i) => {
+      const bare2 = i % 2 === 0 ? strip(part) : null;
+      return bare2 !== null && classesWithin(compoundClasses(bare2.split(":")[0]), cardClasses);
+    });
+    if (at < 0) continue;
+    const bare = strip(parts[at]) ?? "";
+    const leftover = bare.slice(bare.split(":")[0].length);
+    const rest = parts.slice(at + 1).join("");
+    const relative = rest === "" ? `&${leftover}` : leftover === "" ? rest.trim() : `&${leftover}${rest}`;
+    found.set(relative, { ...found.get(relative), ...rule.decls });
+  }
+  return found;
+}
+var hoverState = (compound) => compound.includes(":hover") ? compound.replace(":hover", "") : null;
+var openState = (compound) => compoundClasses(compound).includes("is-open") ? compound.replace(/\.is-open(?![\w-])/, "") : null;
+function hasPseudo(repo, target, pseudo) {
+  const kind = pseudo.replace(/^:+/, "");
+  return repo.rules.some((rule) => {
+    const hit = PSEUDO_ELEMENT.exec(rule.selector);
+    return hit !== null && hit[0].replace(/^:+/, "") === kind && styles(repo, rule.selector.slice(0, hit.index), target);
+  });
+}
+function settleReveal(repo, card, relative, remarks) {
+  if (repo.rules.length === 0) return relative;
+  const pseudo = PSEUDO_ELEMENT.exec(relative)?.[0] ?? "";
+  const body = relative.slice(0, relative.length - pseudo.length);
+  if (body.startsWith("&") && body !== "&") return relative;
+  let chain = body === "&" ? [] : selectorCompounds(body);
+  const last = chain.at(-1);
+  if (chain.length > 1 && last !== void 0 && repo.rules.some((rule) => styles(repo, rule.selector, `${card} ${last}`))) chain = [last];
+  if (pseudo !== "") {
+    let host = chain.length - 1;
+    while (host >= 0 && !hasPseudo(repo, `${card} ${chain[host]}`, pseudo)) host -= 1;
+    if (host >= 0) chain = chain.slice(0, host + 1);
+    else if (hasPseudo(repo, card, pseudo)) chain = [];
+    else remarks.push(`reveal ${relative}: no ${pseudo} rule for it in the section`);
+  }
+  const settled = chain.length === 0 ? `&${pseudo}` : `${chain.join(" ")}${pseudo}`;
+  if (settled !== relative) remarks.push(`reveal ${relative} taken as ${settled}, as the section styles it`);
+  return settled;
+}
+function revealOf(card, desktopRow, repo, resolve, options, notes, missing, remarks) {
+  const own = stateRules(repo, card, hoverState, () => true);
+  if (own.size > 0) {
+    remarks.push(`reveal mirrors the section's :hover rules of ${card}`);
+    const mirrored = stateRules(repo, card, openState, (media) => media === repo.bp);
+    if ([...own.keys()].every((key) => mirrored.has(key))) remarks.push(`the section already has this .is-open reveal in ${repo.bp}`);
+    return Object.fromEntries(own);
+  }
   const reveal = {};
   for (const [selector, decls] of Object.entries(desktopRow?.hover?.rules ?? {})) {
     if (!selector.startsWith("&:hover")) continue;
     const rest = translateSelector(selector.slice("&:hover".length), resolve, missing);
-    const relative = rest === "" || rest.startsWith(":") ? `&${rest}` : rest.trim();
-    reveal[relative] = themedDecls(decls, options, notes);
+    const relative = settleReveal(repo, card, rest === "" || rest.startsWith(":") ? `&${rest}` : rest.trim(), remarks);
+    reveal[relative] = { ...reveal[relative], ...themedDecls(decls, options, notes) };
   }
   return reveal;
 }
-function touchOf2(row, map, desktop, mobile, resolve, options, notes, missing) {
+function touchOf2(row, map, desktop, mobile, repo, resolve, options, notes, missing, remarks) {
   if (row.interaction.touch === null || row.target === null) return null;
   const mobileRows = new Map(mobile.rows.map((entry) => [entry.nodeId, entry]));
   const own = mobileRows.get(row.id);
@@ -10925,7 +11534,7 @@ function touchOf2(row, map, desktop, mobile, resolve, options, notes, missing) {
     trigger: tappedTarget ?? row.target,
     source: row.interaction.touch,
     mirror: ".is-open",
-    reveal: revealOf(desktopRow, resolve, options, notes, missing),
+    reveal: revealOf(row.target, desktopRow, repo, resolve, options, notes, missing, remarks),
     changesTo: tapped?.tap?.changesTo ?? row.interaction.mobileTap
   };
 }
@@ -10934,13 +11543,17 @@ function buildMobileOverlay(input) {
   const resolve = targetResolver(input.sectionText ?? null, input.classMap ?? {});
   const rootIds = new Set(input.mobile.rows.filter((row) => row.role === "root").map((row) => row.nodeId));
   const cardTarget = cardTargets(map, input.desktop, input.mobile);
+  const pairing = pairingOf(map, input.desktop, input.mobile);
+  const inherited = inheritedPlan(pairing);
+  const sizes = sizePlan(pairing);
+  const orders = orderPlan(pairing);
   const blocks = /* @__PURE__ */ new Map();
   const setBy = /* @__PURE__ */ new Map();
   const unplaced = [];
   const blockFor = (target) => {
     let block = blocks.get(target);
     if (block === void 0) {
-      block = { target, rows: [], decls: {}, resets: [], hide: false, order: null, decor: [], note: null };
+      block = { target, rows: [], decls: {}, resets: [], initial: [], hide: false, order: null, decor: [], note: null };
       blocks.set(target, block);
       setBy.set(block, /* @__PURE__ */ new Map());
     }
@@ -10952,7 +11565,7 @@ function buildMobileOverlay(input) {
   const addRow = (block, id) => {
     if (!block.rows.includes(id)) block.rows.push(id);
   };
-  const setProp3 = (block, rowId, prop, value) => {
+  const setProp3 = (block, rowId, prop, value, initial = false) => {
     const owners = setBy.get(block);
     const first = owners.get(prop);
     if (first !== void 0) {
@@ -10963,6 +11576,36 @@ function buildMobileOverlay(input) {
     owners.set(prop, rowId);
     if (value === null) block.resets.push(prop);
     else block.decls[prop] = value;
+    if (initial && value !== null) block.initial.push(prop);
+  };
+  const sectionRules = input.sectionText == null ? [] : parseSectionCss(input.sectionText);
+  const cardIds = (section) => new Set(section.rows.filter((row) => row.role === "card").map((row) => row.nodeId));
+  const cards = { desktop: cardIds(input.desktop), mobile: cardIds(input.mobile) };
+  const isCard = (row) => cards.desktop.has(row.desktop?.nodeId ?? "") || cards.mobile.has(row.mobile?.nodeId ?? "");
+  const shades = [];
+  const movedCardPaint = (row, prop, desktop) => cardTarget(row) !== null || prop === "background" && isCard(row) && isGradient(desktop);
+  const resetRepoSizes = (block, rows) => {
+    const boxes = rows.flatMap((row) => row.box === null ? [] : [row.box]);
+    const owners = setBy.get(block);
+    for (const { prop, value, selector } of repoSizes(block.target, sectionRules)) {
+      const axis = SIZE_AXIS[prop];
+      if (boxes.length === 0 || owners.has(prop) || new Set(boxes.map((box) => box.sizing[axis])).size !== 1 || boxes[0].sizing[axis] === "fixed") continue;
+      const reset = initialValue(prop, boxes[0]);
+      if (reset === null) continue;
+      setProp3(block, rows[0].id, prop, reset, true);
+      addNote(block, [`${prop} ${value} of the repo rule ${selector} reset`, fillNote(prop, boxes[0])].filter((note) => note !== null).join(", "));
+    }
+  };
+  const routeShade = (row, value) => {
+    const card = isCard(row) ? row.target : cardTarget(row) ?? row.target;
+    if (card === null) return;
+    const shade = shadeTarget(card, sectionRules);
+    if (shade.current !== null && samePaint(shade.current, value)) return;
+    const block = blockFor(shade.target);
+    addRow(block, row.id);
+    setProp3(block, row.id, "background", value);
+    const inside2 = row.target === card ? "" : ` inside ${card}`;
+    addNote(block, `shade from the background of ${row.id}${inside2}${shade.inner === null ? "" : `, painted by ${shade.inner} in the repo`}`);
   };
   const groups = /* @__PURE__ */ new Map();
   for (const row of map.rows) {
@@ -10973,25 +11616,45 @@ function buildMobileOverlay(input) {
     const props = /* @__PURE__ */ new Map();
     const frameSize = [];
     const leftToLayout = [];
+    const initial = /* @__PURE__ */ new Set();
+    const fills = [];
     const isRoot = rootIds.has(row.id);
     const followsLayout = row.box !== null && row.box.w > DECOR_MAX_WIDTH;
     if (row.status === "hidden-on-mobile") props.set("display", "none");
     else {
       for (const [prop, delta] of Object.entries(row.deltas)) {
+        if (INHERITED.has(prop) || sizes.dropped.has(row.id) && SIZE_PROPS.has(prop)) continue;
         if (isRoot && ROOT_SIZE_PROPS.has(prop)) {
           if (delta.mobile !== null) frameSize.push(`${prop} ${roundPx(delta.mobile)}`);
         } else if (followsLayout && WIDTH_PROPS.has(prop) && delta.mobile !== null) {
           leftToLayout.push(`${prop} ${roundPx(delta.mobile)} left to the layout`);
+        } else if (prop === "background" && delta.mobile !== null && isGradient(delta.mobile)) {
+          shades.push({ row, value: delta.mobile });
         } else if (delta.mobile !== null) props.set(prop, roundPx(themedDecl(prop, delta.mobile, options, notes)));
-        else if (delta.desktop !== null) props.set(prop, null);
+        else if (delta.desktop !== null && !(CARD_PAINT_PROPS.has(prop) && movedCardPaint(row, prop, delta.desktop))) {
+          const value = initialValue(prop, row.box);
+          props.set(prop, value);
+          if (value !== null) initial.add(prop);
+          const fill = value === null ? null : fillNote(prop, row.box);
+          if (fill !== null) fills.push(fill);
+        }
+      }
+      for (const plan of [inherited, sizes]) {
+        for (const [prop, value] of plan.props.get(row.id) ?? []) {
+          if (props.has(prop) && !initial.has(prop)) continue;
+          props.set(prop, value === null ? null : roundPx(themedDecl(prop, value, options, notes)));
+          if (!initial.delete(prop)) continue;
+          const stale = fills.findIndex((fill) => fill.startsWith(`${prop} `));
+          if (stale !== -1) fills.splice(stale, 1);
+        }
       }
     }
-    const moved = row.status === "moved" && row.order.mobile !== null && row.order.mobile !== row.order.desktop;
-    if (moved && !props.has("order")) props.set("order", String(row.order.mobile));
+    const order = orders.props.get(row.id)?.get("order");
+    if (order != null && !props.has("order")) props.set("order", order);
     const decor = row.status === "mobile-only-decor";
     if (props.size === 0 && !decor && leftToLayout.length === 0) continue;
     const group = groups.get(row.target);
-    const entry = { row, props, decor, frameSize, leftToLayout };
+    const entry = { row, props, decor, frameSize, leftToLayout, initial, fills };
     if (group === void 0) groups.set(row.target, [entry]);
     else group.push(entry);
   }
@@ -11014,9 +11677,10 @@ function buildMobileOverlay(input) {
         addRow(base, row.id);
         addNote(base, entry.leftToLayout.join(", "));
       }
+      if (entry.fills.length > 0) addNote(base, entry.fills.join(", "));
       for (const [prop, value] of shared) {
         addRow(base, row.id);
-        setProp3(base, row.id, prop, value);
+        setProp3(base, row.id, prop, value, entry.initial.has(prop));
       }
       const own = [...entry.props].filter(([prop]) => !shared.has(prop));
       if (own.length === 0) {
@@ -11027,7 +11691,7 @@ function buildMobileOverlay(input) {
       const block = card === null || card === target ? base : blockFor(`${card} ${target}`);
       addRow(block, row.id);
       for (const [prop, value] of own) {
-        setProp3(block, row.id, prop, value);
+        setProp3(block, row.id, prop, value, entry.initial.has(prop));
         if (block !== base) {
           const targets = split.get(prop) ?? /* @__PURE__ */ new Set();
           targets.add(block.target);
@@ -11041,19 +11705,38 @@ function buildMobileOverlay(input) {
       addNote(base, `split by card: ${[...split.keys()].join(", ")} differ between rows, see ${qualified.join(", ")}`);
       for (const name of qualified) addNote(blockFor(name), `split from ${target}`);
     }
+    if (target !== "&") resetRepoSizes(base, group.filter((entry) => !entry.decor).map((entry) => entry.row));
   }
+  for (const plan of [sizes, inherited, orders]) {
+    for (const [target, note] of plan.notes) addNote(blockFor(target), note);
+  }
+  for (const shade of shades) routeShade(shade.row, shade.value);
   const rowById = new Map(map.rows.map((row) => [row.id, row]));
   for (const block of blocks.values()) {
     block.resets = block.resets.filter((prop) => !Object.hasOwn(block.decls, prop));
     block.hide = block.decls.display === "none" && block.rows.some((id) => rowById.get(id)?.status === "hidden-on-mobile");
     block.order = Object.hasOwn(block.decls, "order") && /^-?\d+$/.test(block.decls.order) ? Number(block.decls.order) : null;
   }
+  const repo = repoSection(input.sectionText ?? null, input.bp);
+  const above = ancestorTargets(map, input.desktop, input.mobile);
+  const mobileById = new Map(input.mobile.rows.map((row) => [row.nodeId, row]));
+  for (const block of blocks.values()) {
+    const setter = (prop) => rowById.get(setBy.get(block)?.get(prop) ?? block.rows[0] ?? "");
+    const byDirection = /* @__PURE__ */ new Map();
+    for (const flip of inlineFlips(block, setter, repo, above, mobileById)) {
+      const key = `${flip.repo} in the repo, ${flip.frame} in the frame`;
+      byDirection.set(key, [...byDirection.get(key) ?? [], `${flip.prop} ${flip.from} to ${flip.to}`]);
+    }
+    for (const [key, flips] of byDirection) addNote(block, `${key}: flipped ${flips.join(", ")}`);
+  }
   const touch = [];
   for (const row of map.rows) {
     const missing = [];
-    const entry = touchOf2(row, map, input.desktop, input.mobile, resolve, options, notes, missing);
+    const remarks = [];
+    const entry = touchOf2(row, map, input.desktop, input.mobile, repo, resolve, options, notes, missing, remarks);
     if (entry === null) continue;
     touch.push(entry);
+    for (const remark of remarks) addNote(blockFor(entry.target), remark);
     for (const className of missing) addNote(blockFor(entry.target), `reveal class ${className} not in the section`);
   }
   return {
@@ -11065,8 +11748,13 @@ function buildMobileOverlay(input) {
     hoverGate: input.hoverGate,
     blocks: [...blocks.values()].filter((block) => block.rows.length > 0 || block.note !== null),
     touch,
-    unplaced
+    unplaced,
+    reparented: orders.reparented
   };
+}
+function resetsText(block) {
+  const initial = block.initial.length === 0 ? [] : [`emitted as initial values: ${block.initial.join(", ")}`];
+  return [block.resets.join(", "), ...initial].filter((part) => part !== "").join("; ");
 }
 function declLines(decls, indent2) {
   return Object.entries(decls).map(([prop, value]) => `${indent2}${prop}: ${value};`);
@@ -11081,7 +11769,7 @@ function mobileOverlayStyled(overlay) {
     const block = overlay.blocks.find((candidate) => candidate.target === target);
     const touches = designTouch.filter((entry) => entry.target === target);
     lines.push(`# ${target}  rows: ${block?.rows.join(", ") || "-"}`);
-    if (block !== void 0 && block.resets.length > 0) lines.push(`# resets: ${block.resets.join(", ")} (set on desktop, not in the mobile frame)`);
+    if (block !== void 0 && block.resets.length + block.initial.length > 0) lines.push(`# resets: ${resetsText(block)} (set on desktop, not in the mobile frame)`);
     for (const entry of touches) {
       if (entry.trigger !== target) lines.push(`# touch: tapping ${entry.trigger} toggles .is-open on ${target}`);
     }
@@ -11376,9 +12064,10 @@ With --out or --stdout, write the HTML preview with the scaffold preset's fluid 
 --mobile-of desktop-section-map.json --overlay-out dir --repo-profile profile.json
 Mobile mode. Renders the mobile frame's scaffold in memory (fixed sizes, the desktop map's component name, no image download, no repo write), pairs its rows with the desktop section map, and writes into --overlay-out only: section-map.json (the mobile map), viewport-map.json, viewport-map.md (the edit surface), mobile-overlay.json (per repo selector: mobile declarations, resets, hide, order, decor, and the touch path of each hover card) and mobile-overlay.styled.txt (ready-to-nest \`theme.bps.mobile\` blocks, tap reveals under \`&.is-open\`, and a \`# gate:\` line from the profile's mobile.hoverGate, default bps.desktop). Colors and fonts become theme tokens as in the scaffold. Cannot be combined with --dist, --out, --stdout, --dump, --scaffold, --fluid, --assets, --component, --fixed, or --section-map. The section map must be a desktop map, and --overlay-out must be outside --section-dir.
 Exits 0 when every row is placed, 12 when rows are unmatched or their target is missing (a checkpoint on viewport-map.md), and 11 when the mobile frame adds content (stop; 11 wins over 12). The files are written in all three cases, stderr gets a \`note: viewport-map <n> unmatched, <n> target-missing, <n> new-content\` line on 11 and 12, and the last stdout line is the --overlay-out path.
+The overlay follows the repo tree, not the mobile frame's. Inherited text properties are compared on the values the text renders with, and a container keeps one only when every repo child that inherits it wants that value (else a \`note:\` names the children it would reach). A container whose repo children differ from the mobile frame's keeps neither its size nor its text properties; its children get their own height. \`order\` is emitted only among the same repo siblings; an element that changed parent is listed under \`reparented\` and noted on the common ancestor. Desktop sizes the mobile box does not have are emitted as \`height: auto\`, \`max-width: none\` and the like, and listed as initial values in \`# resets:\`. Backgrounds and box-shadows are emitted without photo layers (\`var(--*-image)\`); a card's gradient goes to the element that paints the shade in the section (for example \`.card-shade\`). With --section-dir, \`flex-start\`/\`flex-end\` are flipped on the inline axis of elements whose direction in the section differs from the frame's, and tap reveals copy the section's own \`:hover\` rules onto \`.is-open\`; each change is noted.
 
 --section-dir dir
-With --mobile-of, the repo section folder. Its Styled*.js and Client*.js files are read as text, never written, to resolve each target; a class absent from them is target-missing. Without it every class is its own target.
+With --mobile-of, the repo section folder. Its Styled*.js and Client*.js files are read as text, never written, to resolve each target; a class absent from them is target-missing. Without it every class is its own target. The styled rules (with the file's string constants and css mixins expanded) also give each target's direction, hover rules, shade element and resting sizes.
 
 --class-map json
 With --mobile-of, a JSON object (inline or a file path) of scaffold class to repo selector, for classes desktop stage 04 renamed. It wins over the class itself.

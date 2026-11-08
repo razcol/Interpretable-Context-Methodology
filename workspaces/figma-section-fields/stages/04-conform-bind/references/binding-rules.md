@@ -44,8 +44,8 @@ The run is M (`viewport: mobile`) and the section is already built from D. The m
 Inputs, all in `stages/01-export/output/<M>/`:
 
 - `viewport-map.md`, as you edited it at the 01m checkpoint (`viewport-map.json` carries the same edits). The `desktop target` column names the repo selector for each row.
-- `mobile-overlay.json`: per target selector, the decls, `hide`, order hints, decor and `touch`.
-- `mobile-overlay.styled.txt`: per target selector, the ready `${({ theme }) => theme.bps?.mobile} { ... }` block with the deltas.
+- `mobile-overlay.json`: per target selector, the decls, `hide`, order hints, decor and `touch`, plus `reparented` (elements whose parent changes on mobile).
+- `mobile-overlay.styled.txt`: per target selector, the ready `${({ theme }) => theme.bps?.mobile} { ... }` block with the deltas. Its `# note:` lines say what figma-cli left out on purpose (an inherited value that would reach another target, the size of a container whose repo children differ), which alignment values it flipped for the section's direction, and where it routed a shade. Its `# resets:` line lists what it emitted as initial values (`height: auto`, `max-width: none`) and what it could not reset.
 
 Before the first write, copy `Styled<Folder>.js` and `Client<Folder>.js` to `stages/04-conform-bind/output/<M>/before/`. The desktop-frozen audit diffs against these copies. When the export record says `baseline: from-head <sha>`, also check that the repo HEAD is that sha and `git status` shows no change in the section folder, so 05m can rebuild the baseline from it. Stop and say so if either fails.
 
@@ -53,7 +53,7 @@ Rules:
 
 1. **Desktop is frozen.** No declaration outside a `bps.mobile` block changes. The exceptions are gating an existing `:hover` (rule 5) and the base `display: none` of an element added for mobile (rule 4).
 2. **Overlay values, not structure.** Nest each block from `mobile-overlay.styled.txt` inside the existing selector the map names as its target. Never copy the mobile scaffold's structure or class names. When the target selector already has a `bps.mobile` block, merge into it.
-3. **Order without new markup.** For `moved` rows use CSS first: `order`, `grid-template-areas`, or `display: contents` on a wrapper. Change JSX only when CSS cannot express the order, and say why in the record. The root stays `ltr` (`section-shape.md`). A mobile grid that reads right to left sets `direction: rtl` on that grid.
+3. **Order without new markup.** For `moved` rows use CSS first: `order`, `grid-template-areas`, or `display: contents` on a wrapper. The overlay emits `order` only among the same repo siblings. For an element under `reparented`, use grid areas on the common ancestor and `display: contents` on the rows between, as its note says. Change JSX only when CSS cannot express the order, and say why in the record. The root stays `ltr` (`section-shape.md`). A mobile grid that reads right to left sets `direction: rtl` on that grid.
 4. **Hidden and decor.** `hidden-on-mobile`: hide it as in mobile-patterns.md "Hiding and showing". `mobile-only-decor`: search the repo's icons first (mobile-patterns.md "Icons"), present the candidates at the checkpoint, then add the element and hide it outside mobile.
 5. **Touch as the frame shows it.** A row with `touch.source=design` gets the tap toggle on `touch.trigger` with no question (recipe and gate: mobile-patterns.md "Hover and touch"). On OND-7 the trigger is the whole card and the chevron is the affordance. Only a row with `touch.source=checkpoint` asks: tap toggle, always shown, or hidden. Apply only the chosen option.
 6. **`useIsMobile` only for content swaps** (mobile-patterns.md "`useIsMobile`"), imported from the profile's `mobile.hook`, first entry.

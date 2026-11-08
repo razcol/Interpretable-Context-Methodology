@@ -21,7 +21,7 @@ How to read and edit the map figma-cli writes in mobile mode (`export --mobile-o
 | Status | Meaning | Exit |
 |---|---|---|
 | `same` | Matched. Restyle only | 0 |
-| `moved` | Matched, and the order changes | 0 |
+| `moved` | Matched, and the order or the parent changes. A parent change is listed under `reparented` in `mobile-overlay.json` and gets no `order` | 0 |
 | `hidden-on-mobile` | In D, not in M | 0 |
 | `mobile-only-decor` | A small vector or image in a matched card with no desktop counterpart (icon, divider). No field. Carries an `affordance: chevron, arrow or plus` guess | 0 |
 | `new-content` | Content in M that no field holds. The run stops | 11 |
