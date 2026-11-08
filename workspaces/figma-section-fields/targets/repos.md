@@ -12,4 +12,4 @@ The section repos this workspace writes into. Repo structure (versions, fragment
 
 When a run does not name a repo, use ora.
 
-Each repo has its own WordPress and its own fields. Use only the repo named for the run. A run may name another root of the same repo, such as a git worktree; use that path as the repo for every stage of the run.
+Each repo has its own WordPress and its own fields. Use only the repo named for the run. A run may name another root of the same repo, such as a git worktree; use that path as the repo for every stage of the run. A fresh worktree has no `.env` or wp-graphql sign-in, so run wp-graphql with `--repo <worktree> --store <the main root's store>` (wp-graphql `references/commands.md`, `--store`).

@@ -48,7 +48,7 @@ Later records start with the same `# <Stage> record <node-id>` line and list fac
 
 ## Pair rules
 
-- A desktop record from `new` or `sync` without `--mobile` gets `pair: pending`. With `--mobile` it gets `pair: <M>`.
+- A desktop record from `new` or `sync` without `--mobile` gets `pair: pending`. With `--mobile` it gets `pair: <M>`, and M's preflight record gets `pair: <D>`.
 - At the end of desktop 05 on a `pair: pending` record, the agent asks once: "Mobile design URL, or `mobile out of scope`?" The answer sets `pair:` to that URL's node id and starts the mobile pass, or sets it to `out-of-scope`.
 - `pair: none` means no mobile pass is expected, as on an `element` run. A rerun on D keeps D's `pair:` line.
 - `mobile` (Case B) writes `pair: <D>` in M's record and appends one `pair: <M>` line to D's record. This is the only edit a run makes to another node's record.

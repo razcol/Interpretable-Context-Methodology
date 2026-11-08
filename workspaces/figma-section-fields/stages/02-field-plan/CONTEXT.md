@@ -20,9 +20,9 @@ Decide which ACF fields the section has, and write the click list you follow in 
 ## Process
 
 1. Read the export record and the scaffold props. List the content pieces: headings, paragraphs, cards, pictures, buttons, links, disclaimer. When the record has `pair: <M>`, compare each piece with M's `figma.png` and `inspect.txt`.
-2. Run `patterns` and `section <Folder> --refresh` with `--repo` set to the app root in the record.
+2. Run `patterns` and `section <Folder> --refresh` with `--repo` set to the app root in the record. On `new`, a `<Folder>` that is already a live layout in `patterns` is a name question for step 4.
 3. Apply `references/field-plan-rules.md`. On `sync`, the live `tree` is the plan: copy it, then add only what the design has and the group lacks.
-4. Write `output/<node-id>/field-plan.json` (schema in the reference) and `output/<node-id>/field-plan.md`: a table of field, ACF type, shape or clone source, repeater min and max, and why, then the questions the design raises, then the folder name.
+4. Write `output/<node-id>/field-plan.json` (schema in the reference) and `output/<node-id>/field-plan.md`: a table of field, ACF type, shape or clone source, repeater min and max, and why, then the questions the design raises, then the folder name. When you rename the folder at the checkpoint, rerun `section` with the new name, update `folder:` and `section path:` in D's export record, and rerun stage 01 step 6's scaffold with the new `--component`.
 5. On `sync`, run `diff-group <Folder> --plan output/<node-id>/field-plan.json`. `matches` true: go to step 7. Otherwise stop at the checkpoint with the differences.
 6. On `new`, write `<app root>/<sectionsDir>/<Folder>/field-report.md` from the template, creating that folder. Do not add it to `.gitignore`. Stop at the checkpoint and end the run with: "The run ends here. Reply `continue <node-id>` after you save the group in WordPress."
 7. Run the audit. On `sync`, load `../03-fragment/CONTEXT.md`.
@@ -40,7 +40,7 @@ Decide which ACF fields the section has, and write the click list you follow in 
 | Check | Pass Condition |
 |-------|---------------|
 | Page data | No field is breadcrumbs, SEO, page title, order or spacing other than `...Layout` |
-| Shapes | Every picture or button field names its shape and clone source from `patterns` |
+| Shapes | Every picture or button field names its shape, and its clone source from `patterns` when the shape has one (a hand-built `responsiveMedia` has none) |
 | Plan file | `field-plan.json` passes `diff-group` validation (no `USAGE` error) |
 | Report | The report's first step matches its branch in `references/field-report-template.md` |
 | Report place | `field-report.md` is beside the component, not in this stage's `output/` |

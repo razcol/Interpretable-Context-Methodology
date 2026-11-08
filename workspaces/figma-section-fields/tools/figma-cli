@@ -39,7 +39,7 @@ __export(cli_exports, {
 module.exports = __toCommonJS(cli_exports);
 
 // <define:__FIGMA_CLI_BUILD__>
-var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "8896b3f", dirty: false, date: "2026-11-05" };
+var define_FIGMA_CLI_BUILD_default = { version: "0.0.0", sha: "6098676", dirty: false, date: "2026-11-08" };
 
 // src/cli.ts
 var import_promises3 = require("node:readline/promises");
@@ -10699,13 +10699,16 @@ function buildViewportMap(input) {
     }
     rows.push(desktopOnly(d, resolve(d.className), "hidden-on-mobile", null, null));
   }
+  const fallback = targetResolver(input.sectionText, {});
+  const matchedElsewhere = (edit, row) => (edit.desktop?.nodeId ?? null) !== (row.desktop?.nodeId ?? null);
+  const staleTarget = (edit, row) => !matchedElsewhere(edit, row) && (edit.target === null || edit.target === fallback(row.desktop?.className ?? ""));
   const edits = /* @__PURE__ */ new Map();
   for (const edit of input.edits?.rows ?? []) {
     const row = rows.find((candidate) => candidate.id === edit.id);
     if (row === void 0) continue;
-    const matchChanged = (edit.desktop?.nodeId ?? null) !== (row.desktop?.nodeId ?? null);
+    const matchChanged = matchedElsewhere(edit, row);
     const staleMissing = edit.status === "target-missing" && edit.target === null;
-    if (matchChanged || edit.target !== null && edit.target !== row.target || !staleMissing && edit.status !== row.status || edit.interaction.touch !== row.interaction.touch || edit.note !== null && edit.note !== row.note) {
+    if (matchChanged || !staleTarget(edit, row) && edit.target !== row.target || !staleMissing && edit.status !== row.status || edit.interaction.touch !== row.interaction.touch || edit.note !== null && edit.note !== row.note) {
       edits.set(edit.id, edit);
     }
   }
@@ -10721,7 +10724,7 @@ function buildViewportMap(input) {
       row.deltas = d !== void 0 && m !== void 0 ? rowDeltas(d, m) : edit.deltas;
       row.interaction.desktopHover = d === void 0 ? edit.interaction.desktopHover : desktopHover(d);
     }
-    const keepTarget = edit.target === null && !matchChanged;
+    const keepTarget = staleTarget(edit, row);
     if (matchChanged || !keepTarget && edit.target !== row.target) row.signal = "user";
     if (!keepTarget) row.target = edit.target;
     if (!(edit.status === "target-missing" && edit.target === null && row.target !== null)) row.status = edit.status;
