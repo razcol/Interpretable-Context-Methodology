@@ -117,7 +117,34 @@ Append an entry every time the skill is used, even when it works. Record the com
 - Outcome: diffs recorded (0.52, 0.72, 0.52). Fluid measure exited 0 with overflow 0, but the fluid pages render blank because both button states are absolutely positioned in a frame with no height.
 - Surprise: sandbox cannot see the CDP port; the scripts need to run outside the sandbox.
 
+## 2026-11-05 ORA font split without unicode-range (localhost:3000)
+
+- Attempted: `browser.js status`, `navigate.js` and `screenshot.js` at 1280x800 on http://127.0.0.1:3000/, then puppeteer-core on the same Chrome (port 9333) calling `CSS.getPlatformFontsForNode` on real text nodes plus one injected "₪" probe.
+- Outcome: status 200, ready in about 20 s on a cold dev compile. No `@font-face` carried a `unicode-range`. Body Hebrew used Simpler Bold, Latin and digits used Special Gothic Expanded One, Hebrew in `oraHeadline` headings used Simpler Bold, and "₪" used Special Gothic.
+- Surprise: the earlier unicode-range version was not needed. Gothic has no Hebrew glyphs, so a plain `Gothic, Simpler` stack already splits per character. Rendered-font checks still need raw CDP; a `fonts.js` script would cover this.
+
+## 2026-11-05 ORA font split (localhost:3000)
+
+- Attempted: `navigate.js` and `screenshot.js` at 1280x800 on http://127.0.0.1:3000/, then a puppeteer-core session on the same Chrome (port 9333) calling `CSS.getPlatformFontsForNode`. The scripts cannot report which face painted a glyph.
+- Outcome: page status 200. Mixed string "ORA 5 SUV היברידית" used Special Gothic Expanded One for the Latin/digits and Simpler Bold for the Hebrew. Button "סגור" used only Simpler Bold. Headline "הטבות מיוחדות" used Simpler Bold.
+- Surprise: `browser.js status` exits 0 when Chrome is not running, so `status || start` does not start it. `U+0000-00FF` and `U+0-FF` were emitted as `U+??`; `U+20-7E, U+A0-FF` survived. next/font rejects non-literal `unicode-range` values.
+
 ## 2026-11-05 ImageGrid hover crop fixture
 - Attempted: screenshot.js of file:///tmp/imagegrid-zoom-check.html, rest crop beside the tall-start hover crop (111.218% by 112.342%).
 - Outcome: Chrome started on port 9333. The hover card's mark is larger than the resting card, so the crop math enlarges the image inside the clipped frame.
 - Surprise: browser.js status exits 0 when Chrome is stopped, so `status || start` does not start it.
+
+## 2026-11-09 interact.js secrets, fresh context, responses; navigate.js fresh context
+- Why: NSS-4 runs wrote raw Puppeteer for a clean visitor (stage 06) and for form responses (stage 05), and pasted a test identity into step files.
+- Added: `interact.js --fresh-context`, `"secret"` on `type` with `--secrets-file` (values scrubbed from all output, including page text and failure details), `--responses 'a,b'`, `--steps-file` plus `--steps` in one call (file first); `navigate.js --fresh-context`.
+- Live: `ticket-execution/targets/logins/self-service.json` in one `--fresh-context` call signed in on the NSS-4 dev server and reached `/changeAccount` in the same tab (about 35 s).
+- Tested on fixtures (profile bcdp-test, port 9355): secret typed and shown as `<secret FX_NAME>` in get_text, not present on a failing assert, missing key exits 1, `missing.png` 404 captured, fresh context opened and closed, plain `--new-tab` unchanged. `run-all.sh` not rerun because it uses port 9333, which an NSS-4 verify had in use.
+
+## 2026-11-09 NSS-4 starter notice
+- Attempted: `navigate.js --fresh-context` on http://localhost:3000/homepage (profile nss4-notice, port 9341), then stop.
+- Outcome: status 200, final URL http://localhost:3000/login, title "כניסה לאזור האישי | כלמוביל מימון". The result dialog did not appear.
+- Surprise: `navigate.js` and `snapshot.js` reject `--port`; the profile state file supplies it. `snapshot.js` has no `--fresh-context`.
+
+## 2026-11-09 NSS-4 starter notice again
+- Attempted: `navigate.js --fresh-context` on http://localhost:3000/homepage (profile nss4-notice, port 9341), then stop.
+- Outcome: status 200, final URL http://localhost:3000/login, title "כניסה לאזור האישי | כלמוביל מימון". The result dialog did not appear.

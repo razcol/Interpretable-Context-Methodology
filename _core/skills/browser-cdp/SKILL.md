@@ -30,19 +30,25 @@ node scripts/browser.js status
 node scripts/browser.js stop
 ```
 
-Use `--profile NAME --port N` for a separate login/identity. Each profile has its own cookie jar on disk.
+Use `--profile NAME --port N` on `browser.js start` for a separate login/identity. Each profile has its own cookie jar on disk. The port is stored in the profile state file. Later scripts take `--profile` and do not take `--port`.
+
+`--port` is accepted only by `browser.js`. Passing it to `navigate.js`, `snapshot.js`, `interact.js`, `screenshot.js`, `measure.js` or `capture.js` exits USAGE.
+
+`--fresh-context` is accepted only by `navigate.js` and `interact.js`. `snapshot.js` does not have it.
+
+A profile name must match `^[a-z0-9][a-z0-9-]{0,40}$`: lowercase letters, digits and hyphens. `NSS4-handoff` is rejected; `nss4-handoff` is valid.
 
 ## Which script to run
 
 | Need | Script | Key arguments | You get |
 |------|--------|---------------|---------|
-| Is this page reachable and ready? | `navigate.js` | `--url` | status, final URL, title, ready time |
+| Is this page reachable and ready? | `navigate.js` | `--url`, `--fresh-context` for a visitor with no cookies or storage | status, final URL, title, ready time |
 | Screenshot(s) | `screenshot.js` | `--url`, `--viewports 375x812,1280x800`, `--full-page` or `--selector` | PNG paths, sizes, sha256 |
 | Console, page errors, failed/4xx requests | `capture.js` | `--url`, `--out details.json` | counts plus the first 50 of each |
 | Page structure for reasoning | `snapshot.js` | `--url`, `--mode a11y\|dom\|html\|text`, `--selector` | file path plus stats |
 | Compare two screenshots | `diff.js` | `--baseline`, `--current`, `--max-diff-ratio`, `--init` | match, diff ratio, diff PNG |
 | Does a local page scroll sideways? | `measure.js` | `--url` (localhost or file:// only), `--viewports 1920x1080,1440x900,1100x800`, `--selector` | per viewport: `scrollWidth`, `innerWidth`, `overflowPx`, section box, screenshot |
-| Click, type, submit, assert | `interact.js` | `--steps '[...]'`, optional `--url` | per-step results, console errors |
+| Click, type, submit, assert | `interact.js` | `--steps '[...]'`, optional `--url`, `--fresh-context`, `--secrets-file`, `--responses` | per-step results, console errors, matched responses |
 | Cookies and localStorage | `state.js` | `cookies-get`, `cookies-set`, `storage-get`, ... | redacted values by default |
 
 Snapshot modes:
@@ -86,11 +92,17 @@ An HTTP 404 or 500 is not a script failure. Check `status` in the JSON.
 Actions: `goto`, `click`, `type`, `press`, `select`, `wait_for` (selector or text), `get_text`, `assert_text`, `assert_url`, `screenshot`.
 Full examples: `references/recipes.md`.
 
+- `--steps-file` and `--steps` together: the file's steps run first, then `--steps`. Use it for a shared login file followed by the page check.
+- `--fresh-context`: the steps run in a new browser context (no cookies, storage or cache from the profile), closed when the call ends. Put a login and the page check in the same call.
+- `{"action":"type","selector":"...","secret":"NAME"}` with `--secrets-file FILE` types the value of `NAME=` from that file. The value is replaced by `<secret NAME>` everywhere in the output.
+- `--responses 'a,b'` records each response whose URL or request body contains one of the substrings: method, URL, status and the first 2000 characters of the body (long tokens redacted). Use it to read what a form submit returned instead of writing your own Puppeteer listener.
+
 ## Secrets
 
 - `state.js` hides cookie and storage values on stdout. `--show-values` prints them. Avoid it.
 - `--out` files contain real values (mode 0600). Keep them out of git and out of your replies.
 - Never put tokens in commands, scripts or this folder. Log in once in a dedicated profile (see recipes) and let the profile hold the session.
+- A test identity for a local dev server goes in a secrets file outside every repo (mode 0600) and is typed with `"secret"` steps. Do not open or print that file.
 - Chrome 136+ ignores debug ports on the default profile, so these scripts always use their own profile directory under `~/.cache/browser-cdp/profiles/`.
 
 ## Files

@@ -1,12 +1,12 @@
 ---
 name: session-extract
-description: Searches past Cursor agent sessions on this machine across every project, filters them for a tool, skill, command, workflow, or failure, and writes a cited evidence brief used to change or design skills, tools, and workspaces. Use when the user passes this skill plus what to extract from earlier sessions. Do not use for a handoff of the current chat only (session-handoff).
+description: Searches past Cursor agent sessions on this machine across every project, filters them for a tool, skill, command, workflow, or failure, and returns a cited evidence brief in the chat, used to change or design skills, tools, and workspaces. Use when the user passes this skill plus what to extract from earlier sessions. Do not use for a handoff of the current chat only (session-handoff).
 disable-model-invocation: true
 ---
 
 # Session extract
 
-Finds past Cursor work on this computer and writes one cited brief. The brief recommends what to change in a skill, tool, or workspace. It does not edit those artifacts.
+Finds past Cursor work on this computer and replies with one cited brief. The brief recommends what to change in a skill, tool, or workspace. It does not edit those artifacts, and it does not write a report file.
 
 Transcripts are not in the git repo. They live at `~/.cursor/projects/<slug>/agent-transcripts/<uuid>/<uuid>.jsonl`. A search from the current workspace misses the other projects.
 
@@ -26,14 +26,14 @@ python3 <skill-folder>/scripts/scan_transcripts.py \
   --pattern '<marker>' --pattern '<marker>'
 ```
 
-`<skill-folder>` is the folder containing this file. Add `--project <slug>` to limit, or `--include-subagents` only when the user asked for subagent files in the candidate set. The script prints a coverage JSON line, then one JSON line per match. It matches the raw jsonl line, so a marker that appears only in a tool argument still counts. Excerpts are decoded user text, redacted and truncated, not the raw JSON. Exit 2 means a bad regex or a missing `~/.cursor/projects`. Zero matches is a successful empty result: still write the report.
+`<skill-folder>` is the folder containing this file. Add `--project <slug>` to limit, or `--include-subagents` only when the user asked for subagent files in the candidate set. The script prints a coverage JSON line, then one JSON line per match. It matches the raw jsonl line, so a marker that appears only in a tool argument still counts. Excerpts are decoded user text, redacted and truncated, not the raw JSON. Exit 2 means a bad regex or a missing `~/.cursor/projects`. Zero matches is a successful empty result: still deliver the brief.
 
 3. Label each match core, partial, or incidental. A regex hit is not usage. Discard incidental matches before deep reading. In Coverage, state how many were discarded and give one example uuid and the reason.
 4. If more than about eight core or partial parents remain, split an explicit path list across read-only subagents. Each brief includes the report headings, the redaction rules, and the instruction not to scan every project again. One subagent may inventory the product path. Transcript subagents only cite sessions.
 5. Deep-read with the excerpts plus a ranged read of the jsonl. Do not load a multi-megabyte line into context. Tool results in these files are often missing. Confirm outcomes from later assistant text and, when a product path was given, from the current files.
 6. Open `subagents/` only when that parent is about building the thing, the parent jsonl is missing (the coverage line lists orphans), or the user asked. The coverage `orphans` array is session folders with no parent file.
-7. Write the report to `session-extract-<YYYY-MM-DD>-<topic-slug>.md` in the working directory, using [references/report-template.md](references/report-template.md). If the name exists, use `-2`, then `-3`. Never overwrite. Write the file before the final chat message.
-8. Tell the user the path, the coverage counts, three to seven findings, and what was not searched.
+7. Reply with the brief in the chat, using the section titles in [references/report-template.md](references/report-template.md). That reply is the whole deliverable. Do not write a markdown file, and do not save a copy under `/tmp` or the working directory. Write a file only when the user explicitly asks to save this brief.
+8. Lead that reply with the coverage counts, three to seven findings, and what was not searched.
 
 ## Rules
 
@@ -42,3 +42,4 @@ python3 <skill-folder>/scripts/scan_transcripts.py \
 - Do not claim sessions from another machine or from the Windows Cursor profile were included.
 - Separate "still open" from "a later session or the current code already fixed it."
 - Recommendations only. Do not edit the skill, tool, or workspace named in Implications.
+- Before a follow-up edits `workspaces/ticket-execution/`, read `workspaces/ticket-execution/stages/.run-lock`. When that file exists, do not edit the workspace. Say the key and the start time, and wait until the file is gone.

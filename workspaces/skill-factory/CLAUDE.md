@@ -70,3 +70,5 @@ Pipeline Status: skill-factory
 Each stage writes its output to its own `output/` folder. The next stage reads from there. If you edit an output file between stages, the next stage picks up your edits.
 
 New-skill requests flow 01 through 06 in sequence. Existing-skill maintenance requests skip 02-clarify (always) and usually skip 03-research, entering directly at 04-draft-and-test with the current skill folder as input.
+
+Before editing `workspaces/ticket-execution/`, read `workspaces/ticket-execution/stages/.run-lock`. When that file exists, do not edit the workspace. Tell the user the key on line 1 and the start time on line 2, and wait until the file is gone.

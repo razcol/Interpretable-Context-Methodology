@@ -22,7 +22,8 @@ model-workspace-protocol/
     ├── course-deck-production/        (unstructured material -> course PowerPoints)
     ├── workspace-builder/             (builds new MWP workspaces)
     ├── skill-factory/                 (create and maintain agent skills, validated via real usage)
-    └── figma-section-fields/          (Figma layer to a Server/Client section in your Next repos: new, sync, resync, element routes, browser-checked)
+    ├── figma-section-fields/          (Figma layer to a Server/Client section in your Next repos: new, sync, resync, element routes, browser-checked)
+    └── ticket-execution/              (Jira ticket to planned, implemented, browser-checked work, handed to you running locally; commit and push only after you approve)
 ```
 
 ## Routing
@@ -33,6 +34,7 @@ model-workspace-protocol/
 | Build a new workspace for any domain | `workspaces/workspace-builder/CLAUDE.md` |
 | Create or maintain an agent skill | `workspaces/skill-factory/CLAUDE.md` |
 | Turn a Figma layer into a section of a Next.js repo (new section, sync to an ACF group, resync drift, restyle one control) | `workspaces/figma-section-fields/CLAUDE.md` |
+| Work a Jira ticket end to end in its local repo (intake, plan, implement, verify, hand off running, release on approval) | `workspaces/ticket-execution/CLAUDE.md` |
 | Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
 | Drive a browser (screenshots, visual diffs, page data, console errors, interaction) | `_core/skills/browser-cdp/SKILL.md` |
 | Generate a planned Excalidraw flowchart of an idea or system | `_core/skills/system-flowcharts/SKILL.md` |

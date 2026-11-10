@@ -1,0 +1,17 @@
+[
+  {"action": "wait_for", "selector": "#identity", "state": "visible"},
+  {"action": "type", "selector": "#identity", "secret": "NSS_TEST_ID"},
+  {"action": "click", "selector": ".submit-row button"},
+  {"action": "wait_for", "selector": ".terms-title"},
+  {"action": "click", "selector": ".terms-note"},
+  {"action": "press", "key": "End"},
+  {"action": "press", "key": "End"},
+  {"action": "wait_for", "selector": "#terms:not([disabled])"},
+  {"action": "click", "selector": "#terms"},
+  {"action": "click", "selector": ".terms-submit button"},
+  {"action": "wait_for", "selector": ".loginForm input"},
+  {"action": "type", "selector": ".loginForm input", "secret": "NSS_TEST_OTP", "clear": false},
+  {"action": "click", "selector": ".loginForm .submit-row button"},
+  {"action": "wait_for", "text": "האזור האישי שלי"},
+  {"action": "assert_url", "contains": "/homepage"}
+]

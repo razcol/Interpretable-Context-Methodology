@@ -55,6 +55,18 @@ For long flows, put the JSON in a file and use `--steps-file flow.json`.
 
 Session cookies (no expiry) may not survive a restart. Persistent cookies do. Check with `state.js cookies-get --profile work --domain example.com` and read `expires`.
 
+### 4b. Scripted test login (local dev server, test identity)
+
+For a test identity on a local dev server only, not a real account. The steps live in a file with `"secret"` keys; the values live in a secrets file outside every repo.
+
+```bash
+node scripts/interact.js --fresh-context --url http://localhost:3000/login \
+  --steps-file <login-steps.json> --secrets-file ~/.config/ticket-execution/test-logins.env \
+  --steps '...'   # or append the page check to the same steps file
+```
+
+An app that keeps its session in `sessionStorage` loses it in every new tab. Then the login and the page check must run in one tab: one `--fresh-context` call with the login steps followed by `goto` and the checks, or a `--new-tab` login call followed by calls without `--new-tab`, which continue in that tab.
+
 ## 5. Gather information from a page
 
 ```bash

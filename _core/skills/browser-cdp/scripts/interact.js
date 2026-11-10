@@ -1,10 +1,13 @@
-// Usage: node scripts/interact.js (--steps '<json array>' | --steps-file FILE) [--url URL] [--new-tab]
-//        [--viewport 1280x800] [--out-dir DIR] [--profile NAME] [--timeout MS]
+// Usage: node scripts/interact.js (--steps '<json array>' and/or --steps-file FILE; file steps run first) [--url URL] [--new-tab | --fresh-context]
+//        [--secrets-file FILE] [--responses 'substr,substr'] [--viewport 1280x800] [--out-dir DIR] [--profile NAME] [--timeout MS]
 // Runs steps in order on the current tab (the tab is kept open between calls so later calls continue the flow).
+// --fresh-context runs the steps in a new browser context (no cookies, storage or cache) and closes it at the end.
+// --responses records responses whose URL or request body contains one of the substrings (status, body start).
 // Stops at the first failing step. Actions:
 //   {"action":"goto","url":"https://..."}
 //   {"action":"click","selector":"css"}
 //   {"action":"type","selector":"css","text":"...","clear":true}   (clear defaults to true)
+//   {"action":"type","selector":"css","secret":"NAME"}   (types NAME from --secrets-file; the value is never printed)
 //   {"action":"press","key":"Enter"}
 //   {"action":"select","selector":"css","value":"..."}
 //   {"action":"wait_for","selector":"css","state":"visible|hidden"}  or  {"action":"wait_for","text":"..."}
@@ -26,17 +29,33 @@ async function settle(page) {
   }
 }
 
-function loadSteps(args) {
-  let raw = args.steps;
-  if (!raw && args.stepsFile) raw = fs.readFileSync(args.stepsFile, 'utf8');
-  if (!raw) throw new CliError('USAGE', 'Provide --steps JSON or --steps-file FILE', EXIT.USAGE);
+function parseSteps(raw, from) {
   let steps;
   try {
     steps = JSON.parse(raw);
   } catch (e) {
-    throw new CliError('USAGE', `Steps are not valid JSON: ${e.message}`, EXIT.USAGE);
+    throw new CliError('USAGE', `Steps in ${from} are not valid JSON: ${e.message}`, EXIT.USAGE);
   }
-  if (!Array.isArray(steps) || steps.length === 0) throw new CliError('USAGE', 'Steps must be a non-empty JSON array', EXIT.USAGE);
+  if (!Array.isArray(steps)) throw new CliError('USAGE', `Steps in ${from} must be a JSON array`, EXIT.USAGE);
+  return steps;
+}
+
+// With both, the file's steps run first (a shared login), then --steps.
+function loadSteps(args) {
+  if (!args.steps && !args.stepsFile) throw new CliError('USAGE', 'Provide --steps JSON or --steps-file FILE', EXIT.USAGE);
+  let fileRaw;
+  if (args.stepsFile) {
+    try {
+      fileRaw = fs.readFileSync(args.stepsFile, 'utf8');
+    } catch {
+      throw new CliError('FILE_NOT_FOUND', `Steps file not readable: ${args.stepsFile}`, EXIT.USAGE);
+    }
+  }
+  const steps = [
+    ...(fileRaw !== undefined ? parseSteps(fileRaw, '--steps-file') : []),
+    ...(args.steps ? parseSteps(args.steps, '--steps') : []),
+  ];
+  if (steps.length === 0) throw new CliError('USAGE', 'Steps must be a non-empty JSON array', EXIT.USAGE);
   steps.forEach((s, i) => {
     if (!s || !ACTIONS.includes(s.action)) throw new CliError('USAGE', `Step ${i}: unknown action "${s && s.action}". Allowed: ${ACTIONS.join(', ')}`, EXIT.USAGE);
   });
@@ -48,19 +67,67 @@ const need = (s, i, key) => {
   return s[key];
 };
 
+// KEY=VALUE lines; blank lines and # comments ignored; surrounding quotes stripped.
+function loadSecrets(file) {
+  if (!file) return {};
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch {
+    throw new CliError('FILE_NOT_FOUND', `Secrets file not readable: ${file}`, EXIT.USAGE);
+  }
+  const out = {};
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (m && !line.trimStart().startsWith('#')) out[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+  }
+  return out;
+}
+
+// Secret values must never reach stdout, even inside page text or error messages.
+function scrub(value, secrets) {
+  let json = JSON.stringify(value);
+  for (const [name, v] of Object.entries(secrets)) {
+    if (v) json = json.split(JSON.stringify(v).slice(1, -1)).join(`<secret ${name}>`);
+  }
+  return JSON.parse(json);
+}
+
+const redactBody = (t) => t.replace(/[A-Za-z0-9+/_=-]{32,}/g, '<redacted>').slice(0, 2000);
+
 run(async () => {
   const args = parseArgs(process.argv.slice(2), {
-    strings: ['steps', 'steps-file', 'url', 'viewport', 'out-dir', 'profile', 'timeout'],
-    booleans: ['new-tab'],
+    strings: ['steps', 'steps-file', 'url', 'viewport', 'out-dir', 'profile', 'timeout', 'secrets-file', 'responses'],
+    booleans: ['new-tab', 'fresh-context'],
   });
   const steps = loadSteps(args);
+  const secrets = loadSecrets(args.secretsFile);
+  steps.forEach((s, i) => {
+    if (s.secret !== undefined && secrets[s.secret] === undefined) {
+      throw new CliError('USAGE', `Step ${i}: secret "${s.secret}" is not in ${args.secretsFile ? 'the secrets file' : '--secrets-file (not given)'}`, EXIT.USAGE);
+    }
+  });
   const timeout = timeoutOf(args);
   const outDir = ensureDir(args.outDir || DEFAULT_OUT);
   const vp = parseViewport(args.viewport || '1280x800');
+  const watch = (args.responses || '').split(',').map((x) => x.trim()).filter(Boolean);
 
-  return withBrowser(profileOf(args), async (browser) => {
+  try {
+    return scrub(await withBrowser(profileOf(args), (browser) => runSteps(browser, args, steps, secrets, { timeout, outDir, vp, watch })), secrets);
+  } catch (e) {
+    if (e instanceof CliError && e.details) e.details = scrub(e.details, secrets);
+    if (e && e.message) e.message = scrub(e.message, secrets);
+    throw e;
+  }
+});
+
+async function runSteps(browser, args, steps, secrets, { timeout, outDir, vp, watch }) {
+  const context = args.freshContext ? await browser.createBrowserContext() : null;
+  try {
     let page;
-    if (!args.newTab) {
+    if (context) {
+      page = await freshPage(context, vp);
+    } else if (!args.newTab) {
       // Only real content tabs count. Chrome also exposes internal pages (chrome://omnibox-popup..., devtools) as "pages".
       const pages = (await browser.pages()).filter((p) => !p.isClosed() && /^(https?:|file:|about:blank$)/.test(p.url()));
       page = [...pages].reverse().find((p) => p.url() !== 'about:blank') || pages[pages.length - 1];
@@ -71,6 +138,23 @@ run(async () => {
     const consoleErrors = [];
     page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()));
     page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
+
+    const pending = [];
+    if (watch.length) {
+      page.on('response', (res) => {
+        const req = res.request();
+        const hay = `${res.url()}\n${req.postData() || ''}`;
+        const matched = watch.find((w) => hay.includes(w));
+        if (!matched) return;
+        pending.push(
+          res
+            .text()
+            .then((t) => redactBody(t))
+            .catch(() => null)
+            .then((body) => ({ match: matched, method: req.method(), url: res.url(), status: res.status(), body })),
+        );
+      });
+    }
 
     const results = [];
     if (args.url) {
@@ -97,7 +181,12 @@ run(async () => {
           case 'type': {
             const el = await waitForSelector(page, need(s, i, 'selector'), timeout, { visible: true });
             if (s.clear !== false) await el.evaluate((e) => { e.focus(); if ('value' in e) e.value = ''; });
-            await el.type(String(need(s, i, 'text')));
+            if (s.secret !== undefined) {
+              await el.type(String(secrets[s.secret]));
+              r.secret = s.secret;
+            } else {
+              await el.type(String(need(s, i, 'text')));
+            }
             break;
           }
           case 'press':
@@ -145,9 +234,26 @@ run(async () => {
         results.push(r);
       } catch (e) {
         const base = e instanceof CliError ? e : new CliError(e && e.name === 'TimeoutError' ? 'TIMEOUT' : 'STEP_FAILED', e.message, e && e.name === 'TimeoutError' ? EXIT.TIMEOUT : EXIT.INTERNAL);
-        throw new CliError(base.code, `Step ${i} (${s.action}) failed: ${base.message}`, base.exit, { failedStep: i, completed: results, currentUrl: page.url() });
+        const responses = await Promise.all(pending);
+        throw new CliError(base.code, `Step ${i} (${s.action}) failed: ${base.message}`, base.exit, {
+          failedStep: i,
+          completed: results,
+          currentUrl: page.url(),
+          ...(watch.length ? { responses } : {}),
+        });
       }
     }
-    return { currentUrl: page.url(), stepsRun: steps.length, results, consoleErrors: consoleErrors.slice(0, 20) };
-  });
-});
+    await settle(page);
+    const responses = await Promise.all(pending);
+    return {
+      currentUrl: page.url(),
+      stepsRun: steps.length,
+      results,
+      consoleErrors: consoleErrors.slice(0, 20),
+      ...(watch.length ? { responses } : {}),
+      ...(context ? { freshContext: true } : {}),
+    };
+  } finally {
+    if (context) await context.close().catch(() => {});
+  }
+}

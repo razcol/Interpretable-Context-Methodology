@@ -1,6 +1,6 @@
 # Report template
 
-Write this file as `session-extract-<YYYY-MM-DD>-<topic-slug>.md` in the working directory. If that name exists, use `-2`, then `-3`. Never overwrite.
+This is the shape of the chat reply. Do not write it to a file unless the user explicitly asks to save this brief.
 
 Keep section titles exact. Cite a transcript uuid on every claim in Keep, Extra or harmful, and Still missing. A uuid with no parent jsonl is listed under Gaps, not as a normal session.
 

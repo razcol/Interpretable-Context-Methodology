@@ -194,3 +194,19 @@ Do not put credentials or tokens in this file.
   - Two different ACLI paths return two different shapes for the same data (full object via `view --fields attachment` vs. trimmed `id`/`name`/`size` via `attachment list`) -- worth knowing which one to reach for depending on whether you need the download URL/author or just a quick listing.
   - No native ACLI way to download attachment content -- would require falling back to REST/curl for that one operation even if ACLI is otherwise the primary method for everything else on the same issue.
 - **Would reuse as-is?** Yes, for metadata. Content download needs its own dedicated test (REST call against the `content` URL) before SKILL.md can claim attachments are fully covered -- currently only listing/metadata is confirmed, not retrieval of the actual file.
+
+---
+
+### 2026-11-09 -- full-field view, comment shapes, ADF images (building `workspaces/ticket-execution/tools/intake.py`)
+
+- **Goal:** one call that returns everything a ticket intake needs: description with images, comments, attachments, links, custom fields (repro and acceptance live there when a project uses them).
+- **Approach tried:** C (ACLI) only. REST download path written but not run (no `JIRA_API_TOKEN` on this machine yet).
+- **Details:**
+  - `acli jira workitem view <KEY> --fields '*all' --json` works and returns every field (116 on MAIN-4251). The response has a `names` key, but it is empty, so custom fields show as `customfield_<id>` only. ACLI has no field-list command (`acli jira field` only has create, delete, restore, update); names need REST `GET /rest/api/3/field`.
+  - `workitem search --fields "key,summary,comment"` fails: `field 'comment' is not allowed`. Comment counts need a per-key call.
+  - Two comment shapes: `view --fields comment` gives `fields.comment.{total, comments[]}` with ADF `body`, `created`, and a full `author` object. `comment list --key` gives `{comments[], isLast, total}` with plain-text `body`, `author` as a display-name string, and no date. `view` is the one to keep (dates, images inside comments, `total` for a truncation check).
+  - ADF images: `mediaSingle > media` nodes carry `attrs.alt` equal to the attachment `filename` (OND-7: `image-20261019-075043.png`). `attrs.id` is a media-services id, not the attachment id. Match by filename.
+  - Not-found key: empty stdout, stderr `Issue does not exist or you do not have permission to see it.`
+  - Tested on OND-7, OND-32 (6 comments, 6 images), NSS-1, MAIN-4251, ZZZ-99999. Hebrew text came through intact.
+- **Result:** worked for everything except attachment bytes, which still need REST with Basic Auth. That path is untested.
+- **Would reuse as-is?** Yes. `tools/intake.py` in ticket-execution wraps this and writes `ticket.md`. First real download test should be logged here.
