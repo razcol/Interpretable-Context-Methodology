@@ -1,0 +1,26 @@
+{
+  "checked": "2026-11-16",
+  "harnesses": {
+    "claude-code": {
+      "tool": "Agent",
+      "mid":    {"default": {"subagent_type": "general-purpose", "model": "sonnet", "effort": "high"}},
+      "strong": {"default": {"subagent_type": "general-purpose", "model": "opus", "effort": "high"},
+                 "hardest": {"subagent_type": "general-purpose", "model": "opus", "effort": "xhigh"}},
+      "never": ["haiku", "/fast", "unset model", "fork when a tier is required (ignores model and effort)"]
+    },
+    "cursor": {
+      "tool": "Task",
+      "mid": {
+        "default": {"subagent_type": "generalPurpose", "model": "claude-sonnet-5-5-high"},
+        "grok":    {"subagent_type": "generalPurpose", "model": "grok-4.7-medium"}
+      },
+      "strong": {
+        "default": {"subagent_type": "generalPurpose", "model": "claude-opus-5-5-medium"},
+        "hardest": {"subagent_type": "generalPurpose", "model": "claude-opus-5-5-high"},
+        "grok":    {"subagent_type": "generalPurpose", "model": "grok-4.7-high"},
+        "grok-hardest": {"subagent_type": "generalPurpose", "model": "claude-opus-5-5-high"}
+      },
+      "never": ["fast", "auto", "inherit", "*-fast", "composer-*", "cursor-grok-*", "grok-4.7-low", "grok-4.7-xhigh"]
+    }
+  }
+}

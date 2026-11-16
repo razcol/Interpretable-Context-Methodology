@@ -11,6 +11,8 @@ Registry of every skill this workspace has built or maintains. Updated by `stage
 | session-extract | `_core/skills/session-extract/` (mirrored at `~/.cursor/skills/session-extract/`) | Search past Cursor sessions on this machine across projects, filter for a tool or workflow, and return a cited brief in the chat for changing skills, tools, or workspaces | active (approved 2026-11-01 after a figma-cli corpus test; 2026-11-08: brief stays in the chat) |
 | session-debrief | `_core/skills/session-debrief/` | Explains one Cursor or Kiro CLI session to the person who must decide: the answer first, how it works, each open decision with a recommendation, what was left undone, and the follow-up questions already answered | active (approved 2026-11-08; Rovo retest 6.5/7, 68 script tests) |
 
+| subagent-orchestration | `_core/skills/subagent-orchestration/` | How to run work as an orchestrator with subagents in Cursor or Claude Code: when to split, unit tables, briefs with paths only, explicit model and effort per spawn (mid or strong, never fast) via `scripts/models.py`, checking returns, retry or blocked or dropped, one progress line per unit | active (approved 2026-11-16; Claude Code tested on a 7-unit fan-out and the OND-20 debug; Cursor checked by `models.py check` only, live ticket-execution run pending) |
+
 ## Status values
 
 - `active` -- in use, considered current

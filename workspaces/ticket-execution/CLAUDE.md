@@ -41,13 +41,13 @@ A run is keyed by the Jira key. Its records live in `stages/0N-*/output/<KEY>/` 
 
 ## Orchestrator
 
-The session that read this file only orchestrates. It does not intake, research, plan, edit the repo, or verify. The orchestrator writes no files except `stages/.run-lock`, and that includes skill logs.
+The session that read this file only orchestrates, following `../../_core/skills/subagent-orchestration/SKILL.md` (role, briefs, model and effort, checking returns, retry, blocked, progress lines). This section keeps only what is specific to this workflow. Each stage is one unit, run in number order, never in parallel. The orchestrator does not intake, research, plan, edit the repo, or verify. It writes no files except `stages/.run-lock`, and that includes skill logs.
 
-On `start`, `plan`, `implement` or `change`, write `stages/.run-lock` before the first spawn: the key on line 1, the start time on line 2. If the file already names a different key, stop and report that key and time. Remove the file when stage 06 has posted, and on `stop <KEY>`.
+On `start`, `plan`, `implement` or `change`, write `stages/.run-lock` before the first spawn (the skill's run lock: key on line 1, start time on line 2). If the file already names a different key, stop and report that key and time. Remove the file when stage 06 has posted, and on `stop <KEY>`.
 
-Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The prompt names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Tell it to write only that stage's `output/<KEY>/`, to follow that CONTEXT, and to return the output path, each audit row, and whether a checkpoint is waiting. Do not restate the ticket, the code, or earlier stages in that prompt. Never put a test identity, OTP, password or token in a prompt; name the secrets file and the key names from `targets/repos.md` "Test logins".
+Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `output/<KEY>/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `targets/repos.md` "Test logins".
 
-A Task call without `model` is a failed check. Respawn that stage with `model` set before opening the next stage. Shape of a call, with the model filled in:
+Shape of a call, with the model filled in:
 
 ```text
 subagent_type: generalPurpose
@@ -56,24 +56,24 @@ description: stage 04 <KEY>
 prompt: Read stages/04-implement/CONTEXT.md (version line included) and every path in its Inputs table. Key: <KEY>. Write only stages/04-implement/output/<KEY>/. Return the output path, each audit row, and whether a checkpoint is waiting.
 ```
 
-If the output file is missing, or a checkpoint is not waiting and the audit still fails, spawn that same stage once more with the failed rows. A return that carries the record text instead of writing the file counts as a missing file. The orchestrator does not run `tools/write_record.py` and does not write the record. If it fails again, stop and report. Do not open the next stage's files yourself.
+A stage fails its check when the output file is missing, or when no checkpoint is waiting and the audit still fails. Retry and stop follow the skill. The orchestrator does not run `tools/write_record.py`.
 
 ### Subagent model
 
-This table is the user's instruction for every stage spawn: pass `model` on each Task call, chosen from the stage's work and risk. `subagent_type` stays `generalPurpose`, because every stage writes a record.
+This table is the user's instruction for every stage spawn, in the skill's unit-table format. Get the slug for a tier from `python3 ../../_core/skills/subagent-orchestration/scripts/models.py pick --harness cursor --tier <tier>` (add `--retry` for a retry). `subagent_type` stays `generalPurpose`, because every stage writes a record.
 
-| Stage | Model | Leave the base only when |
-|-------|-------|--------------------------|
-| 01 intake | fast | Never needed; a failed audit retries as mid |
+| Stage | Base tier | Leave the base only when |
+|-------|-----------|--------------------------|
+| 01 intake | mid | Never; a failed audit retries as strong |
 | 02 research | mid | `intake.md` names more than one root, or has more than five acceptance lines |
 | 03 plan | strong | Always strong |
 | 04 implement | mid | The plan changes a shared service's exported signature or types, or touches auth, payments, `prisma/` or a root layout. A file that merely lives under `shared/` stays mid |
 | 04 change pass | mid | The change text adds behavior, or the pass comes after a FAIL. A simplify, reduce or remove pass stays mid |
-| 05 verify | mid | A row sends a form and "Form submits" is `yes`. The scripted sign-in alone stays mid. Drop to fast when every remaining row is a plain screenshot |
-| 06 handoff | fast | Verify had a FAIL row. Sign-in alone stays fast |
+| 05 verify | mid | A row sends a form and "Form submits" is `yes`. The scripted sign-in alone stays mid |
+| 06 handoff | mid | Verify had a FAIL row. Sign-in alone stays mid |
 | 07 release | mid | The tree has files the handoff did not list |
 
-Tiers: fast `composer-2.5-fast`, mid `claude-sonnet-5-5-high`, strong `claude-opus-5-5-medium`. A retry after a failed audit goes one tier above the first attempt. When a slug is rejected, use the next tier up; never leave `model` out.
+Today `models.py` gives mid `claude-sonnet-5-5-high` and strong `claude-opus-5-5-medium` (`claude-opus-5-5-high` for a strong retry). No fast tier.
 
 ### Before stage 05 on a login root
 
@@ -90,9 +90,9 @@ Order for `start` and for `plan <KEY>`: the stages in the trigger, in number ord
 
 When stage 05 returns FAIL rows caused by the change, spawn 04 once with those rows, then 05 again, then 06 even if a FAIL remains. A checkpoint that asks you to choose (an unknown repo root) stops the run. Report it and wait.
 
-Between stages, one line: `stage 04 → claude-sonnet-5-5-high (base mid; no step-up) → <output path>`. Name the model you passed and why it left the base, or `no step-up`. The stage 06 subagent posts the handoff message. That is the first full message. Do not spawn 07 until `approve <KEY>` or `commit <KEY>`.
+Between stages, the skill's progress line, for example `stage 04 → claude-sonnet-5-5-high (mid; base) → <output path>`. The stage 06 subagent posts the handoff message. That is the first full message. Do not spawn 07 until `approve <KEY>` or `commit <KEY>`.
 
-A notice that a background command finished is not a handoff and not a server check. `dev_server.py up` exits 0 when the starter returns; the `httpStatus` in its terminal is from startup. Do not tell the user the app is up from that file. After stage 06 has posted, that notice gets one line, from `dev_server.py status` run unsandboxed. No browser, and no edits. Before stage 06 has posted, the same status line is enough. Do not replace the stage 06 message.
+A background-command notice is not a server check (the skill's rule, applied here). `dev_server.py up` exits 0 when the starter returns; the `httpStatus` in its terminal is from startup. Do not tell the user the app is up from that file. After stage 06 has posted, that notice gets one line, from `dev_server.py status` run unsandboxed. No browser, and no edits. Before stage 06 has posted, the same status line is enough. Do not replace the stage 06 message.
 
 ## Routing
 
@@ -107,7 +107,7 @@ A notice that a background command finished is not a handoff and not a server ch
 
 ## What to Load
 
-This table is for the subagent of that stage. The orchestrator loads this file only.
+This table is for the subagent of that stage. The orchestrator loads this file and `../../_core/skills/subagent-orchestration/SKILL.md` (plus the Cursor harness file it names).
 
 | Stage | Load These | Do NOT Load |
 |-------|-----------|-------------|

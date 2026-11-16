@@ -16,6 +16,7 @@ model-workspace-protocol/
 │   └── skills/                        (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
 │       ├── jira-research/             (searching/extracting info from Jira -- experimental)
 │       ├── browser-cdp/               (drive Chrome via CDP scripts: screenshots, diffs, overflow at set widths, DOM, console, interaction -- provisional)
+│       ├── subagent-orchestration/    (split work into units, brief and spawn subagents with explicit model tiers, check returns)
 │       ├── system-flowcharts/         (plan and generate editable Excalidraw flowcharts)
 │       └── wp-graphql/                (fixed commands for a project's WordPress GraphQL schema)
 └── workspaces/
@@ -37,6 +38,7 @@ model-workspace-protocol/
 | Work a Jira ticket end to end in its local repo (intake, plan, implement, verify, hand off running, release on approval) | `workspaces/ticket-execution/CLAUDE.md` |
 | Search/extract data from Jira | `_core/skills/jira-research/SKILL.md` |
 | Drive a browser (screenshots, visual diffs, page data, console errors, interaction) | `_core/skills/browser-cdp/SKILL.md` |
+| Split a task across subagents (when to split, briefs, model and effort per spawn, checking returns) | `_core/skills/subagent-orchestration/SKILL.md` |
 | Generate a planned Excalidraw flowchart of an idea or system | `_core/skills/system-flowcharts/SKILL.md` |
 | Read a project's live WordPress GraphQL schema for ACF sections, check fragments, or compare a field plan with a group | `_core/skills/wp-graphql/SKILL.md` |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
