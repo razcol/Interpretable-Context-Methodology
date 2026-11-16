@@ -15,8 +15,11 @@ The chat is often rooted in the app repo, so the records, the browser and the ot
 | `curl` to `localhost` | `all` |
 | `npm run lint` or `npx eslint` in an app root | `all` |
 | `write_record.py` | `all` (it writes outside the app-repo sandbox) |
+| wp-graphql `python3 scripts/wp_graphql.py` (every command, run from the skill folder) | `all` |
 
 `git status`, `git diff` and reads need none. `dev_server.py status` needs `all`: a sandboxed status reports "not answering" when the server is up. Never restart on that result.
+
+A sandboxed wp-graphql call can come back as `AUTH_FAILED` or `HTTP_FAILED` when WordPress is fine. That result is not a schema fact. Rerun it with `all` before recording it.
 
 ## Writing records
 

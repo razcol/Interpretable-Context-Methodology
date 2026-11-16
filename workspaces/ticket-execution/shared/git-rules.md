@@ -10,7 +10,7 @@ After stage 06 the run stops for your review of the running app. Only `approve <
 
 | Stage | Allowed | Never |
 |-------|---------|-------|
-| 01 to 03 | Read files, `git log`, `git show`, `git diff`, `git fetch` | Any edit under the root, branch, checkout, worktree |
+| 01 to 03 | Read files, `git log`, `git show`, `git diff`, `git fetch`. Stage 02 may also run the wp-graphql commands named in its rules. Those commands write nothing under the root | Any edit under the root, branch, checkout, worktree |
 | 04 | `git fetch`, create the branch and work tree named in `plan.md`, edit files | `git add`, `stash`, `commit`, `amend`, `reset`, `rebase`, `push`, PR API calls |
 | 05, 06 | Run lint, the dev server and the browser | Same as 04, and no code edits (a fix is a new stage 04 assignment) |
 | 07 | `git add` of the reviewed files, `commit`, `push -u origin <branch>` | `--force`, `amend`, PR API calls, Jira writes |

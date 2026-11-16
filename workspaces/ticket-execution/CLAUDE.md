@@ -112,7 +112,7 @@ This table is for the subagent of that stage. The orchestrator loads this file o
 | Stage | Load These | Do NOT Load |
 |-------|-----------|-------------|
 | 01 | Its CONTEXT and reference, `shared/tools.md` "intake.py", `targets/repos.md`, the jira-research SKILL sections named | The repo's code, later stages |
-| 02 | Its CONTEXT and reference, the key's `intake.md` and images, `shared/git-rules.md`, `shared/tools.md` "Writing records" | Other keys' records, later stages |
+| 02 | Its CONTEXT and reference, the key's `intake.md` and images, `shared/git-rules.md`, `shared/tools.md` "Permissions" and "Writing records", the wp-graphql SKILL sections named | Other keys' records, later stages, the wp-graphql script, store and cache |
 | 03 | Its CONTEXT and reference, the key's `intake.md` and `research.md`, `targets/repos.md`, `shared/git-rules.md`, `shared/tools.md` "Writing records" | Tool internals, later stages |
 | 04 | Its CONTEXT and reference, the key's `plan.md`, `intake.md` "Acceptance", `research.md`, `shared/git-rules.md`, `targets/repos.md` "Lint", `shared/tools.md` "Writing records" | Stage 05 to 07 files |
 | 05 | Its CONTEXT and reference, the key's `plan.md` and `implement-record.md`, `shared/tools.md`, `targets/repos.md` "Test logins", the browser-cdp SKILL sections named | Stage 01 and 02 references, the secrets file |

@@ -32,6 +32,7 @@ Write the plan stage 04 will follow: scope, files, branch, work tree, the accept
 | Branch | Name follows the repo pattern and includes the key |
 | No edits | `git status` of the root is the same as in `research.md` |
 | Small | No file or change that no checklist row needs |
+| WordPress | Every WordPress name in "Change", "Files", "Risks", "Not doing", "Questions" or the checklist matches a live block in `research.md`. "create", "missing" or "does not exist" only for a name under `absent` on `ok: true` for the run's root. A new `.gql` selection only for a name under `present` on that root. A name under "Unconfirmed live", or with no live block, appears only as unconfirmed, and its checklist row says `not checkable locally: live schema unconfirmed for <name> (<code>)` |
 | Defaults | Every question states the default this run will take, or the section says none |
 
 ## Outputs

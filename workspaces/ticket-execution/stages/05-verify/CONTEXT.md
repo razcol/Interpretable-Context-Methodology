@@ -18,7 +18,7 @@ Check each acceptance line in the running app with a headless browser, and recor
 
 ## Process
 
-0. Sort the checklist before any server or browser. When "Form submits" is not `yes`, every row that sends a form is NOT VERIFIED with "submit not allowed", and it gets no browser. When no row remains, write the report and return. Do not start the server or the browser for an empty remainder.
+0. Sort the checklist before any server or browser. When "Form submits" is not `yes`, every row that sends a form is NOT VERIFIED with "submit not allowed", and it gets no browser. A row whose Check says `not checkable locally` is NOT VERIFIED with that text, and it gets no browser. When no row remains, write the report and return. Do not start the server or the browser for an empty remainder.
 1. Start or reuse the dev server for the app root as `references/verify-steps.md` "Server" says. When lint was deferred, run it now.
 2. Start the headless browser (`browser.js start`, or reuse) only when a row remains.
 3. For each remaining row, run its check on its URL at its widths in a fresh browser context. One `interact.js` call covers every remaining row on the same page and width. For a page behind a login, that context signs in only through the root's steps file (`references/verify-steps.md` "Pages behind a login"). Send a form only as "Form submits" says. Open every screenshot and compare it with the ticket image. Console and page errors: on a page behind a login, take `consoleErrors` from that page's sign-in call, and do not run `capture.js` there. On a page with no login, run `capture.js` once per review URL. Errors never add a sign-in call.

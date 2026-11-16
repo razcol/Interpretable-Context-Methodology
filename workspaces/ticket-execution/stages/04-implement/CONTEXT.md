@@ -24,7 +24,7 @@ Do not read stage 05, 06 or 07 records, contexts or references. This stage's inp
 
 1. Read `plan.md` as written, including each default under "Questions". On a change pass, also read the change text in the assignment. Do not ask which word started the run.
 2. Set up the branch and work tree as `plan.md` says, with the commands in `references/work-tree.md`. Write the branch and path into `implement-record.md` first.
-3. Make the change file by file in the plan's order. Follow the repo's own patterns (the sibling and nearby files in `research.md`), not general habits.
+3. Make the change file by file in the plan's order. Follow the repo's own patterns (the sibling and nearby files in `research.md`), not general habits. Do not add a `.gql` selection for a WordPress name that `research.md` does not list under `present` in an `ok: true` live block on the run's root, even when the plan names it; list it under "Deviations".
 4. In a change pass, change only what your text asks, on the same branch. Record the diff size against the base before the edit and after it (`git diff --stat origin/dev`). When the text says to simplify, reduce or remove, the after diff must be smaller, or the record explains why not. Name one smaller option you considered and rejected, with the reason. On a simplify, reduce or remove pass, read `git diff origin/dev` after the edit, which covers the whole branch and not only this pass. List each added item of these three kinds:
    - a new field in an `interface` or `type`
    - a new helper: a function, an arrow-function const, or a hook that does not exist on `origin/dev`
