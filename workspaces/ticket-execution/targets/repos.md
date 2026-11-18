@@ -11,6 +11,7 @@ All Next repos keep the app in `code/` (package.json, `app/`, `prisma/`). `npm r
 | NSS | self-service | /home/dev/self-service-cfs/self-service-cfs-next | `NSS-<id>-<kebab>` | `<root>-NSS-<id>` (sibling folder) | `NSS-<id> <Sentence>` | `/changeAccount` (the account form; pages need a login, see "Test logins". `/homepage` only shows a loading spinner and is not a review page) |
 | MAIN | jaecoo | /home/dev/jaecoo-next | `MAIN-<id>-<kebab>` | main tree | `MAIN-<id>: <Sentence>.` | none yet |
 | MAIN | colmobil | /home/dev/colmobilnext | `bugfix/MAIN-<id>-<kebab>` | main tree | `<Sentence> (MAIN-<id>).` | none yet |
+| PER | ai-system | /home/dev/ai-system | `PER-<id>-<kebab>` | main tree | `PER-<id> <Sentence>` | none yet |
 
 ## Rules
 

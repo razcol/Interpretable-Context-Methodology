@@ -210,3 +210,60 @@ Do not put credentials or tokens in this file.
   - Tested on OND-7, OND-32 (6 comments, 6 images), NSS-1, MAIN-4251, ZZZ-99999. Hebrew text came through intact.
 - **Result:** worked for everything except attachment bytes, which still need REST with Basic Auth. That path is untested.
 - **Would reuse as-is?** Yes. `tools/intake.py` in ticket-execution wraps this and writes `ticket.md`. First real download test should be logged here.
+
+---
+
+### 2026-11-16 -- first write: create a Task with an ADF description (PER-3)
+
+- **Goal:** turn the subagent-orchestration skill-factory findings into a new Task on the PER board (board 556).
+- **Approach tried:** C (ACLI) only.
+- **Details:**
+  - `acli jira auth status` showed the session already authenticated on `switchil.atlassian.net`; no re-login needed.
+  - `acli jira workitem create --project PER --type Task --summary "..." --description-file desc.json --assignee @me --json` -> exit 0, created PER-3. `--json` returns the full created issue object (same shape as `view`), so the key is at `.key`.
+  - `--description-file` accepts an ADF JSON document (`{"version":1,"type":"doc","content":[...]}`) and stores it as rich content: re-reading with `view --fields description --json` showed 9 headings, 6 bullet lists, 1 ordered list, 1 table, and `code` marks intact. It is not stored as raw JSON text.
+  - `--assignee @me` self-assigns; no account-id lookup needed.
+  - The board URL (`/jira/software/projects/PER/boards/556`) only gives the project key; no board flag is needed on create, since the board's filter picks the issue up.
+  - The exit-code and output-capture quirk did not appear (output was redirected to files, as advised above).
+- **Result:** worked first try.
+- **Would reuse as-is?** Yes. Build the ADF with a small script (headings, lists, tables, inline code marks) rather than plain text, so structure shows on the board. Not yet tried: `--parent`, `--label`, issue links, editing an existing item, transitions.
+
+---
+
+### 2026-11-16 -- create a Feature with a custom option field (PER-5)
+
+- **Goal:** turn the reviewed `~/.config/ai-system` migration plan into a new Feature on the PER board (board 556), with the "Scope" field set.
+- **Approach tried:** C (ACLI) for create and assign; REST (B) only to read field metadata.
+- **Details:**
+  - PER-3 had been moved to type **Feature** (id 11132). `view --fields '*all'` showed an option field `customfield_11938` with no name, because ACLI returns no field names.
+  - REST `GET /rest/api/3/issue/createmeta/PER/issuetypes` lists the types (Epic, Subtask, Task, Story, Feature, Bug). `GET .../createmeta/PER/issuetypes/11132` names `customfield_11938` "Scope", an option field with values Figma, WP, Jira, Workspaces, Skills, Tools. Credentials came from `~/.config/jira/jira.env`, sourced in a subshell and never printed.
+  - `acli jira workitem create --from-json item.json --json` sets custom fields through `"additionalAttributes": {"customfield_11938": {"value": "Workspaces"}}`. `--generate-json` prints the template.
+  - `"assignee": "@me"` inside the JSON fails: `User '<accountId>' cannot be assigned issues`, and nothing is created. Leave out the assignee, then run `acli jira workitem assign --key PER-5 --assignee @me`, which worked.
+  - The ADF description (headings, 3 tables, lists, a code block) came through intact on re-read.
+- **Result:** PER-5 created as a Feature with Scope = Workspaces, and assigned.
+- **Would reuse as-is?** Yes. For an option field, read the allowed values from createmeta first, then use `--from-json` with `additionalAttributes`. Assign in a second call.
+
+---
+
+### 2026-11-16 -- read PER-4, including attachment bytes
+
+- **Goal:** full read of bug PER-4 (summary, ADF description, comments, status, attachment metadata and the two PNG bytes) on `switchil.atlassian.net`.
+- **Approach tried:** C (ACLI) for the issue; B (REST) for attachment bytes. No writes.
+- **Details:**
+  - `acli jira workitem view PER-4 --fields summary,description,status,assignee,comment,attachment,issuetype,priority,labels,parent,issuelinks,created,updated,reporter --json` failed in the sandbox with `failed to fetch work item details` (no network). The same call with network access returned the issue (id 89400). Description is ADF with two `mediaSingle` images. Comments total 0. No issue links.
+  - `acli jira workitem attachment --help` still only lists `list` and `delete`.
+  - `GET https://switchil.atlassian.net/rest/api/3/attachment/content/88875` and `88876` with Basic Auth from the local env file (sourced in a subshell, never printed): without `-L`, HTTP 303 and a 0-byte body. With `curl -L --max-redirs 5`, HTTP 200, `image/png`, 28622 and 33121 bytes, matching the attachment metadata. The `content` URL host in the ACLI payload (`jira-prod-us-17-2.prod.atl-paas.net`) was not used.
+- **Result:** worked. Issue text and both images.
+- **Friction:** sandbox network block on the first ACLI call; attachment GET must follow the redirect.
+- **Would reuse as-is?** Yes. View via ACLI, then `curl -L` against the site host for bytes. Do not use `--location-trusted`.
+
+---
+
+### 2026-11-16 -- read PER-3 to work it
+
+- **Goal:** full read of PER-3 (summary, ADF description, comments, status, links, attachments) to carry it through skill-factory stage 04.
+- **Approach tried:** C (ACLI). No writes.
+- **Details:**
+  - `acli jira workitem view PER-3 --fields summary,description,comment,status,assignee,attachment,issuelinks,parent,labels --json`, output redirected to a file. Exit 0, about 51 KB, empty stderr. No sandbox network error this time.
+  - Rendered the ADF (headings, lists, one table) to text with a short stdlib script. Table rows flattened fine. No comments, links or attachments.
+- **Result:** worked first try.
+- **Would reuse as-is?** Yes.

@@ -116,11 +116,33 @@ acli jira workitem view PROJ-123 --fields summary,attachment --json
 acli jira workitem attachment list --key PROJ-123 --json
 ```
 **ACLI has no attachment *content* download/get command** -- `workitem
-attachment --help` only exposes `list` and `delete`. To actually fetch a
-file's bytes, take the `content` URL from the `view --fields attachment`
-response and pass it to REST/curl with the same Basic Auth credentials used
-in the REST fallback section below. This specific step (downloading actual
-file content) is still untested -- only metadata listing is confirmed.
+attachment --help` only exposes `list` and `delete`. To fetch the bytes,
+GET `https://<site>.atlassian.net/rest/api/3/attachment/content/<id>` with
+the same Basic Auth as the REST fallback, and follow redirects (`curl -L`).
+Confirmed 2026-11-16 on PER-4: without `-L` the call returns HTTP 303 and an
+empty body; with `-L` both PNGs came back HTTP 200 and the sizes matched the
+metadata. Use the site host, not the `jira-prod-*.prod.atl-paas.net` host
+in the `content` field. Do not pass `--location-trusted` (that would forward
+the Authorization header to the media host).
+
+Create a work item (write) -- confirmed working 2026-11-16 (PER-3). Only
+when the user asks for one:
+```bash
+acli jira workitem create --project PROJ --type Task --summary "..." \
+  --description-file desc.json --assignee @me --json
+```
+`--description-file` takes plain text or an ADF document
+(`{"version":1,"type":"doc","content":[...]}`). ADF keeps headings, lists,
+tables and code marks. `--json` returns the created issue; the key is at
+`.key`. A board URL only gives the project key, and no board flag is needed.
+Parent, labels, links, edits and transitions are not tested yet.
+
+Custom fields (confirmed 2026-11-16, PER-5): use `--from-json` (template from
+`--generate-json`) with `"additionalAttributes": {"customfield_NNNNN": {"value": "<option>"}}`.
+ACLI shows no field names or allowed values. Read them from REST
+`GET /rest/api/3/issue/createmeta/<PROJECT>/issuetypes/<typeId>`. Inside the
+JSON, `"assignee": "@me"` fails ("cannot be assigned issues"). Leave it out and run
+`acli jira workitem assign --key <KEY> --assignee @me` afterwards.
 
 Run `acli jira workitem --help` / `acli jira workitem <subcommand> --help`
 to see current flags -- don't assume flags shown here are exhaustive or

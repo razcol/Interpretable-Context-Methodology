@@ -148,3 +148,31 @@ Append an entry every time the skill is used, even when it works. Record the com
 ## 2026-11-09 NSS-4 starter notice again
 - Attempted: `navigate.js --fresh-context` on http://localhost:3000/homepage (profile nss4-notice, port 9341), then stop.
 - Outcome: status 200, final URL http://localhost:3000/login, title "כניסה לאזור האישי | כלמוביל מימון". The result dialog did not appear.
+
+## 2026-11-10 figma-section-fields stage 05 (FinishesPricing 2556-14120)
+- Attempted: browser.js start, screenshot/diff/measure on file:// preview and fluid export, measure/screenshot/interact/snapshot on http://localhost:3000 (existing dev server), harness page.
+- Outcome: all passed. Surprise: `browser.js start` times out inside the sandbox (profile under ~/.cache); it works with sandbox disabled. interact.js has no hover action and screenshots only the viewport.
+
+## 2026-11-10 FinishesPricing check icon
+- Attempted: screenshot of a local SVG comparison, then measure/snapshot of http://127.0.0.1:3000/model/ora-05-raz-test/ `#section-16`.
+- Outcome: the new circled check matches the Figma crop. After the default engine selection, the section is 1170px tall and shows the grey checks, the black היברידי pill, and the price block. The dev server took about 30s to answer. Stopped the browser.
+
+## 2026-11-10 FinishesPricing UI gap pass
+- Attempted: `browser.js start`, then `screenshot.js` and `interact.js` / `snapshot.js` on http://127.0.0.1:3000/model/ora-05-raz-test/ `#section-16` at 1440 and 393. Clicked the other engine toggle and tried to dismiss the cookie bar.
+- Outcome: desktop card is centered (borders at x 494 and 945 in a 1440 frame). Price stack, toggle, and the section disclaimer match the frame. The page only has one finish, so the 3-up row and mobile side arrows were not on screen. Cookie close click failed ("not clickable"), so the lower mobile card stayed covered. `browser.js start` still times out in the sandbox.
+
+## 2026-11-11 FinishesPricing disclaimer alignment
+- Attempted: `browser.js start`, `snapshot.js` text of `.finishes-disclaimer`, `measure.js` at 1920 and 393 on http://localhost:3000/model/ora-05-raz-test/, plus file:// wrap tests of Simpler-Regular. Stopped the browser.
+- Outcome: after `white-space: pre-wrap`, desktop is 927×40 and sits 32px under the catalog row. Mobile is 369×64 (4 lines). Figma’s mobile render is 5 lines. `browser.js start` still needs sandbox disabled.
+
+## 2026-11-11 FinishesPricing disclaimer field
+- Attempted: screenshot.js and capture.js on http://127.0.0.1:3000/model/ora-05-raz-test/ for `#section-16` and `.finishes-disclaimer` at 1440 and 393. The browser was already running on port 9333.
+- Outcome: the disclaimer element is 927×40 on desktop and 369×64 on mobile. Desktop size matches the Figma text box. Mobile is four lines of 16px rather than the frame's 80px. Console showed only the failed Next HMR websocket. A mid-edit reload logged `disclaimers is not defined` and hid the carousel until the file settled.
+
+## 2026-11-17 — ora-next OND-20 FinishesPricing mobile carousel check
+
+- Attempted: `measure.js --selector` for arrow/card boxes at 393–1280, `screenshot.js --selector .finish-carousel`, `capture.js`, `snapshot.js --mode text`.
+- `measure.js` without `--wait-for` returned `sectionBox: null` on a client-rendered carousel; with `--wait-for` it worked.
+- Surprise: `measure.js` exits 99 INTERNAL ("Node is either not visible or not an HTMLElement" / "Node has 0 height") when the selector matches a hidden element at one viewport, which aborts the whole multi-viewport run. A hidden element should be reported per viewport, not crash.
+- Later runs failed `--wait-for` at every width: `capture.js` showed Prisma query failures and `ERR_PROXY_CONNECTION_FAILED` (dev DB unreachable), so the section rendered no cards. `capture.js` was the quickest way to tell an environment failure from a selector problem.
+- Earlier in the session the agent wrote ad-hoc Puppeteer probes against `scripts/lib.js` instead of using the scripts; avoid that (SKILL.md: agents never write raw CDP/Puppeteer).
