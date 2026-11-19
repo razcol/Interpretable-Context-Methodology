@@ -17,7 +17,7 @@ For existing-skill maintenance runs (which skip `02-clarify` and usually `03-res
 Explicitly ephemeral and disposable (see `shared/test-log-format.md`). It's not read by any later stage as a canonical source.
 
 - Safe to delete as soon as the findings it surfaced have been folded into the draft/skill and the run is done -- there is no need to wait for publish.
-- If it contains findings worth preserving long-term (e.g. a quirk that will recur), copy those into the skill's own `LOG.md` or `SKILL.md` rather than keeping the test log itself around.
+- If it contains findings worth preserving long-term (e.g. a quirk that will recur), copy those into `<data-root>/log/<skill-name>/LOG.md` or the skill's `SKILL.md` rather than keeping the test log itself around.
 
 ## What Never Gets Cleared
 

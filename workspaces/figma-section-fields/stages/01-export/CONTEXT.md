@@ -7,7 +7,7 @@ Read the repo's structure, read the Figma layer, and write the repo-shaped scaff
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
 | Run | The trigger message | Route, Figma URL, repo, folder (`sync`, `resync`, `mobile`), `--mobile <url>`, `--mobile` (`resync`, `element`), target file (`element`) | What this run is |
-| Targets | `../../targets/repos.md` | Full file | Repo root and default repo |
+| Targets | `<data-root>/workspaces/figma-section-fields/repos.md` | Full file | Repo root and default repo |
 | Repo skill | `../../skills/next-section-repo/SKILL.md` | `probe_repo.py` section | The repo profile |
 | Setup | `../../shared/figma-cli-setup.md` | Full file | How to call figma-cli and load the token |
 | Contract | `../../shared/export-contract.md` | Full file | Commands, notes and exit codes |
@@ -19,7 +19,7 @@ Read the repo's structure, read the Figma layer, and write the repo-shaped scaff
 
 D is the desktop node id and M the mobile one. `$FIGMA` paths are from the workspace root, `<workspace>` (`/home/dev/ai-system/workspaces/figma-section-fields`); the skill scripts run from `skills/next-section-repo/`.
 
-1. Read the route, the Figma URL and the repo from the trigger, and `--mobile <url>` (Case A). The `mobile` route (Case B) gives M's URL. Record `viewport: mobile` for M, otherwise `viewport: desktop`. Resolve the repo from `targets/repos.md`, or use the path the user gave (a worktree counts). Take the node id from the URL's `node-id`, written with `-`. Stop if a URL has no node id.
+1. Read the route, the Figma URL and the repo from the trigger, and `--mobile <url>` (Case A). The `mobile` route (Case B) gives M's URL. Record `viewport: mobile` for M, otherwise `viewport: desktop`. Resolve the repo from `<data-root>/workspaces/figma-section-fields/repos.md`, or use the path the user gave (a worktree counts). Take the node id from the URL's `node-id`, written with `-`. Stop if a URL has no node id.
    - `resync <Folder> <mobile-url> <repo> --mobile` is a mobile pass on M: step 6m, then 04m in drift mode (the new overlay is diffed against the existing `bps.mobile` rules only), then 05m. It never runs desktop 04 drift on D.
    - `element <mobile-url> <repo> <file> --mobile` records `viewport: mobile` and `pair: none`, and runs as `element`.
 2. Delete this node's folders under every `stages/0*-*/output/` (a rerun replaces them; `shared/run-records.md`), then create `stages/01-export/output/<node-id>/`. A mobile pass keeps M's preflight files and record from Case A. From `skills/next-section-repo/`, run `python3 scripts/probe_repo.py --repo <repo> --out <workspace>/stages/01-export/output/<node-id>/profile.json`. Show its `warnings`. A mobile pass goes on at step 6m.

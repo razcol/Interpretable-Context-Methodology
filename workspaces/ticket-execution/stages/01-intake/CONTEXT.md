@@ -11,14 +11,14 @@ Read one Jira ticket into files (description, images, repro, comments, links) an
 | You | The trigger | Browse URL or key | Which ticket |
 | Tools | `../../shared/tools.md` | "intake.py", "Writing records" | Command, exit codes, gaps to report |
 | Steps | `references/intake-steps.md` | Full file | Downloads, `intake.md` shape, re-runs |
-| Repos | `../../targets/repos.md` | Table and "Rules" | Key to root, branch pattern |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | Table and "Rules" | Key to root, branch pattern |
 | Jira skill | `../../../../_core/skills/jira-research/SKILL.md` | "ACLI", "Security notes" | Install, sign-in, untrusted content |
 
 ## Process
 
 1. The record's first line is `version: 1`. Run `intake.py` with full network access. On exit 3, check `acli jira auth status` and follow the jira-research skill. On exit 4, stop and say the key is wrong or not visible to you.
 2. Read `ticket.md` in full. Open every file in `output/<KEY>/attachments/` with the Read tool and look at it. A `![name](attachments/...)` link in `ticket.md` is not the image.
-3. Resolve the root from `targets/repos.md`. Two roots (`MAIN`) or no row: stop and ask.
+3. Resolve the root from `<data-root>/workspaces/ticket-execution/repos.md`. Two roots (`MAIN`) or no row: stop and ask.
 4. If a previous run of this key exists (an older `intake.md`), follow "Re-runs" in `references/intake-steps.md`.
 5. Write `intake.md` as `references/intake-steps.md` says.
 6. Return the path to `intake.md`, each audit row, and whether a checkpoint is waiting. Name gaps there (images not downloaded, comments truncated, no repro where the ticket is a bug). Do not stop for those gaps. Do not open stage 02.

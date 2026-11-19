@@ -13,7 +13,7 @@ git -C <wt> show --stat --format='%h %s' HEAD
 
 Never `git add -A`, `git add .` or `git commit -a`. A deleted file is staged with `git add -- <path>` like any other.
 
-Subject: the repo's pattern from `targets/repos.md`, from plan "Change", one line. A bundle plan makes one commit per key with that key's files.
+Subject: the repo's pattern from `<data-root>/workspaces/ticket-execution/repos.md`, from plan "Change", one line. A bundle plan makes one commit per key with that key's files.
 
 A pre-commit hook that fails: show its output, fix what the change caused, and run the commit again. Never `--no-verify` unless you type it.
 

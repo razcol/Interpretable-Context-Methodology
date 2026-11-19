@@ -8,13 +8,13 @@ These questions configure the workspace. Per-run facts (Figma URL, repo for this
 
 ### Q1: Where are your section repos on this machine?
 - Placeholders: `{{ORA_REPO}}`, `{{SMART_REPO}}`, `{{JAECOO_REPO}}`, `{{LUXURY_TRADE_REPO}}`, `{{OMODA_REPO}}`
-- Files: `targets/repos.md`
+- Files: `<data-root>/workspaces/figma-section-fields/repos.md` (when it does not exist, start from `targets/repos.example.md`)
 - Type: free text, one path per repo (the repo root or its `code/` folder)
 - Default: `/home/dev/ora-next`, `/home/dev/smart-next`, `/home/dev/jaecoo-next`, `/home/dev/colmobil-luxury-trade`, `/home/dev/omoda-next`
 
 ### Q2: Which repo should a run use when it does not name one?
 - Placeholder: `{{DEFAULT_REPO}}`
-- Files: `targets/repos.md`
+- Files: `<data-root>/workspaces/figma-section-fields/repos.md` (when it does not exist, start from `targets/repos.example.md`)
 - Type: selection: ora, smart, jaecoo, luxury-trade, omoda
 - Default: ora
 
@@ -26,10 +26,10 @@ These questions configure the workspace. Per-run facts (Figma URL, repo for this
 
 ### Q4: Which local page should stage 05 open to see a section in the app?
 - Placeholder: `{{ORA_TEST_ROUTE}}`
-- Files: `targets/repos.md`
+- Files: `<data-root>/workspaces/figma-section-fields/repos.md` (when it does not exist, start from `targets/repos.example.md`)
 - Type: free text, a path on the dev server where your test page lists the sections you are building
 - Default: `/model/ora-05-raz-test/`
-- Derived: other repos start with "none yet". Stage 05 asks for a route the first time it runs on one of them and adds it to `targets/repos.md`.
+- Derived: other repos start with "none yet". Stage 05 asks for a route the first time it runs on one of them and adds it to `<data-root>/workspaces/figma-section-fields/repos.md`.
 
 ---
 

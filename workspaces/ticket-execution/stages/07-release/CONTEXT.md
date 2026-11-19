@@ -12,7 +12,7 @@ After you approve: stage the reviewed files, commit with the key, push the branc
 | Stage 03 | `../03-plan/output/<KEY>/plan.md` | "Change" | Commit subject source |
 | Steps | `references/release-steps.md` | Full file | Commands, record |
 | Git | `../../shared/git-rules.md` | "Allowed per stage", "Never staged", "Commit and PR" | Limits, subject, PR URL |
-| Repos | `../../targets/repos.md` | The root's row | Commit subject pattern, slug |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row | Commit subject pattern, slug |
 
 ## Process
 

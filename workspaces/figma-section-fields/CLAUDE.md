@@ -8,7 +8,7 @@ Turn a Figma layer into a section of one of your Next.js + styled-components + W
 figma-section-fields/
 ├── CLAUDE.md, CONTEXT.md
 ├── setup/questionnaire.md        (onboarding)
-├── targets/repos.md              (repo roots, test routes)
+├── targets/repos.example.md              (repo roots, test routes)
 ├── shared/                       (export contract, figma-cli setup, run records)
 ├── skills/next-section-repo/     (repo probe, section checker, section shape)
 ├── tools/figma-cli               (shipped exporter)
@@ -35,6 +35,8 @@ figma-section-fields/
 
 A run is keyed by the Figma node id. Its records live in `stages/0N-*/output/<node-id>/`. A mobile pass is its own run, linked to the desktop run by `pair:` lines. How `status` works and what each record holds: `shared/run-records.md`.
 
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). Resolve it once per run and use the real path in every brief and command.
+
 ## Routing
 
 | Task | Go To |
@@ -44,20 +46,20 @@ A run is keyed by the Figma node id. Its records live in `stages/0N-*/output/<no
 | Fragment | `stages/03-fragment/CONTEXT.md` |
 | Repo files and binding | `stages/04-conform-bind/CONTEXT.md` |
 | Browser check | `stages/05-verify/CONTEXT.md` |
-| Which repo and route | `targets/repos.md` |
+| Which repo and route | `<data-root>/workspaces/figma-section-fields/repos.md` |
 
 ## What to Load
 
 | Stage | Load These | Do NOT Load |
 |-------|-----------|-------------|
-| 01 | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `targets/repos.md`, the next-section-repo SKILL | Later stages, figma-cli source |
-| 01m | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `targets/repos.md`, `stages/01-export/references/viewport-map.md`, D's records, the next-section-repo SKILL and `references/mobile-patterns.md` | Later stages, figma-cli source |
+| 01 | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `<data-root>/workspaces/figma-section-fields/repos.md`, the next-section-repo SKILL | Later stages, figma-cli source |
+| 01m | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `<data-root>/workspaces/figma-section-fields/repos.md`, `stages/01-export/references/viewport-map.md`, D's records, the next-section-repo SKILL and `references/mobile-patterns.md` | Later stages, figma-cli source |
 | 02 | Its CONTEXT and references, the run's export record and profile, the wp-graphql SKILL | Stage 03 to 05 files, other runs' outputs (except the paired M's `inspect.txt` and `figma.png`) |
 | 03 | Its CONTEXT and reference, the run's field plan and profile, the wp-graphql SKILL | Stage 04 and 05 files, the field report |
 | 04 | Its CONTEXT and reference, the run's records and `.gql`, the next-section-repo SKILL and checklist | wp-graphql internals, other runs |
 | 04m | Its CONTEXT, the "mobile: overlay" and "Record" sections of `binding-rules.md`, `mobile-patterns.md`, the run's export record, viewport map and overlay, the next-section-repo SKILL and checklist | Stage 02 and 03 references |
 | 05 | Its CONTEXT and reference, the run's records, the browser-cdp SKILL | Stage 02 and 03 references |
-| 05m | Its CONTEXT, the Mobile section of `verify-steps.md`, the run's records, `targets/repos.md`, the browser-cdp SKILL | Stage 02 and 03 references |
+| 05m | Its CONTEXT, the Mobile section of `verify-steps.md`, the run's records, `<data-root>/workspaces/figma-section-fields/repos.md`, the browser-cdp SKILL | Stage 02 and 03 references |
 
 ## Stage Handoffs
 

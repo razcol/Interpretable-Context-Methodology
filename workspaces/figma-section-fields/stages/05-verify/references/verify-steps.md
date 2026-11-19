@@ -15,7 +15,7 @@ node $B/scripts/measure.js --url "file://$R/fluid.html" --viewports 1920x1080,14
 
 ## Level 2: the section in the app
 
-The test route for the repo is in `targets/repos.md`. The dev port is `dev.port` in the profile (3000 unless the script sets one).
+The test route for the repo is in `<data-root>/workspaces/figma-section-fields/repos.md`. The dev port is `dev.port` in the profile (3000 unless the script sets one).
 
 1. `curl -s -o /dev/null -w '%{http_code}' http://localhost:<port>/` answers: use that server.
 2. Otherwise start it from the app root in the background: `npm run dev`. It loads its own environment and runs prisma; wait until the route answers (up to 3 minutes). If another app already holds the port, use `PORT=3001 npm run dev` and port 3001.

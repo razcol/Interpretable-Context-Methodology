@@ -6,7 +6,7 @@ The goal: you open the first link and see the change. No setup, no searching for
 
 Ready only when a fresh browser context shows the acceptance screen at the first URL. Then the first line is `**<KEY> is ready for your review.**`
 
-For a root in `targets/repos.md` "Test logins", ready means the screen came back right after the documented sign-in in that fresh context. Then the first line and the line under it are:
+For a root in `<data-root>/workspaces/ticket-execution/repos.md` "Test logins", ready means the screen came back right after the documented sign-in in that fresh context. Then the first line and the line under it are:
 
 ```markdown
 **<KEY> is ready for your review after you sign in.**

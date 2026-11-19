@@ -1,6 +1,14 @@
 # Names this checkout's data root (see "Data root" in _core/CONVENTIONS.md). Local only.
 /.data-root
 
+# Backstop only: user data lives in the data root, never here (see "Data root" in _core/CONVENTIONS.md)
+/session-debrief-*.md
+/session-extract-*.md
+/session-handoff-*.md
+/_core/skills/*/LOG.md
+/workspaces/*/targets/repos.md
+/workspaces/ticket-execution/targets/logins/
+
 # Stage outputs (per-run artifacts, not part of the workspace definition)
 **/stages/*/output/*
 !**/stages/*/output/.gitkeep

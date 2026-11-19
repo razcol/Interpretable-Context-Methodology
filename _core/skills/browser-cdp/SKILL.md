@@ -14,7 +14,7 @@ Every script prints exactly one JSON object and exits non-zero on failure.
 
 Tested so far: headless Chrome inside WSL2, fixture pages, and public pages.
 Not tested: Windows Chrome from WSL, authenticated real sites. Headed mode starts and captures correctly under WSLg, but window visibility was not checked.
-**Every time this skill is used, append to `LOG.md`** (what was attempted, outcome, surprises). If you were told not to modify the skill folder, put the same note in your own report instead.
+**Every time this skill is used, append to `<data-root>/log/browser-cdp/LOG.md`** (what was attempted, outcome, surprises). `<data-root>` is the folder `python3 ../../data-root/data_root.py resolve` prints when run from this skill folder (see "Data root" in `_core/CONVENTIONS.md`). Never create a log file in this skill folder. If you were told not to write outside your task's files, put the same note in your own report instead.
 
 ## First-time setup
 
@@ -75,7 +75,7 @@ Success: `{"ok": true, ...}` and exit 0. Failure: `{"ok": false, "error": {"code
 | 6 | ASSERTION_FAILED | An `assert_*` step did not hold. |
 | 10 | DIFF_DETECTED | Only with `diff.js --fail-on-diff`. |
 | 11 | OVERFLOW_DETECTED | `measure.js`: at least one viewport scrolls sideways. `error.details` holds the full per-viewport result. |
-| 99 | INTERNAL | Unexpected. Log it in `LOG.md`. |
+| 99 | INTERNAL | Unexpected. Log it in `<data-root>/log/browser-cdp/LOG.md`. |
 
 An HTTP 404 or 500 is not a script failure. Check `status` in the JSON.
 
@@ -111,7 +111,7 @@ Full examples: `references/recipes.md`.
 - `references/recipes.md`: the first test case, visual regression loop, login reuse, data gathering
 - `references/troubleshooting.md`: common failures and fixes
 - `fixtures/`: a local test page and server plus `run-all.sh`, `run-extra.sh`, `run-persist.sh` to re-verify the scripts after any change
-- `LOG.md`: usage log, keep updating
+- `<data-root>/log/browser-cdp/LOG.md`: usage log, keep updating
 
 ## Checking a section export
 

@@ -9,7 +9,7 @@ Check the result in a browser: the export against Figma's own picture, and the s
 | Stage 01 | `../01-export/output/<node-id>/` | `export-record.md`, `figma.png`, `preview.html` | Figma URL, viewport, pair, baseline, reference image, preview |
 | Stage 04 | `../04-conform-bind/output/<node-id>/conform-record.md` | Full file | What changed. Mobile: the touch decisions and triggers |
 | Baseline | `output/<D>/shots/baseline__1440x900.png` | The file (mobile, Case A) | Desktop regression reference |
-| Targets | `../../targets/repos.md` | The repo's test route | Where the section is placed |
+| Targets | `<data-root>/workspaces/figma-section-fields/repos.md` | The repo's test route | Where the section is placed |
 | Steps | `references/verify-steps.md` | Full file, or "Mobile" on a mobile pass | Commands and pass marks |
 | Harness | `../../skills/next-section-repo/scripts/harness.py` | Usage line | Deterministic page for baseline, regression and tap |
 | Browser | `../../../../_core/skills/browser-cdp/SKILL.md` | "Checking a section export" | `screenshot.js`, `diff.js`, `measure.js`, `interact.js` |
@@ -29,7 +29,7 @@ Check the result in a browser: the export against Figma's own picture, and the s
 
 | After Step | Agent Presents | Human Decides |
 |------------|---------------|---------------|
-| 3 | The repo has no test route | Give a route (added to `targets/repos.md`), or skip Level 2 |
+| 3 | The repo has no test route | Give a route (added to `<data-root>/workspaces/figma-section-fields/repos.md`), or skip Level 2 |
 | 6 | A second FAIL | What to change, or accept |
 | 7 | Desktop PASS on `pair: pending` | The mobile URL, or `mobile out of scope` |
 

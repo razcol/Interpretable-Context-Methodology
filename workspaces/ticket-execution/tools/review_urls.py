@@ -283,7 +283,7 @@ def main():
     ap.add_argument("--app-root", required=True, help="folder with package.json and app/")
     ap.add_argument("--base", default="origin/dev", help="branch the work started from")
     ap.add_argument("--port", type=int, default=3000)
-    ap.add_argument("--test-route", help="repo test page for CMS sections, from targets/repos.md")
+    ap.add_argument("--test-route", help="repo test page for CMS sections, from <data-root>/workspaces/ticket-execution/repos.md")
     args = ap.parse_args()
 
     app_root = os.path.realpath(args.app_root)

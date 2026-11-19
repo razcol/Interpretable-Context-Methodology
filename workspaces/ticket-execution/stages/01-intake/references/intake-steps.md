@@ -23,7 +23,7 @@ Written by the agent after reading `ticket.md` and the images. English. Hebrew t
 - ticket: <browse URL>
 - summary: <one English sentence>
 - type / status: <type> / <status>
-- repo: <repo name from targets/repos.md>
+- repo: <repo name from <data-root>/workspaces/ticket-execution/repos.md>
 - root: <root>
 - app root: <root>/code
 - linked: <keys and one line each, or none>

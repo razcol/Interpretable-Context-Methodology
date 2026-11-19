@@ -57,3 +57,5 @@ model-workspace-protocol/
 ## How It Works
 
 Each workspace is self-contained with its own CLAUDE.md. Navigate into a workspace folder and that workspace's CLAUDE.md takes over. You do not need to read this root file once you are inside a workspace.
+
+Your own data (repo tables, login steps, skill logs, session briefs) lives outside this repo, in the data root. Docs write those paths as `<data-root>/...`: `<data-root>` is the folder `python3 _core/data-root/data_root.py resolve` prints (see "Data root" in `_core/CONVENTIONS.md`). Never write a log, brief or table into this repo.

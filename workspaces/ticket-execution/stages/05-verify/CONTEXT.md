@@ -14,7 +14,7 @@ Check each acceptance line in the running app with a headless browser, and recor
 | Steps | `references/verify-steps.md` | Full file | Server, browser commands, report shape |
 | Tools | `../../shared/tools.md` | "dev_server.py", "Writing records" | Start or reuse the server |
 | Browser | `../../../../_core/skills/browser-cdp/SKILL.md` | "Which script to run", "Output contract", "Interaction steps" | Screenshots, measure, interact, capture |
-| Repos | `../../targets/repos.md` | "Test logins" (the root's row) | Sign-in steps file, secret key names, form submits |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | "Test logins" (the root's row) | Sign-in steps file, secret key names, form submits |
 
 ## Process
 

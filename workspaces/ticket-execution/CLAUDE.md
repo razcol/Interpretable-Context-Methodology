@@ -10,7 +10,7 @@ Take one Jira ticket through to a running local app: read it, research, plan, im
 ticket-execution/
 ├── CLAUDE.md, CONTEXT.md
 ├── setup/questionnaire.md     (onboarding)
-├── targets/repos.md           (Jira key to repo root, branch and commit patterns, test routes)
+├── targets/repos.example.md           (Jira key to repo root, branch and commit patterns, test routes)
 ├── shared/                    (git rules, run records, tools)
 ├── tools/                     (intake.py, dev_server.py, review_urls.py, write_record.py, tests)
 └── stages/
@@ -45,7 +45,9 @@ The session that read this file only orchestrates, following `../../_core/skills
 
 On `start`, `plan`, `implement` or `change`, write `stages/.run-lock` before the first spawn (the skill's run lock: key on line 1, start time on line 2). If the file already names a different key, stop and report that key and time. Remove the file when stage 06 has posted, and on `stop <KEY>`.
 
-Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `output/<KEY>/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `targets/repos.md` "Test logins".
+Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `output/<KEY>/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
+
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). Resolve it once per run and copy the real path into every brief.
 
 Shape of a call, with the model filled in:
 
@@ -77,7 +79,7 @@ Today `models.py` gives mid `claude-sonnet-5-5-high` and strong `claude-opus-5-5
 
 ### Before stage 05 on a login root
 
-This check runs before stage 05 on every trigger that reaches it (`start`, `plan`, `implement`, `change`). When the run's root is in `targets/repos.md` "Test logins":
+This check runs before stage 05 on every trigger that reaches it (`start`, `plan`, `implement`, `change`). When the run's root is in `<data-root>/workspaces/ticket-execution/repos.md` "Test logins":
 
 1. The secret keys exist: the `grep -c` command in that section. It prints a count, never the values.
 2. "Form submits" is `yes` or `no`, or the plan has no checklist row that sends a form.
@@ -102,7 +104,7 @@ A background-command notice is not a server check (the skill's rule, applied her
 | Plan or replan | `stages/03-plan/CONTEXT.md` |
 | Implement or change | `stages/04-implement/CONTEXT.md` |
 | Release | `stages/07-release/CONTEXT.md` |
-| Which repo, branch name, test route | `targets/repos.md` |
+| Which repo, branch name, test route | `<data-root>/workspaces/ticket-execution/repos.md` |
 | What git may do when | `shared/git-rules.md` |
 
 ## What to Load
@@ -111,13 +113,13 @@ This table is for the subagent of that stage. The orchestrator loads this file a
 
 | Stage | Load These | Do NOT Load |
 |-------|-----------|-------------|
-| 01 | Its CONTEXT and reference, `shared/tools.md` "intake.py", `targets/repos.md`, the jira-research SKILL sections named | The repo's code, later stages |
+| 01 | Its CONTEXT and reference, `shared/tools.md` "intake.py", `<data-root>/workspaces/ticket-execution/repos.md`, the jira-research SKILL sections named | The repo's code, later stages |
 | 02 | Its CONTEXT and reference, the key's `intake.md` and images, `shared/git-rules.md`, `shared/tools.md` "Permissions" and "Writing records", the wp-graphql SKILL sections named | Other keys' records, later stages, the wp-graphql script, store and cache |
-| 03 | Its CONTEXT and reference, the key's `intake.md` and `research.md`, `targets/repos.md`, `shared/git-rules.md`, `shared/tools.md` "Writing records" | Tool internals, later stages |
-| 04 | Its CONTEXT and reference, the key's `plan.md`, `intake.md` "Acceptance", `research.md`, `shared/git-rules.md`, `targets/repos.md` "Lint", `shared/tools.md` "Writing records" | Stage 05 to 07 files |
-| 05 | Its CONTEXT and reference, the key's `plan.md` and `implement-record.md`, `shared/tools.md`, `targets/repos.md` "Test logins", the browser-cdp SKILL sections named | Stage 01 and 02 references, the secrets file |
-| 06 | Its CONTEXT and reference, the key's 03 to 05 records, `shared/tools.md`, `targets/repos.md`, the browser-cdp SKILL sections named | Stage 01 and 02 files, the secrets file |
-| 07 | Its CONTEXT and reference, the key's `handoff.md` and `plan.md` "Change", `shared/git-rules.md`, `targets/repos.md` | Everything else |
+| 03 | Its CONTEXT and reference, the key's `intake.md` and `research.md`, `<data-root>/workspaces/ticket-execution/repos.md`, `shared/git-rules.md`, `shared/tools.md` "Writing records" | Tool internals, later stages |
+| 04 | Its CONTEXT and reference, the key's `plan.md`, `intake.md` "Acceptance", `research.md`, `shared/git-rules.md`, `<data-root>/workspaces/ticket-execution/repos.md` "Lint", `shared/tools.md` "Writing records" | Stage 05 to 07 files |
+| 05 | Its CONTEXT and reference, the key's `plan.md` and `implement-record.md`, `shared/tools.md`, `<data-root>/workspaces/ticket-execution/repos.md` "Test logins", the browser-cdp SKILL sections named | Stage 01 and 02 references, the secrets file |
+| 06 | Its CONTEXT and reference, the key's 03 to 05 records, `shared/tools.md`, `<data-root>/workspaces/ticket-execution/repos.md`, the browser-cdp SKILL sections named | Stage 01 and 02 files, the secrets file |
+| 07 | Its CONTEXT and reference, the key's `handoff.md` and `plan.md` "Change", `shared/git-rules.md`, `<data-root>/workspaces/ticket-execution/repos.md` | Everything else |
 
 ## Stage Handoffs
 

@@ -47,7 +47,7 @@ Read-only. Never edit the session's code, branches, tickets, or PR.
 
 6. **Predict the follow-ups.** Read [references/follow-up-questions.md](references/follow-up-questions.md). Answer the 4 to 7 questions this user would most likely ask next, answer first, with the session type's "Must also cover" items first.
 
-7. **Write the debrief** to `session-debrief-<today YYYY-MM-DD>-<topic-slug>.md` in the working directory, using [references/debrief-template.md](references/debrief-template.md). Add only the optional sections the template's table calls for. Add `-2`, `-3` if the name exists. Never overwrite.
+7. **Write the debrief** to `session-debrief-<today YYYY-MM-DD>-<topic-slug>.md` in `<data-root>/log/briefs/`, using [references/debrief-template.md](references/debrief-template.md). Add only the optional sections the template's table calls for. Add `-2`, `-3` if the name exists. Never overwrite. `<data-root>` is the folder `python3 <skill-folder>/../../data-root/data_root.py resolve` prints (see "Data root" in `_core/CONVENTIONS.md`). Never write the debrief in the working directory or in any repo.
 
 8. **Check it.** Run `python3 $S/check_debrief.py <file>` after the file is written. Fix every ERROR and rerun until it prints OK. Fix each WARN unless you have a reason to keep it.
 

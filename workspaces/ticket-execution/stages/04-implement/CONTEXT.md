@@ -14,7 +14,7 @@ Make the planned change on the planned branch and work tree. Nothing is staged, 
 | Stage 02 | `../02-research/output/<KEY>/research.md` | "Per acceptance line" | Paths and sibling patterns |
 | Work tree | `references/work-tree.md` | Full file | Branch and worktree commands, lint, record |
 | Git | `../../shared/git-rules.md` | "Allowed per stage", "Never staged", "Your work comes first" | Limits |
-| Repos | `../../targets/repos.md` | "Lint" | The lint command for this root |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | "Lint" | The lint command for this root |
 | You | `change <KEY>: <text>` | The text | What to change in a change pass |
 | Records | `../../shared/tools.md` | "Writing records" | How to write this stage's record when the chat is rooted in the app repo |
 
@@ -31,7 +31,7 @@ Do not read stage 05, 06 or 07 records, contexts or references. This stage's inp
    - a display string that falls back to an error code, for example `ErrorMessage || ErrorCode`, `?? code`, or a code placed in rendered text.
 
    Remove each one, or say in one line why it stays.
-5. Run lint on the changed files with the command in `targets/repos.md` "Lint" (`references/work-tree.md` "Lint"). Fix what the change caused. Do not look for another eslint or prettier config.
+5. Run lint on the changed files with the command in `<data-root>/workspaces/ticket-execution/repos.md` "Lint" (`references/work-tree.md` "Lint"). Fix what the change caused. Do not look for another eslint or prettier config.
 6. Finish `implement-record.md`. Return its path and each audit row. Do not open stage 05.
 
 ## Audit

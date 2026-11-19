@@ -32,6 +32,6 @@ Force-push and amend run only when you type those words for that key. Amend mean
 
 ## Commit and PR
 
-- Subject: the repo's pattern in `targets/repos.md`, one line, what changed for the user.
+- Subject: the repo's pattern in `<data-root>/workspaces/ticket-execution/repos.md`, one line, what changed for the user.
 - Body: none, unless the plan lists follow-ups.
 - PR URL: `https://bitbucket.org/colwebteam/<slug>/pull-requests/new?source=<branch>&dest=dev`. You open the PR. The agent never calls the Bitbucket API and never reads a credential file.

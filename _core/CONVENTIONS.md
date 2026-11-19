@@ -164,6 +164,8 @@ Tools never type the path. They ask the helper, `_core/data-root/data_root.py` (
 
 From a shell: `"$(python3 _core/data-root/data_root.py resolve)"`.
 
+**In docs** a path inside the data root is written `<data-root>/<path>`, for example `<data-root>/workspaces/ticket-execution/repos.md` or `<data-root>/log/browser-cdp/LOG.md`. `<data-root>` is the folder `resolve` prints for the checkout you are working in. Resolve it once, then use the real path in commands and briefs. Never type `~/.config/ai-system` or a `/home/<user>/` path in its place, and never write a log, brief or table into the repo instead (a skill never keeps its log in its own folder).
+
 **Layout** (version 1, named in the data root's `LAYOUT` file):
 
 | Folder | Holds |

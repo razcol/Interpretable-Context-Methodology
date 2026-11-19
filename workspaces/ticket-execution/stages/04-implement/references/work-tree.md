@@ -36,7 +36,7 @@ A fresh worktree has no `node_modules` and no `.env`. Stage 05 handles both thro
 
 ## Lint
 
-Use the command in `targets/repos.md` "Lint" for this root, from `code/`. Do not search the repo for another eslint or prettier setup.
+Use the command in `<data-root>/workspaces/ticket-execution/repos.md` "Lint" for this root, from `code/`. Do not search the repo for another eslint or prettier setup.
 
 When `node_modules` is missing in a fresh worktree, lint runs in stage 05 after the install. Record "lint deferred to 05", and report the Lint audit row as `deferred`, not pass.
 
