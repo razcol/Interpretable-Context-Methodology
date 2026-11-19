@@ -63,6 +63,8 @@ Next:
 - `stop <KEY>`: stop the server I started
 ```
 
+`<PR target>` is the root's PR target in `<data-root>/workspaces/ticket-execution/repos.md`. When the row's PR link is `none`, the `approve` line reads "commit and push; open the PR into `<PR target>` yourself".
+
 Image differences: copy the differences from `verify-report.md`. Do not open the image again to settle them. Match by number, never by model name. When verify did not record which number was on screen, write "verify did not record which number was shown". Never print the test identity values.
 
 Not ready uses the same rest, with this opening instead of the ready line and the Open list:
