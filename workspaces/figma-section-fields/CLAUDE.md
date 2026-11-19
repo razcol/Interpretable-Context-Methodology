@@ -8,7 +8,7 @@ Turn a Figma layer into a section of one of your Next.js + styled-components + W
 figma-section-fields/
 ├── CLAUDE.md, CONTEXT.md
 ├── setup/questionnaire.md        (onboarding)
-├── targets/repos.example.md              (repo roots, test routes)
+├── targets/repos.example.md              (example repo table: roots, default repo, test routes)
 ├── shared/                       (export contract, figma-cli setup, run records)
 ├── skills/next-section-repo/     (repo probe, section checker, section shape)
 ├── tools/figma-cli               (shipped exporter)
@@ -46,14 +46,14 @@ A run is keyed by the Figma node id. Its records live in `<runs>/<node-id>/0N-*/
 | Fragment | `stages/03-fragment/CONTEXT.md` |
 | Repo files and binding | `stages/04-conform-bind/CONTEXT.md` |
 | Browser check | `stages/05-verify/CONTEXT.md` |
-| Which repo and route | `<data-root>/workspaces/figma-section-fields/repos.md` |
+| Which repo and route | `<data-root>/workspaces/figma-section-fields/repos.md`, read as `targets/CONTEXT.md` "Rules" says |
 
 ## What to Load
 
 | Stage | Load These | Do NOT Load |
 |-------|-----------|-------------|
-| 01 | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `<data-root>/workspaces/figma-section-fields/repos.md`, the next-section-repo SKILL | Later stages, figma-cli source |
-| 01m | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `<data-root>/workspaces/figma-section-fields/repos.md`, `stages/01-export/references/viewport-map.md`, D's records, the next-section-repo SKILL and `references/mobile-patterns.md` | Later stages, figma-cli source |
+| 01 | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `<data-root>/workspaces/figma-section-fields/repos.md`, `targets/CONTEXT.md` "Rules", the next-section-repo SKILL | Later stages, figma-cli source |
+| 01m | Its CONTEXT, `shared/export-contract.md`, `shared/figma-cli-setup.md`, `shared/run-records.md`, `<data-root>/workspaces/figma-section-fields/repos.md`, `targets/CONTEXT.md` "Rules", `stages/01-export/references/viewport-map.md`, D's records, the next-section-repo SKILL and `references/mobile-patterns.md` | Later stages, figma-cli source |
 | 02 | Its CONTEXT and references, the run's export record and profile, the wp-graphql SKILL | Stage 03 to 05 files, other runs' outputs (except the paired M's `inspect.txt` and `figma.png`) |
 | 03 | Its CONTEXT and reference, the run's field plan and profile, the wp-graphql SKILL | Stage 04 and 05 files, the field report |
 | 04 | Its CONTEXT and reference, the run's records and `.gql`, the next-section-repo SKILL and checklist | wp-graphql internals, other runs |
@@ -73,5 +73,6 @@ Each stage writes its record into `<runs>/<node-id>/0N-*/` and, on the same run,
 - The Figma token is loaded with `node --env-file`. Never print it, paste it into a command, or write it to a file. If you paste a token into chat, rotate it.
 - On `new`, never bind or write a fragment before you say the ACF group is saved.
 - Never edit a repo's main working tree when the user named a worktree. Never push.
+- One repo per run, from `<data-root>/workspaces/figma-section-fields/repos.md`, read with `targets/CONTEXT.md` "Rules" (default repo, worktree roots). Each repo has its own WordPress and its own fields.
 - Never derive a mobile design from a desktop frame or the reverse. A mobile pass needs the mobile URL from the user.
 - The mobile touch path comes from the mobile frame ([mobile-patterns.md "Hover and touch"](skills/next-section-repo/references/mobile-patterns.md#hover-and-touch)).

@@ -3,7 +3,7 @@
 ## Where to look
 
 - Routes: `code/app/**/page.*`. Most content pages come from WordPress through `code/app/(pages)/[...pageUri]/page.js`; fixed pages live under `(dynamic-pages)/` and others.
-- CMS sections: `code/app/components/Sections/<Name>/` (Server, Client, Styled, `.gql`). The `@colmobil/next` package loads them from the folder, so no page imports them.
+- CMS sections: `code/app/components/Sections/<Name>/` (Server, Client, Styled, `.gql`). They load from the folder by name, so no page imports them (the table's "Notes" may name the loader).
 - CMS page templates: `code/app/components/Templates/<Name>/`.
 - Shared UI: `code/app/components/UIComponents/`, `Core/`, `Layout/`.
 - Data: `.gql` fragments next to components and in `code/app/fragments/`, Prisma in `code/prisma/`, server actions in `code/app/actions/`.
@@ -13,7 +13,7 @@
 
 ## Siblings
 
-The Colmobil brand sites share one structure, and a feature often exists in one before another: ora-next, jaecoo-next, omoda-next, smart-next, colmobilnext, hyundai. Read the sibling only when it already has the feature. Leave luxury-trade and self-service out of a cross-brand survey unless you name them; they are built differently.
+The siblings are the repos the "Siblings" line in `<data-root>/workspaces/ticket-execution/repos.md` "Notes" names: they share one structure, and a feature often exists in one before another. Read the sibling only when it already has the feature. Leave out of a cross-repo survey the repos that line says are built differently, unless you name them. No "Siblings" line: no sibling survey.
 
 ## Live WordPress
 
@@ -98,7 +98,7 @@ The skill never confirms these. Write them under `not settled`, never as schema 
 # <KEY> research
 
 - root: <root>, branch <current branch>, tree <clean or dirty: N files>
-- origin/dev: <short hash>
+- origin/<base>: <short hash>  (<base> from intake.md)
 
 ## Per acceptance line
 1. <line from intake.md>

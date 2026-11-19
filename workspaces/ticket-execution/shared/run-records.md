@@ -24,8 +24,8 @@ List each `<KEY>` folder under `<runs>/` that has `01-intake/`. For each key, a 
 ```
 Pipeline Status: ticket-execution
 
-OND-7  rich image grid section
+ABC-7  rich image grid section
   [01-intake] -> [02-research] -> [03-plan] -> [04-implement] -> [05-verify] -> [06-handoff] -> [07-release]
    COMPLETE       COMPLETE         COMPLETE      COMPLETE          COMPLETE       COMPLETE        PENDING
-  06 waiting for your review: http://localhost:3001/model/ora-05-raz-test/ (server answers)
+  06 waiting for your review: http://localhost:3001/<test route>/ (server answers)
 ```

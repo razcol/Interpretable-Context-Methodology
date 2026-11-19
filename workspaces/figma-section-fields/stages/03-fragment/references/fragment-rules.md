@@ -29,7 +29,7 @@ Names come from the repo profile's `fragments` (the fragment name, not the file 
 | `responsiveFull` | `<field> { ...<backgroundFields> }` |
 | `responsiveMedia` | `<field> { ...<responsiveMedia> }` |
 | `mediaItem` | `<field> { ...<mediaItem> }`. The repo's media fragment already selects `node`, so it goes directly on the image field. `node { ...MediaItem }` is wrong |
-| `button` | `<field> { ...<button> }` (`Button` in ora, `ButtonItem` elsewhere) |
+| `button` | `<field> { ...<button> }` (`Button` or `ButtonItem`: the name the profile's `fragments` lists) |
 | `spacing` | `...<layout>` |
 
 Use `MediaItemNew` or `ResponsiveMediaItemNew` only when the component reads `src` and `alt` (stage 04 decides; default to `MediaItem`). A spread name that is not in the repo silently becomes `__typename`, so every spread must exist in the profile's `fragments` or in another repo `.gql`.

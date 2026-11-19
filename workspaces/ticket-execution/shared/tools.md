@@ -72,10 +72,10 @@ python3 <ws>/tools/dev_server.py down --state <runs>/<KEY>/05-verify/dev-server.
 ## review_urls.py (stage 06)
 
 ```bash
-python3 <ws>/tools/review_urls.py --app-root <app root> --base origin/dev --port <port> [--test-route <route>]
+python3 <ws>/tools/review_urls.py --app-root <app root> --base origin/<base> --port <port> [--test-route <route>]
 ```
 
-- Changed files are all differences from the merge base with `--base`, committed or not, plus untracked files.
+- Changed files are all differences from the merge base with `--base` (required; `<base>` is the run's base from `intake.md`), committed or not, plus untracked files.
 - Follows imports backwards (relative, jsconfig `paths`, `baseUrl`) to `page.*` and `layout.*` under `app/`.
 - `kind` per file: `static`, `dynamic` (route keeps `[param]`), `wordpress` (only through the catch-all CMS page), `section` (`components/Sections/<Name>/`), `template` (`components/Templates/<Name>/`), `all-pages` (root layout), `unmapped`.
 - `sharedStringsOnly` lists routes reached only through a changed locale file whose changed keys that route does not use. They are not in `urls`. When the script cannot tell, the route stays in `urls`. Each locale file's entry has `changedKeys` (`null` when it cannot tell).

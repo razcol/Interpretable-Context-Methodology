@@ -185,7 +185,9 @@ A layout change raises the `LAYOUT` version and ships with a migration step that
 
 **Data repo rules** (seeded from `_core/data-root/seed/`): `.gitignore` keeps env and secret files, caches and run locks out; `.gitattributes` sets `LOG.md` and `log/briefs/` to `merge=union`, so two branches that both append never conflict.
 
-**Seeding.** A tracked `workspaces/<ws>/targets/<path>.example.<ext>` seeds `workspaces/<ws>/<path>.<ext>` in the data root, once. Example files hold the procedure text with `<...>` placeholders, never a user's data.
+**Seeding.** A tracked `workspaces/<ws>/targets/<path>.example.<ext>` seeds `workspaces/<ws>/<path>.<ext>` in the data root, once. Example files show every column with `<...>` placeholders, never a user's data.
+
+**Project practices are rows.** How a target project works (root, branch and commit patterns, base branch, PR target and PR link, main tree or worktree and where, lint command, test route, test logins, form submits, and any rule that holds for that project only) is that project's row in its workspace's repo table in the data root. The repo keeps only the generic rule for reading a row (for example `workspaces/ticket-execution/shared/repo-rows.md`), so adding or changing a project never needs an edit in the repo. ai-system's own maintenance worktrees and their paired data worktrees ("Two modes" below) are ai-system's own mechanism, not a project row.
 
 **Run folders** (`workspaces/<ws>/runs/<KEY>/<stage>/`) hold every stage output and run record (Pattern 2). Tools that write a record resolve the data root themselves (for example `workspaces/ticket-execution/tools/write_record.py`). A generated diagram of a workspace goes to `workspaces/<ws>/flowchart/`. Kept history that belongs to no run goes to `archive/<ws>/`. A session's throwaway files go to its own temp folder, never into the repo; anything worth keeping goes to the data root.
 

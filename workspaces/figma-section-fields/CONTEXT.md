@@ -17,7 +17,7 @@ One Figma layer becomes a section in one of your Next.js repos: the repo's Serve
 
 | Resource | Location | Contains |
 |----------|----------|----------|
-| Target repos | `<data-root>/workspaces/figma-section-fields/repos.md` | Repo roots, default repo, test routes |
+| Target repos | `<data-root>/workspaces/figma-section-fields/repos.md`, read as `targets/CONTEXT.md` "Rules" says | Repo roots, default repo, test routes |
 | Export contract | `shared/export-contract.md` | figma-cli commands, flags, files and exit codes |
 | figma-cli setup | `shared/figma-cli-setup.md` | How to call the shipped binary and load the token |
 | Run records | `shared/run-records.md` | Per-run folders, what each record holds, desktop and mobile pairs, `status` |

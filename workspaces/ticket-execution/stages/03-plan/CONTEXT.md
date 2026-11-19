@@ -11,13 +11,14 @@ Write the plan stage 04 will follow: scope, files, branch, work tree, the accept
 | Stage 01 | `<runs>/<KEY>/01-intake/intake.md` | Full file | Acceptance, root, gaps |
 | Stage 02 | `<runs>/<KEY>/02-research/research.md` | Full file | Paths, siblings, tree state |
 | Shape | `references/plan-shape.md` | Full file | `plan.md` sections and rules |
-| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row and "Rules" | Branch pattern, work tree, test route |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row, its "Notes" and "Test logins" | Branch pattern, work tree, test route |
+| Repo rows | `../../shared/repo-rows.md` | "Columns", "Rules" | How to read the row |
 | Git | `../../shared/git-rules.md` | "The stop", "Your work comes first" | What the plan may promise |
 | Records | `../../shared/tools.md` | "Writing records" | How to write this stage's record when the chat is rooted in the app repo |
 
 ## Process
 
-1. The record's first line is `version: 1`. Pick the branch name and the work tree from the repo row, the tree state in `research.md`, and "Rules" in `<data-root>/workspaces/ticket-execution/repos.md`. A re-run on an existing branch keeps that branch.
+1. The record's first line is `version: 1`. Pick the branch name and the work tree from the repo row, the tree state in `research.md`, and "Rules" in `../../shared/repo-rows.md`. A re-run on an existing branch keeps that branch.
 2. Write `plan.md` as `references/plan-shape.md` says. Only what the acceptance lines need. Every question includes the default this run will take.
 3. Run the audit. Fix and rewrite until it passes.
 4. Return the path to `plan.md` and each audit row. Do not create the branch. Do not open stage 04. Do not wait for an edit.

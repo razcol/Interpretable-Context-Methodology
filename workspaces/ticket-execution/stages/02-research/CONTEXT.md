@@ -11,6 +11,7 @@ Find where the asked behavior lives in the repo, what live WordPress has for it,
 | Stage 01 | `<runs>/<KEY>/01-intake/intake.md` | Full file | What is asked, root, acceptance |
 | Stage 01 | `<runs>/<KEY>/01-intake/attachments/` | Images named in "Images" | What it should look like |
 | Rules | `references/research-rules.md` | Full file | Where to look, when and how to check live WordPress, what to leave out, `research.md` shape |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | "Notes" | Siblings |
 | Git | `../../shared/git-rules.md` | "Allowed per stage" | Read-only git, plus the wp-graphql commands the rules name |
 | Repo | `<root>` from `intake.md` | Files the search finds | The code |
 | Live schema | `../../../../_core/skills/wp-graphql/SKILL.md` | "Which command", "Output", "Secrets" | Live ACF facts for each `wp: yes` line. A `.gql` file is what the code selects, not what WordPress has |

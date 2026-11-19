@@ -30,7 +30,7 @@ How to read and edit the map figma-cli writes in mobile mode (`export --mobile-o
 
 ## Match signals, strongest first
 
-1. Equal normalized text: trimmed, whitespace collapsed, Hebrew niqqud stripped. OND-7 matched its cards by title.
+1. Equal normalized text: trimmed, whitespace collapsed, Hebrew niqqud stripped. Cards often match by title.
 2. The same `imageRef` on an image fill. The same WordPress image is usually placed in both frames.
 3. Instances of the same component or component set (variants `Property 1=Default` and `Variant2`).
 4. Descendants: a container whose matched children point into the same desktop container.
@@ -46,7 +46,7 @@ A matched row's desktop class resolves to a repo selector in this order:
 2. The class itself.
 3. The class without its `-<n>` suffix (`card-2` to `card`).
 
-When none occurs in the repo files, the row is `target-missing`. Desktop 04 often renames classes: on OND-7 scaffold `card-2` became `.grid-card.slot-tall-end`.
+When none occurs in the repo files, the row is `target-missing`. Desktop 04 often renames classes: for example scaffold `card-2` became `.grid-card.slot-tall-end`.
 
 ## Interaction and touch
 

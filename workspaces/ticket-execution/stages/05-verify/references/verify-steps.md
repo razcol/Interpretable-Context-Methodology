@@ -30,7 +30,7 @@ A section not on the page (`ELEMENT_NOT_FOUND`) means the CMS page does not incl
 
 ## Pages behind a login
 
-Read the root's row in `<data-root>/workspaces/ticket-execution/repos.md` "Test logins". `L` is its steps file under `<data-root>/workspaces/ticket-execution/logins/`, and `S` is `~/.config/ticket-execution/test-logins.env`. Do not open `S`. Each check is one call: a fresh context, the documented sign-in, then the row in the same tab.
+Read the root's row in `<data-root>/workspaces/ticket-execution/repos.md` "Test logins". `L` is its steps file under `<data-root>/workspaces/ticket-execution/logins/`, and `S` is the secrets file that section names (`~/.config/ticket-execution/test-logins.env` by default). Do not open `S`. Each check is one call: a fresh context, the documented sign-in, then the row in the same tab.
 
 ```bash
 node $B/scripts/interact.js --profile <key>-review --fresh-context --viewport <W>x<H> --timeout 60000 \

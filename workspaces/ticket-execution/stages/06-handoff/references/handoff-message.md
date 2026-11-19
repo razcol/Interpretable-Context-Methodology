@@ -57,7 +57,7 @@ Branch `<branch>` in `<work tree>`, nothing staged or committed. Diff in Source 
 Checklist: <N> of <M> passed. Report: `<runs>/<KEY>/05-verify/verify-report.md`. Screenshots: `<runs>/<KEY>/05-verify/shots/`.
 
 Next:
-- `approve <KEY>`: commit, push, and give you the PR link against `dev`
+- `approve <KEY>`: commit, push, and give you the PR link against `<PR target>`
 - `change <KEY>: <what>`: I change it, recheck, and hand it back on the same server
 - `commit <KEY>`: commit only, no push
 - `stop <KEY>`: stop the server I started

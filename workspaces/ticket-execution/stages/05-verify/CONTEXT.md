@@ -15,6 +15,7 @@ Check each acceptance line in the running app with a headless browser, and recor
 | Tools | `../../shared/tools.md` | "dev_server.py", "Writing records" | Start or reuse the server |
 | Browser | `../../../../_core/skills/browser-cdp/SKILL.md` | "Which script to run", "Output contract", "Interaction steps" | Screenshots, measure, interact, capture |
 | Repos | `<data-root>/workspaces/ticket-execution/repos.md` | "Test logins" (the root's row) | Sign-in steps file, secret key names, form submits |
+| Repo rows | `../../shared/repo-rows.md` | "Test logins" | What Session and Form submits mean |
 
 ## Process
 

@@ -72,7 +72,7 @@ Run <node-id> (<route>, <Folder>, <repo>)
 When a desktop record D and a mobile record M name each other in `pair:` lines, show them as one block:
 
 ```
-Section ImageGrid (ora, /home/dev/ora-next/.worktrees/OND-7)
+Section ImageGrid (<repo>, <root or worktree path>)
   desktop 3919-20727 (sync)   [01] --> [02] --> [03] --> [04] --> [05]   STATUS ...
   mobile  1482-11000 (mobile) [01m] --> [04m] --> [05m]                  STATUS ...
 ```

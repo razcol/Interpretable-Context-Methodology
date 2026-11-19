@@ -7,7 +7,8 @@ Stage 04 follows this file as written, including the default on each question. T
 
 - ticket: <browse URL>
 - root: <root>
-- branch: <name>  (new from origin/dev | existing)
+- base: <base from intake.md>
+- branch: <name>  (new from origin/<base> | existing)
 - work tree: <main tree | path of the worktree to create or reuse>
 - app root: <work tree>/code
 
@@ -41,7 +42,7 @@ Stage 04 follows this file as written, including the default on each question. T
 - Check methods map to stage 05. `screenshot` and `measure` (horizontal overflow) take widths. `interact` names the click or input. `view source` is for markup asked in the ticket (heading levels, `alt`, lazy load), read from the server HTML. Lint never checks a line on its own.
 - Widths: the ticket's widths, or 1920, 1440 and 375 when it shows desktop and mobile, or 1440 when it shows desktop only.
 - Review URLs are paths on the local dev server (no host, no port; stage 06 adds them). A CMS section uses the repo's test route from `<data-root>/workspaces/ticket-execution/repos.md`, or a page named in the ticket. When no page is known, write "none known" and a question whose default is to hand off without a page.
-- A page behind a login (self-service) says so, names the login path, and says whether the root has a "Test logins" row in `<data-root>/workspaces/ticket-execution/repos.md` ("no test login yet" when it does not).
+- A page behind a login says so, names the login path, and says whether the root has a "Test logins" row in `<data-root>/workspaces/ticket-execution/repos.md` ("no test login yet" when it does not).
 - An `interact` row that has to send a form (the click that submits it) says `submits` in Check. Stage 05 sends it only when the root's "Form submits" is `yes`. Otherwise the row is NOT VERIFIED with "submit not allowed" and stage 05 does not open a browser for it.
 - Schema or data changes (`prisma/`, WordPress fields) are listed in "Files" and called out in "Risks". The dev server never decides them. A WordPress field or group is a change only when `research.md` lists it under `absent` in an `ok: true` live block on the run's root. A name under "Unconfirmed live", or with no live block, is never "create", "missing" or "does not exist": "Risks" says `live schema unconfirmed for <name> (<code>)`, "Files" leaves out the selection that needs it, and that line's checklist row says `not checkable locally: live schema unconfirmed for <name> (<code>)`. A fragment selects only names under `present` on the run's root, never a name copied from a sibling's fragment.
 - No time estimates.

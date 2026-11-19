@@ -8,6 +8,7 @@ Read the repo's structure, read the Figma layer, and write the repo-shaped scaff
 |--------|--------------|---------------|-----|
 | Run | The trigger message | Route, Figma URL, repo, folder (`sync`, `resync`, `mobile`), `--mobile <url>`, `--mobile` (`resync`, `element`), target file (`element`) | What this run is |
 | Targets | `<data-root>/workspaces/figma-section-fields/repos.md` | Full file | Repo root and default repo |
+| Target rules | `../../targets/CONTEXT.md` | "Rules" | Default repo, worktree roots |
 | Repo skill | `../../skills/next-section-repo/SKILL.md` | `probe_repo.py` section | The repo profile |
 | Setup | `../../shared/figma-cli-setup.md` | Full file | How to call figma-cli and load the token |
 | Contract | `../../shared/export-contract.md` | Full file | Commands, notes and exit codes |

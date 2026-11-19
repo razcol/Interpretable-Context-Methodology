@@ -31,7 +31,7 @@ Exit 0 passes. Exit 11 means overflow; `error.details.results` gives `overflowPx
 
 ## Desktop baseline for the mobile pass
 
-On a desktop PASS, when the export record has `pair: <M>` or `pair: pending`, save the baseline shots. Use the harness (it is deterministic, and 05m uses the same page). `<harness root>` is the folder holding `components/`: the profile's `appRoot` plus `sectionsDir` without its `components/...` tail (`code/app` in ora). `<props>` is `<runs>/<D>/05-verify/harness-props.json`: one object of `Client<Folder>` props in the shape the bound `Server<Folder>.js` passes, with texts from D's section map. Write it once; every harness build of the pair uses it.
+On a desktop PASS, when the export record has `pair: <M>` or `pair: pending`, save the baseline shots. Use the harness (it is deterministic, and 05m uses the same page). `<harness root>` is the folder holding `components/`: the profile's `appRoot` plus `sectionsDir` without its `components/...` tail (for example `code/app`). `<props>` is `<runs>/<D>/05-verify/harness-props.json`: one object of `Client<Folder>` props in the shape the bound `Server<Folder>.js` passes, with texts from D's section map. Write it once; every harness build of the pair uses it.
 
 ```bash
 (cd <workspace>/skills/next-section-repo && python3 scripts/harness.py --repo <harness root> --folder <Folder> --out-dir $R/harness --props <props>)
@@ -76,7 +76,7 @@ node $B/scripts/interact.js --url "<page>" --viewport 393x852 --out-dir $R/shots
 | Level 1 mobile | `diffRatio` recorded |
 | Fluid mobile | exit 0, no overflow |
 | Level 2 or harness | exit 0 and the selector is found. On `H` the report says "harness: media and breadcrumbs stubbed" and never claims Level 2 |
-| Boundary | 1279 shows mobile and 1280 shows desktop, else FAIL. A listed ora overlap does not fail ([mobile-patterns.md "Breakpoints"](../../../skills/next-section-repo/references/mobile-patterns.md#breakpoints)) |
+| Boundary | 1279 shows mobile and 1280 shows desktop, else FAIL. A listed overlap does not fail ([mobile-patterns.md "Breakpoints"](../../../skills/next-section-repo/references/mobile-patterns.md#breakpoints)) |
 | Desktop regression | `match: true` (ratio ≤ 0.001 for the section), or each difference listed with its cause |
 | Touch | Matches the recorded decision: tap toggle opens then closes; always shown is visible at rest; hidden is absent. A tap below the fold scrolls the page, so judge `touch-closed` by the card's state, not by a page diff with `touch-rest` |
 | Look | By eye, the `touch-rest` and Level 2 (or `H`) shots at M's width match `$S/figma.png` in order, sizes and decor, or each difference is listed |

@@ -25,6 +25,7 @@ Written by the agent after reading `ticket.md` and the images. English. Hebrew t
 - type / status: <type> / <status>
 - repo: <repo name from <data-root>/workspaces/ticket-execution/repos.md>
 - root: <root>
+- base: <the row's Base>
 - app root: <root>/code
 - linked: <keys and one line each, or none>
 

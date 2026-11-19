@@ -11,10 +11,11 @@ Hand you the work ready to review: the app running on the changed code, the exac
 | Stage 05 | `<runs>/<KEY>/05-verify/verify-report.md` | Full file | Results, evidence, what was not verified |
 | Stage 05 | `<runs>/<KEY>/05-verify/dev-server.json` | Full file | Port, app root, dev artifacts |
 | Stage 04 | `<runs>/<KEY>/04-implement/implement-record.md` | "branch", "work tree", "app root", "Files changed" | What changed and where |
-| Stage 03 | `<runs>/<KEY>/03-plan/plan.md` | "Review URLs", "Acceptance checklist" | Where to look and what for |
+| Stage 03 | `<runs>/<KEY>/03-plan/plan.md` | "base", "Review URLs", "Acceptance checklist" | Diff base, where to look and what for |
 | Message | `references/handoff-message.md` | Full file | URL rules, message and `handoff.md` shape |
 | Tools | `../../shared/tools.md` | "dev_server.py", "review_urls.py", "Writing records" | Server check, changed files to routes |
-| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row, and its "Test logins" row | Test route, Bitbucket slug, sign-in |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row, its "Notes", and its "Test logins" row | Test route, PR target, sign-in |
+| Repo rows | `../../shared/repo-rows.md` | "Columns", "Test logins" | How to read the row |
 | Browser | `../../../../_core/skills/browser-cdp/SKILL.md` | "Which script to run", "Interaction steps" | The fresh request |
 | Sign-in | `../05-verify/references/verify-steps.md` | "Pages behind a login" | The one call for a page behind a login |
 
@@ -22,9 +23,9 @@ Hand you the work ready to review: the app running on the changed code, the exac
 
 0. When the assignment says the checklist cannot be verified on this backend (submit not allowed), skip steps 1 to 4 and continue at step 5. The not-ready line gives that reason. Do not open a browser.
 1. Confirm the server: `dev_server.py status --app-root <app root>`, unsandboxed (`required_permissions: all`). A sandboxed status that says "not answering" is not a reason to restart. When an unsandboxed status says no match answers, run `up` again (background, as in `shared/tools.md`) with the same state file. Exit 0 from `up` means the starter returned. It is not a later check.
-2. Run `review_urls.py` with the server's port and the repo's test route. For NSS the review page is `/changeAccount` (see `<data-root>/workspaces/ticket-execution/repos.md`). Do not use `/homepage`; it only shows a loading spinner.
+2. Run `review_urls.py` with the server's port, `--base origin/<base>` (`<base>` from the plan's `base` line; a plan without one means the row's Base) and the repo's test route. Follow what the row's Test route and the repo's line under "Notes" say about which page to review and which page not to use.
 3. When verify already has a screenshot of the review page, the server was not restarted, and the working tree is unchanged since verify, reuse that screenshot. Do not sign in again. Otherwise request the first review URL in a fresh browser context: `node <browser-cdp>/scripts/navigate.js --fresh-context --url <url>` (start the browser first with `browser.js start --profile <key>-handoff --port 9340`, and stop it after). `--port` belongs on `browser.js` only. For a root in "Test logins", use the single sign-in call from verify-steps "Pages behind a login", with `goto` to the first URL and a screenshot, and only when this step is not reusing verify's shot. On a root whose Session in `<data-root>/workspaces/ticket-execution/repos.md` "Test logins" is `sessionStorage`, do not run `navigate.js --fresh-context`, `screenshot.js` or `capture.js` on the review URL. If one ran anyway, ignore what it returned. Record what came back: the acceptance screen, a login page, or no answer. Keep a URL only when that screen shows the change. Drop `review_urls.py` hits that do not render it. A status under 500 does not keep a URL.
-4. Collect the diff summary: `git -C <work tree> status --short` and `git -C <work tree> diff --stat origin/dev`, leaving out dev artifacts and anything in `shared/git-rules.md` "Never staged".
+4. Collect the diff summary: `git -C <work tree> status --short` and `git -C <work tree> diff --stat origin/<base>`, leaving out dev artifacts and anything in `shared/git-rules.md` "Never staged".
 5. Write `handoff.md` as `references/handoff-message.md` says. Its first line is `version: 1`. When the fresh request did not show the acceptance screen, or verify was skipped because submits are not allowed, use the not-ready line. When no page is known, say so in the message. Do not stop to ask. Copy stage 05's listed image differences into the message and `handoff.md` as `references/handoff-message.md` says.
 6. Post that message once. Return the path to `handoff.md`. Do not open stage 07. The session that spawned you waits for `approve <KEY>`, `commit <KEY>`, `change <KEY>: ...`, or `stop <KEY>`.
 
