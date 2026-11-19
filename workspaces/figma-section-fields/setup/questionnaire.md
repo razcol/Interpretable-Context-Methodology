@@ -2,6 +2,8 @@
 
 Read this file when the user types `setup`. Ask ALL questions below in one pass, so the user can answer everything in one message. Replace the placeholders in the files listed, then scan the workspace for any `{{` left.
 
+Before the questions, run `python3 ../../_core/data-root/data_root.py init` from this workspace folder. It creates your data root (default `~/.config/ai-system`) when it is missing and changes nothing when it is complete. See "Data root" in `_core/CONVENTIONS.md`.
+
 These questions configure the workspace. Per-run facts (Figma URL, repo for this run, folder name, target file for `element`) come with the trigger.
 
 ### Q1: Where are your section repos on this machine?

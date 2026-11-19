@@ -2,6 +2,8 @@
 
 Read this file when the user types "setup". Ask ALL questions below in a single conversational pass. The user should be able to answer everything in one message. These answers inform the discovery conversation in Stage 01 -- they are not placeholder replacements.
 
+Before the questions, run `python3 ../../_core/data-root/data_root.py init` from this workspace folder. It creates your data root (default `~/.config/ai-system`) when it is missing and changes nothing when it is complete. See "Data root" in `_core/CONVENTIONS.md`.
+
 ---
 
 ### Q1: What domain is this workspace for?

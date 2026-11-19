@@ -1,3 +1,6 @@
+# Names this checkout's data root (see "Data root" in _core/CONVENTIONS.md). Local only.
+/.data-root
+
 # Stage outputs (per-run artifacts, not part of the workspace definition)
 **/stages/*/output/*
 !**/stages/*/output/.gitkeep

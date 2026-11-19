@@ -2,6 +2,8 @@
 
 Read this file when the user types "setup". Ask ALL questions below in a single conversational pass.
 
+Before the questions, run `python3 ../../_core/data-root/data_root.py init` from this workspace folder. It creates your data root (default `~/.config/ai-system`) when it is missing and changes nothing when it is complete. See "Data root" in `_core/CONVENTIONS.md`.
+
 ---
 
 ### Q1: Where did you install the bundled outlookctl tool?

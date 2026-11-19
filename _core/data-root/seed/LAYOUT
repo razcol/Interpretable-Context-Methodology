@@ -1,0 +1,11 @@
+version: 1
+
+# Data root layout. The first line is read by _core/data-root/data_root.py.
+# A layout change raises the version and ships with a migration step.
+#
+# workspaces/<ws>/              settings for one workspace (repo tables, login steps)
+# workspaces/<ws>/runs/<KEY>/   run records and produced artifacts, per run key
+# log/<skill>/LOG.md            one log per skill, append only
+# log/briefs/                   session briefs, handoffs and debriefs
+# archive/                      kept history
+# .worktrees/<branch>/          paired data worktrees for ai-system maintenance (ignored)

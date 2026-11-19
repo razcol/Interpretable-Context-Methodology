@@ -13,6 +13,7 @@ model-workspace-protocol/
 │   ├── CONVENTIONS.md                 (source of truth for all patterns)
 │   ├── placeholder-syntax.md          (how {{VARIABLES}} work)
 │   ├── templates/                     (blank starting points for new workspaces)
+│   ├── data-root/                     (data root helper: resolve, setup seed, maintenance worktree pairing)
 │   └── skills/                        (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
 │       ├── jira-research/             (searching/extracting info from Jira -- experimental)
 │       ├── browser-cdp/               (drive Chrome via CDP scripts: screenshots, diffs, overflow at set widths, DOM, console, interaction -- provisional)
@@ -41,6 +42,7 @@ model-workspace-protocol/
 | Split a task across subagents (when to split, briefs, model and effort per spawn, checking returns) | `_core/skills/subagent-orchestration/SKILL.md` |
 | Generate a planned Excalidraw flowchart of an idea or system | `_core/skills/system-flowcharts/SKILL.md` |
 | Read a project's live WordPress GraphQL schema for ACF sections, check fragments, or compare a field plan with a group | `_core/skills/wp-graphql/SKILL.md` |
+| Find where your data lives (data root), or pair a maintenance worktree with a data worktree | `_core/CONVENTIONS.md`, "Data root" section |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
 | Understand the placeholder system | `_core/placeholder-syntax.md` |
 | Use a template for a new workspace | `_core/templates/` |
@@ -49,7 +51,7 @@ model-workspace-protocol/
 
 | Keyword | Action |
 |---------|--------|
-| `setup` | Run onboarding in whatever workspace you are in |
+| `setup` | Create the data root if missing, then run onboarding in whatever workspace you are in |
 | `status` | Show pipeline completion for the current workspace |
 
 ## How It Works

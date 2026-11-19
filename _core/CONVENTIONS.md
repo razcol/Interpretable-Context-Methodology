@@ -141,11 +141,57 @@ Note: When a workspace bundles skills (Pattern 9), many tools that would have ne
 
 ---
 
+## Data root
+
+The repo holds definitions only: rules, workflows, skills, tools and templates. Everything a user produces or keeps while using it (repo tables, login steps, logs, session briefs, stage outputs, run records) is that user's data. It lives in the **data root**, a local git repo of its own, outside the repo tree. A `.gitignore` entry in the repo is a backstop only, never the place where data is kept.
+
+**One definition.** The data root is the first of:
+
+1. the path in `.data-root` at the top of the ai-system checkout (one line, starting with `~` or `/`; git-ignored, never committed)
+2. the `AI_SYSTEM_HOME` environment variable
+3. `~/.config/ai-system`
+
+Tools never type the path. They ask the helper, `_core/data-root/data_root.py` (Python 3 standard library only):
+
+| Command | What it does |
+|---|---|
+| `resolve` | Prints the data checkout this ai-system checkout uses: the main checkout uses the data root, a worktree on branch X uses data worktree X. Stops when there is none. |
+| `init` | Creates the data root when it is missing and seeds what is missing. Never overwrites. `setup` runs it. |
+| `commit -m MSG [PATH...]` | Commits in the data checkout. Stages named paths (all changes when none are given), refuses secret-looking files, and holds a short lock so commits into one checkout never overlap. |
+| `add <branch>` | Maintenance only: an ai-system worktree (default `<checkout>.worktrees/<branch>` next to the main checkout) and a data worktree at `<data root>/.worktrees/<branch>`, on the same branch name. |
+| `merge <branch>` | Commits the data worktree, merges data into the main data checkout, then merges code. Stops before the code merge if the data merge conflicts. |
+| `remove <branch>` | Removes both worktrees and both branches after a confirmation. Uncommitted or unmerged work is dropped only with `--discard`. |
+
+From a shell: `"$(python3 _core/data-root/data_root.py resolve)"`.
+
+**Layout** (version 1, named in the data root's `LAYOUT` file):
+
+| Folder | Holds |
+|---|---|
+| `workspaces/<ws>/` | One workspace's settings (repo tables, login steps) |
+| `workspaces/<ws>/runs/<KEY>/` | Run records and produced artifacts, per run key |
+| `log/<skill>/LOG.md` | One append-only log per skill |
+| `log/briefs/` | Session briefs, handoffs and debriefs |
+| `archive/` | Kept history |
+| `.worktrees/<branch>/` | Paired data worktrees (ignored) |
+
+A layout change raises the `LAYOUT` version and ships with a migration step that runs on merge.
+
+**Data repo rules** (seeded from `_core/data-root/seed/`): `.gitignore` keeps env and secret files, caches and run locks out; `.gitattributes` sets `LOG.md` and `log/briefs/` to `merge=union`, so two branches that both append never conflict.
+
+**Seeding.** A tracked `workspaces/<ws>/targets/<path>.example.<ext>` seeds `workspaces/<ws>/<path>.<ext>` in the data root, once. Example files hold the procedure text with `<...>` placeholders, never a user's data.
+
+**Large outputs** (screenshots, exports) are committed to the data repo like everything else, so discarding a worktree never loses them. Env and secret files are never committed in either repo.
+
+**Two modes.** Normal work runs on the main ai-system checkout and writes to the main data checkout; a run never gets its own ai-system worktree. Changing ai-system itself happens in a worktree from `add`, whose test runs write to its paired data worktree; finish with `merge` (data first, then code) or `remove --discard`.
+
+---
+
 ## Trigger Keywords
 
 Every workspace recognizes these triggers:
 
-**`setup`** -- Starts the onboarding questionnaire. The agent reads `setup/questionnaire.md`, asks the questions conversationally, collects answers, replaces placeholders across the workspace, and verifies no placeholders remain.
+**`setup`** -- Starts the onboarding questionnaire. The agent first runs `python3 _core/data-root/data_root.py init` from the ai-system checkout, which creates the data root when it is missing (see Data root) and changes nothing when it is complete. Then it reads `setup/questionnaire.md`, asks the questions conversationally, collects answers, replaces placeholders across the workspace, and verifies no placeholders remain.
 
 **`status`** -- Shows pipeline completion. The agent scans all `stages/*/output/` folders and renders an ASCII pipeline diagram:
 

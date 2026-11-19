@@ -2,6 +2,8 @@
 
 Read this file when the user types `setup`. Ask all questions below in a single conversational pass. The user should be able to answer everything in one message. Collect answers, replace placeholders across the listed files, then scan the workspace (except this file) for any remaining `{{` patterns.
 
+Before the questions, run `python3 ../../_core/data-root/data_root.py init` from this workspace folder. It creates your data root (default `~/.config/ai-system`) when it is missing and changes nothing when it is complete. See "Data root" in `_core/CONVENTIONS.md`.
+
 Per-run details are not asked here. The target repo path and app root are collected at the start of each run by `stages/01-recon/CONTEXT.md`.
 
 ---

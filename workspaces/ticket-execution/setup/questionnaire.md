@@ -2,6 +2,8 @@
 
 Read this file when the user types `setup`. Ask ALL questions below in one pass, so the user can answer everything in one message. Write the answers into the files listed, then confirm the checks at the end.
 
+Before the questions, run `python3 ../../_core/data-root/data_root.py init` from this workspace folder. It creates your data root (default `~/.config/ai-system`) when it is missing and changes nothing when it is complete. See "Data root" in `_core/CONVENTIONS.md`.
+
 These questions configure the workspace. Per-run facts (the ticket, which `MAIN` site) come with the trigger. The defaults below are already written in the files; setup only changes what you answer differently.
 
 ### Q1: Where are your repos, by Jira project key?
