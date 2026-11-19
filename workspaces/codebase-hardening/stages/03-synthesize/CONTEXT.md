@@ -6,9 +6,9 @@ Turn probe reports into convention candidates, and get the ratifier's decision o
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../02-measure/output/reports/` | Every report. Not the evidence folder. | The facts to synthesize |
-| Previous stage | `../02-measure/output/skipped-probes.md` | Full file | Known blind spots |
-| Earlier stage | `../01-recon/output/project-profile.md` | "Stack" and "Tooling" sections | Cross-check dependency and config facts |
+| Previous stage | `<runs>/<KEY>/02-measure/reports/` | Every report. Not the evidence folder. | The facts to synthesize |
+| Previous stage | `<runs>/<KEY>/02-measure/skipped-probes.md` | Full file | Known blind spots |
+| Earlier stage | `<runs>/<KEY>/01-recon/project-profile.md` | "Stack" and "Tooling" sections | Cross-check dependency and config facts |
 | Shared | `../../shared/rules-manifest-schema.md` | "Candidate Block" | Fields of a candidate |
 | Shared | `../../shared/preferences.md` | "Ratifier" | Who decides |
 | Reference | `references/candidates-format.md` | Full file | Method, corroboration, presentation |
@@ -42,4 +42,4 @@ Turn probe reports into convention candidates, and get the ratifier's decision o
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Convention candidates | `output/conventions-candidates.md` | Candidate blocks with final decisions |
+| Convention candidates | `<runs>/<KEY>/03-synthesize/conventions-candidates.md` | Candidate blocks with final decisions |

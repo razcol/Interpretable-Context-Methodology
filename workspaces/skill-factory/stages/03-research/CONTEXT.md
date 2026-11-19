@@ -6,8 +6,8 @@ Explore viable implementation approaches for the skill before committing to one.
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../02-clarify/output/clarified-requirements.md` | Full file | Scope and constraints to research against (new mode) |
-| Previous stage | `../01-intake/output/intake-note.md` | Resolved skill folder path | Current implementation to reconsider (existing mode, approach-change requests only) |
+| Previous stage | `<runs>/<KEY>/02-clarify/clarified-requirements.md` | Full file | Scope and constraints to research against (new mode) |
+| Previous stage | `<runs>/<KEY>/01-intake/intake-note.md` | Resolved skill folder path | Current implementation to reconsider (existing mode, approach-change requests only) |
 | Shared | `../../shared/authoring-conventions.md` | Full file | Keeps research grounded in what's actually implementable as a skill |
 | Shared | `../../shared/preferences.md` | "Research Depth" | How thoroughly to compare candidate approaches before drafting |
 
@@ -23,4 +23,4 @@ Explore viable implementation approaches for the skill before committing to one.
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Candidate approaches | `output/candidate-approaches.md` | List of viable paths with tradeoffs, and ruled-out paths with reasons |
+| Candidate approaches | `<runs>/<KEY>/03-research/candidate-approaches.md` | List of viable paths with tradeoffs, and ruled-out paths with reasons |

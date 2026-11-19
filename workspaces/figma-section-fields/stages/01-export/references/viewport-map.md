@@ -1,6 +1,6 @@
 # Viewport map
 
-How to read and edit the map figma-cli writes in mobile mode (`export --mobile-of`). It pairs every node of the mobile frame M with a target in the built desktop section D. figma-cli writes two files in `stages/01-export/output/<M>/`: `viewport-map.md`, the edit surface you show the user, and `viewport-map.json`, what `--map` reads. Flags and exit codes: `shared/export-contract.md`.
+How to read and edit the map figma-cli writes in mobile mode (`export --mobile-of`). It pairs every node of the mobile frame M with a target in the built desktop section D. figma-cli writes two files in `<runs>/<M>/01-export/`: `viewport-map.md`, the edit surface you show the user, and `viewport-map.json`, what `--map` reads. Flags and exit codes: `shared/export-contract.md`.
 
 ## Columns
 
@@ -42,7 +42,7 @@ The matcher never guesses. No signal, or a tie it cannot split by order (repeate
 
 A matched row's desktop class resolves to a repo selector in this order:
 
-1. `--class-map`: the scaffold class to repo selector map desktop 04 writes to `stages/04-conform-bind/output/<D>/class-map.json`.
+1. `--class-map`: the scaffold class to repo selector map desktop 04 writes to `<runs>/<D>/04-conform-bind/class-map.json`.
 2. The class itself.
 3. The class without its `-<n>` suffix (`card-2` to `card`).
 
@@ -63,12 +63,12 @@ Show the user the `unmatched` and `target-missing` rows. They may edit three col
 - `status`: for example `mobile-only-decor`, `hidden-on-mobile`, or `new-content` (which stops the run with exit 11 on rerun).
 - `touch` (in `interaction`): `design` with the trigger, or `checkpoint`.
 
-For a `target-missing` row the usual fix is a class-map entry, scaffold class to repo selector, written to `stages/04-conform-bind/output/<D>/class-map.json` as `{ "<scaffold class>": "<repo selector>" }`, for example `{ "card-4": ".grid-card.slot-wide" }`. The scaffold class is the row's `desktop` class in `viewport-map.md`. Create the file when it is absent.
+For a `target-missing` row the usual fix is a class-map entry, scaffold class to repo selector, written to `<runs>/<D>/04-conform-bind/class-map.json` as `{ "<scaffold class>": "<repo selector>" }`, for example `{ "card-4": ".grid-card.slot-wide" }`. The scaffold class is the row's `desktop` class in `viewport-map.md`. Create the file when it is absent.
 
 Then carry each edited row into `viewport-map.json` by `id`, and rerun from the workspace root:
 
 ```bash
-$FIGMA export '<M url>' --mobile-of stages/01-export/output/<D>/section-map.json --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out stages/01-export/output/<M> --repo-profile stages/01-export/output/<M>/profile.json --class-map stages/04-conform-bind/output/<D>/class-map.json --map stages/01-export/output/<M>/viewport-map.json [--font-map 'Family=export']
+$FIGMA export '<M url>' --mobile-of <runs>/<D>/01-export/section-map.json --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out <runs>/<M>/01-export --repo-profile <runs>/<M>/01-export/profile.json --class-map <runs>/<D>/04-conform-bind/class-map.json --map <runs>/<M>/01-export/viewport-map.json [--font-map 'Family=export']
 ```
 
 Drop `--class-map` when the file does not exist. Your edits win over the matcher, and the row's `signal` becomes `user`. A row you left as it was keeps the matcher's result, so a `target-missing` row resolves from the new class-map entry alone. figma-cli recomputes `box`, `deltas` and `order` from the frame, so never edit them, or the overlay files, by hand.

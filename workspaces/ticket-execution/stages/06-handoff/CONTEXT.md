@@ -8,10 +8,10 @@ Hand you the work ready to review: the app running on the changed code, the exac
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 05 | `../05-verify/output/<KEY>/verify-report.md` | Full file | Results, evidence, what was not verified |
-| Stage 05 | `../05-verify/output/<KEY>/dev-server.json` | Full file | Port, app root, dev artifacts |
-| Stage 04 | `../04-implement/output/<KEY>/implement-record.md` | "branch", "work tree", "app root", "Files changed" | What changed and where |
-| Stage 03 | `../03-plan/output/<KEY>/plan.md` | "Review URLs", "Acceptance checklist" | Where to look and what for |
+| Stage 05 | `<runs>/<KEY>/05-verify/verify-report.md` | Full file | Results, evidence, what was not verified |
+| Stage 05 | `<runs>/<KEY>/05-verify/dev-server.json` | Full file | Port, app root, dev artifacts |
+| Stage 04 | `<runs>/<KEY>/04-implement/implement-record.md` | "branch", "work tree", "app root", "Files changed" | What changed and where |
+| Stage 03 | `<runs>/<KEY>/03-plan/plan.md` | "Review URLs", "Acceptance checklist" | Where to look and what for |
 | Message | `references/handoff-message.md` | Full file | URL rules, message and `handoff.md` shape |
 | Tools | `../../shared/tools.md` | "dev_server.py", "review_urls.py", "Writing records" | Server check, changed files to routes |
 | Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row, and its "Test logins" row | Test route, Bitbucket slug, sign-in |
@@ -49,4 +49,4 @@ Hand you the work ready to review: the app running on the changed code, the exac
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Handoff | `output/<KEY>/handoff.md` | See `references/handoff-message.md` |
+| Handoff | `<runs>/<KEY>/06-handoff/handoff.md` | See `references/handoff-message.md` |

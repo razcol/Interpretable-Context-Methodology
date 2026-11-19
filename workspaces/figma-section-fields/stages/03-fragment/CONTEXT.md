@@ -6,9 +6,9 @@ Write the section's `.gql` from the group you built, after checking the group st
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 01 | `../01-export/output/<node-id>/export-record.md` | Full file | Repo, folder |
-| Profile | `../01-export/output/<node-id>/profile.json` | `fragments`, `appRoot`, `sectionsDir` | Spread names this repo uses |
-| Stage 02 | `../02-field-plan/output/<node-id>/field-plan.json` | Full file | The approved plan |
+| Stage 01 | `<runs>/<node-id>/01-export/export-record.md` | Full file | Repo, folder |
+| Profile | `<runs>/<node-id>/01-export/profile.json` | `fragments`, `appRoot`, `sectionsDir` | Spread names this repo uses |
+| Stage 02 | `<runs>/<node-id>/02-field-plan/field-plan.json` | Full file | The approved plan |
 | Rules | `references/fragment-rules.md` | Full file | How the tree becomes the selection |
 | WP GraphQL | `../../../../_core/skills/wp-graphql/SKILL.md` | `section`, `diff-group`, `check-fragment` | Live checks |
 
@@ -19,7 +19,7 @@ Write the section's `.gql` from the group you built, after checking the group st
 3. Write the selection from the live `tree`, following `references/fragment-rules.md`, with spread names from the profile.
 4. Write `<app root>/<sectionsDir>/<Folder>/<Folder>.gql`. On `continue` the folder exists from stage 02. Create it when it does not.
 5. Run `check-fragment` on that file. Fix every `missingOnSchema` and `shapeMismatches` entry. `deprecatedSelected` is fine. When `fragment.compared` is false, stop: the layout does not exist yet.
-6. Run the audit. Write `output/<node-id>/fragment-record.md`.
+6. Run the audit. Write `<runs>/<node-id>/03-fragment/fragment-record.md`.
 7. Continue. Load `../04-conform-bind/CONTEXT.md`.
 
 ## Checkpoints
@@ -44,4 +44,4 @@ Write the section's `.gql` from the group you built, after checking the group st
 | Artifact | Location | Format |
 |----------|----------|--------|
 | Fragment | `<app root>/<sectionsDir>/<Folder>/<Folder>.gql` | GraphQL fragment |
-| Fragment record | `output/<node-id>/fragment-record.md` | `diff-group` and `check-fragment` summaries |
+| Fragment record | `<runs>/<node-id>/03-fragment/fragment-record.md` | `diff-group` and `check-fragment` summaries |

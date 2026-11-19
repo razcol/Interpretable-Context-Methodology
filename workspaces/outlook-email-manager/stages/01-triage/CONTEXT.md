@@ -17,7 +17,7 @@ Categorize, label, and prioritize every unread email in the inbox.
 
 Live Outlook is the only source of email data (see "Source of Truth: Live Outlook Only" in `../../CLAUDE.md`). Specific rules for this stage:
 
-- Do not read the existing `output/triage-report.md` to get rows, IDs, categories, or needs-reply values. It is a record of a previous run and is overwritten by this one. If it shows an unresolved checkpoint, do not resume it. Triage from the live unread list.
+- Do not read an earlier `<runs>/<KEY>/01-triage/triage-report.md` (an earlier date, or today's before this run) to get rows, IDs, categories, or needs-reply values. It is a record of a previous run; a second triage on the same date overwrites that day's report. If it shows an unresolved checkpoint, do not resume it. Triage from the live unread list.
 - `shared/category-map.md` holds mapping decisions only. Read each message's current categories live from `list`/`category get`.
 - Never write "unchanged from prior run" for an ID or any email field. Every row's data comes from this run's live fetch.
 
@@ -66,6 +66,6 @@ Live Outlook is the only source of email data (see "Source of Truth: Live Outloo
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Triage report | `output/triage-report.md` | Markdown table: subject, sender, received date, entry ID, store ID, category, label, priority score + reasoning, needs-reply (`Yes`/`No`/`Flag`) |
+| Triage report | `<runs>/<KEY>/01-triage/triage-report.md` | Markdown table: subject, sender, received date, entry ID, store ID, category, label, priority score + reasoning, needs-reply (`Yes`/`No`/`Flag`) |
 | Updated category map | `../../shared/category-map.md` | Same file, updated in place with any new approved mappings |
 | Outlook side effect | Inbox | Categories applied directly to messages via `outlookctl category set`; `No` rows marked read via `outlookctl mark-read` after the checkpoint resolves |

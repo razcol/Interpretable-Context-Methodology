@@ -12,7 +12,7 @@ The most important conventions for building a new workspace:
 
 - **Stage contracts**: Every stage CONTEXT.md has Inputs, Process, Outputs sections. No exceptions. See "Pattern 1: Stage Contracts" in `/_core/CONVENTIONS.md`.
 
-- **Stage handoffs**: Output folders connect stages. Stage N writes to output/, Stage N+1 reads from there. See "Pattern 2: Stage Handoffs" in `/_core/CONVENTIONS.md`.
+- **Stage handoffs**: Run folders connect stages. Stage N writes to `<runs>/<KEY>/0N-name/` in the data root (never into the repo), Stage N+1 reads from there. See "Pattern 2: Stage Handoffs" in `/_core/CONVENTIONS.md`.
 
 - **One-way references**: If A references B, B must not reference A. See "Pattern 3: One-Way Cross-References" in `/_core/CONVENTIONS.md`.
 
@@ -30,11 +30,11 @@ The most important conventions for building a new workspace:
 
 - **Checkpoints**: Creative stages should pause for human steering between process steps. Agent completes a unit of work, presents options, human redirects. See "Pattern 11: Checkpoints" in `/_core/CONVENTIONS.md`.
 
-- **Stage audits**: Creative and build stages include a quality checklist the agent runs before writing to output/. Each check has an unambiguous pass condition. See "Pattern 12: Stage Audits" in `/_core/CONVENTIONS.md`.
+- **Stage audits**: Creative and build stages include a quality checklist the agent runs before writing its output. Each check has an unambiguous pass condition. See "Pattern 12: Stage Audits" in `/_core/CONVENTIONS.md`.
 
 - **Value validation**: Content-producing stages define value types and lock which ones each piece will deliver before drafting begins. See "Pattern 13: Value Validation" in `/_core/CONVENTIONS.md`.
 
-- **Docs over outputs**: Reference docs are the authoritative source for how to build. Agents do not read other output/ files to learn patterns. See "Pattern 14: Docs Over Outputs" in `/_core/CONVENTIONS.md`.
+- **Docs over outputs**: Reference docs are the authoritative source for how to build. Agents do not read other runs' outputs to learn patterns. See "Pattern 14: Docs Over Outputs" in `/_core/CONVENTIONS.md`.
 
 - **Shared constants**: Code-producing workspaces define shared constant files (colors, fonts, timing) that all outputs import from. See "Pattern 15: Shared Constants" in `/_core/CONVENTIONS.md`.
 

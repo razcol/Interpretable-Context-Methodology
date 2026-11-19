@@ -14,7 +14,7 @@ node scripts/measure.mjs --probe <probe.md> --repo <dir> --out <dir> [--days 90]
 |--------|---------|
 | `--probe` | A probe file. It must contain a fenced block tagged `json measure`. |
 | `--repo` | The target repo or app folder. Candidate files come from `git ls-files` under it. |
-| `--out` | The stage output folder. Writes `reports/<id>.md` and `evidence/<id>-*.{tsv,txt}`. |
+| `--out` | The stage run folder, `<runs>/<KEY>/02-measure` (absolute). Writes `reports/<id>.md` and `evidence/<id>-*.{tsv,txt}`. |
 | `--days` | Trend window length. Defaults to the probe's `trendDays`, then 90. |
 
 Default exclusions: `node_modules`, `.next`, `dist`, `build`, `coverage`, minified files.

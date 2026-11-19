@@ -25,7 +25,7 @@ A sandboxed wp-graphql call can come back as `AUTH_FAILED` or `HTTP_FAILED` when
 
 Write records with the Write or StrReplace tool. When a write is refused, read the reason. For a security-policy denial, fix what it names and write again with the same tool. For any other refusal, retry once.
 
-When the chat's root is outside this workspace (usually the app repo), the Write tool cannot reach `stages/`. Write the record with `tools/write_record.py` instead:
+When the chat's root is outside this workspace (usually the app repo), the Write tool cannot reach the data root. Write the record with `tools/write_record.py` instead:
 
 ```bash
 python3 <ws>/tools/write_record.py --stage <01..07> --key <KEY> <<'RECORD'
@@ -33,14 +33,14 @@ python3 <ws>/tools/write_record.py --stage <01..07> --key <KEY> <<'RECORD'
 RECORD
 ```
 
-It is the only shell exception in this section: no other heredoc, `python -c`, `tee`, `cat >` or redirect writes a record. The script writes only the stage's own record under `stages/<n>/output/<KEY>/` and refuses every other path. The record name is fixed per stage (`shared/run-records.md`), the whole file is replaced, and the text must carry the `version:` line in its first five lines. For a small edit, read the current file and pass the full new text. Exit 0 written, 2 refused (unknown stage, bad key, a path outside that folder), 3 empty or no `version:` line.
+It is the only shell exception in this section: no other heredoc, `python -c`, `tee`, `cat >` or redirect writes a record. The script writes only the stage's own record under `<runs>/<KEY>/<n>/` (it resolves the data root itself) and refuses every other path. The record name is fixed per stage (`shared/run-records.md`), the whole file is replaced, and the text must carry the `version:` line in its first five lines. For a small edit, read the current file and pass the full new text. Exit 0 written, 2 refused (unknown stage, bad key, no data root, a path outside that folder), 3 empty or no `version:` line.
 
 When the script also refuses, put the record's full content in your return with the path it belongs at; the orchestrator reports it. The orchestrator never runs this script and never writes the record.
 
 ## intake.py (stage 01)
 
 ```bash
-python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <ws>/stages/01-intake/output/<KEY> --env-file ~/.config/jira/jira.env
+python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <runs>/<KEY>/01-intake --env-file ~/.config/jira/jira.env
 ```
 
 - Reads the item with ACLI (`acli jira workitem view <KEY> --fields '*all' --json`). ACLI needs the network: run with full network access.
@@ -54,8 +54,8 @@ python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <ws>/stages/01-intake/o
 
 ```bash
 python3 <ws>/tools/dev_server.py status --app-root <app root>
-python3 <ws>/tools/dev_server.py up --app-root <app root> --state <ws>/stages/05-verify/output/<KEY>/dev-server.json --path <first review path>
-python3 <ws>/tools/dev_server.py down --state <ws>/stages/05-verify/output/<KEY>/dev-server.json
+python3 <ws>/tools/dev_server.py up --app-root <app root> --state <runs>/<KEY>/05-verify/dev-server.json --path <first review path>
+python3 <ws>/tools/dev_server.py down --state <runs>/<KEY>/05-verify/dev-server.json
 ```
 
 - `status` and `up` must run unsandboxed (`required_permissions: all`). A sandboxed `status` reports "not answering" falsely. Never restart on that result. Confirm with an unsandboxed `status` before `up`.

@@ -17,7 +17,7 @@ Read one Jira ticket into files (description, images, repro, comments, links) an
 ## Process
 
 1. The record's first line is `version: 1`. Run `intake.py` with full network access. On exit 3, check `acli jira auth status` and follow the jira-research skill. On exit 4, stop and say the key is wrong or not visible to you.
-2. Read `ticket.md` in full. Open every file in `output/<KEY>/attachments/` with the Read tool and look at it. A `![name](attachments/...)` link in `ticket.md` is not the image.
+2. Read `ticket.md` in full. Open every file in `<runs>/<KEY>/01-intake/attachments/` with the Read tool and look at it. A `![name](attachments/...)` link in `ticket.md` is not the image.
 3. Resolve the root from `<data-root>/workspaces/ticket-execution/repos.md`. Two roots (`MAIN`) or no row: stop and ask.
 4. If a previous run of this key exists (an older `intake.md`), follow "Re-runs" in `references/intake-steps.md`.
 5. Write `intake.md` as `references/intake-steps.md` says.
@@ -43,7 +43,7 @@ Read one Jira ticket into files (description, images, repro, comments, links) an
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Raw item | `output/<KEY>/issue.json` | ACLI JSON |
-| Ticket | `output/<KEY>/ticket.md` | Written by `intake.py` |
-| Attachments | `output/<KEY>/attachments/` | The files |
-| Intake | `output/<KEY>/intake.md` | Working summary, see `references/intake-steps.md` |
+| Raw item | `<runs>/<KEY>/01-intake/issue.json` | ACLI JSON |
+| Ticket | `<runs>/<KEY>/01-intake/ticket.md` | Written by `intake.py` |
+| Attachments | `<runs>/<KEY>/01-intake/attachments/` | The files |
+| Intake | `<runs>/<KEY>/01-intake/intake.md` | Working summary, see `references/intake-steps.md` |

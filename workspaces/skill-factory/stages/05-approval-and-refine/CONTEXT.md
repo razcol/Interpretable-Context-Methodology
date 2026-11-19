@@ -6,8 +6,8 @@ Get explicit user sign-off on the tested draft before it gets published.
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../04-draft-and-test/output/draft-skill/` | Full folder | The draft to review |
-| Previous stage | `../04-draft-and-test/output/test-log.md` | Full file | Evidence of how it performed |
+| Previous stage | `<runs>/<KEY>/04-draft-and-test/draft-skill/` | Full folder | The draft to review |
+| Previous stage | `<runs>/<KEY>/04-draft-and-test/test-log.md` | Full file | Evidence of how it performed |
 
 ## Process
 
@@ -26,4 +26,4 @@ Get explicit user sign-off on the tested draft before it gets published.
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Approved skill | `output/approved-skill/` | Finalized SKILL.md + supporting scripts, ready to publish |
+| Approved skill | `<runs>/<KEY>/05-approval-and-refine/approved-skill/` | Finalized SKILL.md + supporting scripts, ready to publish |

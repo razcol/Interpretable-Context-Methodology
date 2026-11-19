@@ -353,32 +353,64 @@ class WriteRecordTests(unittest.TestCase):
     RECORD = "version: 3\n\n# Verify\n"
 
     def setUp(self):
+        # <tmp>/ai/workspaces/ticket-execution/tools/write_record.py, a stub helper at
+        # <tmp>/ai/_core/data-root/data_root.py that prints <tmp>/data, like resolve does.
         self.tmp = tempfile.TemporaryDirectory()
-        self.ws = Path(self.tmp.name).resolve()
-        Path(self.ws, "tools").mkdir()
+        base = Path(self.tmp.name).resolve()
+        self.ai = base / "ai"
+        self.ws = self.ai / "workspaces" / "ticket-execution"
+        self.data = base / "data"
+        Path(self.ws, "tools").mkdir(parents=True)
         Path(self.ws, "stages", "05-verify").mkdir(parents=True)
+        self.data.mkdir()
         shutil.copy(HERE / "write_record.py", Path(self.ws, "tools", "write_record.py"))
+        helper = self.ai / "_core" / "data-root" / "data_root.py"
+        helper.parent.mkdir(parents=True)
+        helper.write_text(f"import sys\nprint({str(self.data)!r}) if sys.argv[1:] == ['resolve'] else sys.exit(1)\n")
+        self.runs = self.data / "workspaces" / "ticket-execution" / "runs"
 
     def tearDown(self):
         self.tmp.cleanup()
 
-    def write(self, stage, key, text):
-        res = subprocess.run([sys.executable, Path(self.ws, "tools", "write_record.py"), "--stage", stage, "--key", key],
+    def write(self, stage, key, text, *extra):
+        res = subprocess.run([sys.executable, Path(self.ws, "tools", "write_record.py"), "--stage", stage, "--key", key, *extra],
                              input=text, capture_output=True, text=True)
         return res.returncode, json.loads(res.stdout)
 
-    def test_writes_stage_record(self):
+    def test_writes_stage_record_into_the_data_root(self):
         code, data = self.write("05", "ABC-1", self.RECORD)
-        target = Path(self.ws, "stages", "05-verify", "output", "ABC-1", "verify-report.md")
+        target = Path(self.runs, "ABC-1", "05-verify", "verify-report.md")
         self.assertEqual(code, 0)
         self.assertEqual(Path(data["path"]), target)
         self.assertEqual(target.read_text(), self.RECORD)
         self.assertFalse(data["replaced"])
+        self.assertFalse(Path(self.ws, "stages", "05-verify", "output").exists())
+
+    def test_data_root_flag_overrides_resolve(self):
+        other = Path(self.tmp.name, "other")
+        other.mkdir()
+        code, data = self.write("05", "ABC-1", self.RECORD, "--data-root", other)
+        self.assertEqual(code, 0)
+        self.assertEqual(Path(data["path"]), other.resolve() / "workspaces/ticket-execution/runs/ABC-1/05-verify/verify-report.md")
+        self.assertFalse(self.runs.exists())
+
+    def test_refuses_without_data_root(self):
+        Path(self.ai, "_core", "data-root", "data_root.py").write_text("import sys\nsys.exit('no data root')\n")
+        code, data = self.write("05", "ABC-1", self.RECORD)
+        self.assertEqual(code, 2)
+        self.assertIn("no data root", data["error"])
+        Path(self.ai, "_core", "data-root", "data_root.py").unlink()
+        code, data = self.write("05", "ABC-1", self.RECORD)
+        self.assertEqual(code, 2)
+        code, data = self.write("05", "ABC-1", self.RECORD, "--data-root", Path(self.tmp.name, "missing"))
+        self.assertEqual(code, 2)
+        self.assertFalse(Path(self.tmp.name, "missing").exists())
+        self.assertFalse(Path(self.ws, "stages", "05-verify", "output").exists())
 
     def test_replaces_atomically(self):
         self.write("05", "ABC-1", self.RECORD)
         code, data = self.write("05", "ABC-1", "version: 3\nsecond\n")
-        folder = Path(self.ws, "stages", "05-verify", "output", "ABC-1")
+        folder = Path(self.runs, "ABC-1", "05-verify")
         self.assertEqual(code, 0)
         self.assertTrue(data["replaced"])
         self.assertEqual(Path(folder, "verify-report.md").read_text(), "version: 3\nsecond\n")
@@ -389,19 +421,27 @@ class WriteRecordTests(unittest.TestCase):
             code, data = self.write("05", key, self.RECORD)
             self.assertEqual(code, 2, key)
             self.assertFalse(data["ok"])
-        self.assertFalse(Path(self.ws, "stages", "05-verify", "output").exists())
+        self.assertFalse(self.runs.exists())
         self.assertFalse(Path(self.ws, "stages", ".run-lock").exists())
 
-    def test_refuses_symlinked_output(self):
+    def test_refuses_symlinked_run_folder(self):
         with tempfile.TemporaryDirectory() as outside:
-            Path(self.ws, "stages", "05-verify", "output").mkdir()
-            Path(self.ws, "stages", "05-verify", "output", "ABC-1").symlink_to(outside)
+            Path(self.runs).mkdir(parents=True)
+            Path(self.runs, "ABC-1").symlink_to(outside)
             code, _ = self.write("05", "ABC-1", self.RECORD)
             self.assertEqual(code, 2)
             self.assertEqual(list(Path(outside).iterdir()), [])
         with tempfile.TemporaryDirectory() as outside:
-            shutil.rmtree(Path(self.ws, "stages", "05-verify", "output"))
-            Path(self.ws, "stages", "05-verify", "output").symlink_to(outside)
+            Path(self.runs, "ABC-1").unlink()
+            Path(self.runs, "ABC-1").mkdir()
+            Path(self.runs, "ABC-1", "05-verify").symlink_to(outside)
+            code, _ = self.write("05", "ABC-1", self.RECORD)
+            self.assertEqual(code, 2)
+            self.assertEqual(list(Path(outside).iterdir()), [])
+        with tempfile.TemporaryDirectory() as outside:
+            shutil.rmtree(self.runs)
+            Path(self.runs).parent.mkdir(parents=True, exist_ok=True)
+            Path(self.runs).symlink_to(outside)
             code, _ = self.write("05", "ABC-1", self.RECORD)
             self.assertEqual(code, 2)
             self.assertEqual(list(Path(outside).iterdir()), [])
@@ -411,14 +451,14 @@ class WriteRecordTests(unittest.TestCase):
             code, data = self.write("05", "ABC-1", text)
             self.assertEqual(code, 3, repr(text))
             self.assertFalse(data["ok"])
-        self.assertFalse(Path(self.ws, "stages", "05-verify", "output", "ABC-1", "verify-report.md").exists())
+        self.assertFalse(Path(self.runs, "ABC-1", "05-verify", "verify-report.md").exists())
 
     def test_unknown_stage(self):
         for stage in ("08", "5", "00"):
             code, data = self.write(stage, "ABC-1", self.RECORD)
             self.assertEqual(code, 2, stage)
             self.assertFalse(data["ok"])
-        self.assertFalse(Path(self.ws, "stages", "05-verify", "output").exists())
+        self.assertFalse(self.runs.exists())
 
 
 if __name__ == "__main__":

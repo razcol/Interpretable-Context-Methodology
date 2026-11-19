@@ -40,13 +40,15 @@ outlook-email-manager/
 | Task | Load These | Do NOT Load |
 |------|-----------|-------------|
 | Triage | `stages/01-triage/CONTEXT.md`, `shared/priority-rubric.md`, `shared/category-map.md`, `skills/outlook-automation/SKILL.md` | `shared/tone-profile.md`, `stages/02-draft-replies/` |
-| Draft replies | `stages/02-draft-replies/CONTEXT.md`, `shared/tone-profile.md`, `stages/01-triage/output/triage-report.md`, `skills/outlook-automation/SKILL.md` | `shared/priority-rubric.md`, `shared/category-map.md` |
+| Draft replies | `stages/02-draft-replies/CONTEXT.md`, `shared/tone-profile.md`, `<runs>/<KEY>/01-triage/triage-report.md`, `skills/outlook-automation/SKILL.md` | `shared/priority-rubric.md`, `shared/category-map.md` |
 | Tone profile setup | `tone-profile/CONTEXT.md`, `skills/outlook-automation/SKILL.md` | `stages/01-triage/`, `stages/02-draft-replies/` |
 | Ad-hoc email lookup | `shared/email-lookup-guide.md`, `skills/outlook-automation/SKILL.md` | `stages/`, `shared/tone-profile.md` |
 
 ## Stage Handoffs
 
-Each stage writes its output to its own `output/` folder. The next stage reads from there for the **decisions** in it (needs-reply values, category choices, your edits and overrides). It never treats the email **facts** in it (existence, location, read state, categories, dates, IDs, thread contents) as current. See "Source of Truth" below. If you edit an output file, the next stage picks up your edited decisions.
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/outlook-email-manager/runs`. A run's key is the run date, `YYYY-MM-DD` (stage 02 uses the key of the triage it drafts from). Each stage writes into `<runs>/<KEY>/<stage folder>/`, for example `<runs>/<KEY>/01-triage/`, never into this repo. Resolve the data root once per run and use the real path.
+
+Each stage writes its output to its own run folder, `<runs>/<KEY>/<stage>/`. The next stage reads from there for the **decisions** in it (needs-reply values, category choices, your edits and overrides). It never treats the email **facts** in it (existence, location, read state, categories, dates, IDs, thread contents) as current. See "Source of Truth" below. If you edit an output file, the next stage picks up your edited decisions.
 
 ## Source of Truth: Live Outlook Only
 

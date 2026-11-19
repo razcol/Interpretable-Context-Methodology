@@ -24,7 +24,7 @@ Layer 4: Working artifacts   -> "What am I working with?"  (loaded selectively, 
 
 **Layer 3 -- Reference material** is the persistent context: design systems, voice rules, build conventions, style guides, domain knowledge bundled as skill files. These files are configured once during workspace setup and remain stable across every run of the pipeline. They live in `references/` folders within stages, in workspace-level configuration folders (like `brand-vault/` or `design-system/`), in `shared/`, and in `skills/`. Larger reference collections can include their own CONTEXT.md routing files to help agents navigate within the collection.
 
-**Layer 4 -- Working artifacts** are the per-run context: previous stage outputs, user-provided source material, anything specific to this particular run. These files are produced and consumed during execution and change every time the pipeline runs. They live in `output/` folders.
+**Layer 4 -- Working artifacts** are the per-run context: previous stage outputs, user-provided source material, anything specific to this particular run. These files are produced and consumed during execution and change every time the pipeline runs. They live in the run folders in the data root (Pattern 2), never in the repo.
 
 The distinction between Layers 3 and 4 matters because they require different things from the model. Layer 3 material needs to be internalized as constraints and patterns -- write like this, use these colors, follow these conventions. Layer 4 material needs to be processed as input -- transform this research into a script, convert this script into a specification. Layer 3 is the factory. Layer 4 is the product.
 
@@ -62,17 +62,20 @@ This is the contract. It is simple enough that a non-technical user can read it 
 
 ---
 
-## Pattern 2: Stage Handoffs via Output Folders
+## Pattern 2: Stage Handoffs via Run Folders
 
-Every stage has an `output/` subfolder. The agent writes its artifact there. The next stage reads from the previous stage's `output/` folder.
+Stage outputs are the user's data, so they live in the data root (see Data root), never in the repo. Each run has a key, and each stage writes its artifact into the run's folder for that stage. The next stage reads from there.
 
 The convention:
-- Stage N produces: `stages/0N-name/output/artifact-name.md`
-- Stage N+1's CONTEXT.md says: "Read `../0N-name/output/artifact-name.md` as your input"
+- `<runs>` is `<data-root>/workspaces/<workspace>/runs`. The workspace CLAUDE.md defines it and says what a run's key is (a Jira key, a Figma node id, a skill slug, a date).
+- Stage N produces: `<runs>/<KEY>/0N-name/artifact-name.md` (the subfolder is named after the stage folder)
+- Stage N+1's CONTEXT.md says: "Read `<runs>/<KEY>/0N-name/artifact-name.md` as your input"
+- Stage folders in the repo hold definitions only (`CONTEXT.md`, `references/`). They have no `output/` folder, and no CONTEXT.md names a repo-relative output path.
+- Work that belongs to a run but to no stage (for example WP content for a Figma section) goes into the run folder too, in a named subfolder.
 
 This is the handoff. A human can open the output file, edit it, and the next stage picks up the edited version. No state management. No orchestration layer. Just files in predictable places.
 
-File naming in output folders: `[topic-slug]-[stage-artifact].md`
+File naming in run folders: `[topic-slug]-[stage-artifact].md`
 - Example: `hello-world-script.md`, `hello-world-spec.md`
 
 ---
@@ -171,10 +174,11 @@ From a shell: `"$(python3 _core/data-root/data_root.py resolve)"`.
 | Folder | Holds |
 |---|---|
 | `workspaces/<ws>/` | One workspace's settings (repo tables, login steps) |
-| `workspaces/<ws>/runs/<KEY>/` | Run records and produced artifacts, per run key |
+| `workspaces/<ws>/runs/<KEY>/` | Run records and produced artifacts, per run key: one subfolder per stage (`<KEY>/0N-name/`) |
+| `workspaces/<ws>/flowchart/` | A generated diagram of the workspace |
 | `log/<skill>/LOG.md` | One append-only log per skill |
 | `log/briefs/` | Session briefs, handoffs and debriefs |
-| `archive/` | Kept history |
+| `archive/` | Kept history (`archive/<ws>/` per workspace) |
 | `.worktrees/<branch>/` | Paired data worktrees (ignored) |
 
 A layout change raises the `LAYOUT` version and ships with a migration step that runs on merge.
@@ -182,6 +186,8 @@ A layout change raises the `LAYOUT` version and ships with a migration step that
 **Data repo rules** (seeded from `_core/data-root/seed/`): `.gitignore` keeps env and secret files, caches and run locks out; `.gitattributes` sets `LOG.md` and `log/briefs/` to `merge=union`, so two branches that both append never conflict.
 
 **Seeding.** A tracked `workspaces/<ws>/targets/<path>.example.<ext>` seeds `workspaces/<ws>/<path>.<ext>` in the data root, once. Example files hold the procedure text with `<...>` placeholders, never a user's data.
+
+**Run folders** (`workspaces/<ws>/runs/<KEY>/<stage>/`) hold every stage output and run record (Pattern 2). Tools that write a record resolve the data root themselves (for example `workspaces/ticket-execution/tools/write_record.py`). A generated diagram of a workspace goes to `workspaces/<ws>/flowchart/`. Kept history that belongs to no run goes to `archive/<ws>/`. A session's throwaway files go to its own temp folder, never into the repo; anything worth keeping goes to the data root.
 
 **Large outputs** (screenshots, exports) are committed to the data repo like everything else, so discarding a worktree never loses them. Env and secret files are never committed in either repo.
 
@@ -195,7 +201,7 @@ Every workspace recognizes these triggers:
 
 **`setup`** -- Starts the onboarding questionnaire. The agent first runs `python3 _core/data-root/data_root.py init` from the ai-system checkout, which creates the data root when it is missing (see Data root) and changes nothing when it is complete. Then it reads `setup/questionnaire.md`, asks the questions conversationally, collects answers, replaces placeholders across the workspace, and verifies no placeholders remain.
 
-**`status`** -- Shows pipeline completion. The agent scans all `stages/*/output/` folders and renders an ASCII pipeline diagram:
+**`status`** -- Shows pipeline completion. The agent lists each run key under `<runs>/` and renders an ASCII pipeline diagram per key:
 
 ```
 Pipeline Status: [workspace-name]
@@ -205,7 +211,7 @@ Pipeline Status: [workspace-name]
   (artifact.md)              (empty)                  (empty)
 ```
 
-For each stage: if the output folder contains files (other than .gitkeep), the stage is COMPLETE and the filenames are listed. If the output folder is empty or contains only .gitkeep, the stage is PENDING.
+For each stage: if `<runs>/<KEY>/<stage>/` contains files, the stage is COMPLETE and the filenames are listed. If it is missing or empty, the stage is PENDING.
 
 Workspaces can define additional trigger keywords in their own CLAUDE.md.
 
@@ -340,7 +346,7 @@ The Checkpoints section in a stage CONTEXT.md is a table:
 
 ## Pattern 12: Stage Audits
 
-Creative and build stages should include an Audit section: a checklist the agent runs after completing the process but before writing to output/. Audits catch quality issues before they propagate downstream. Each check should be specific enough that pass/fail is unambiguous.
+Creative and build stages should include an Audit section: a checklist the agent runs after completing the process but before writing its output. Audits catch quality issues before they propagate downstream. Each check should be specific enough that pass/fail is unambiguous.
 
 Not every stage needs an audit. Data extraction or file conversion stages may not benefit. Creative and build stages almost always do.
 
@@ -352,7 +358,7 @@ The Audit section in a stage CONTEXT.md is a table:
 | [Check name] | [What "passing" looks like] |
 ```
 
-If any check fails, the agent revises before saving to output/.
+If any check fails, the agent revises before saving its output.
 
 ---
 
@@ -366,7 +372,7 @@ Value types are workspace-specific. A content workspace might use NOVEL, USABLE,
 
 ## Pattern 14: Docs Over Outputs
 
-Reference docs (design system, build conventions, skill rules) are the authoritative source for how to build. Previous stage outputs in `output/` folders are artifacts, not templates. Agents should not read other outputs to learn patterns.
+Reference docs (design system, build conventions, skill rules) are the authoritative source for how to build. Previous stage outputs in run folders are artifacts, not templates. Agents should not read other outputs to learn patterns.
 
 This prevents copying from older, lower-quality work and ensures docs remain the single source of truth for quality standards. Early outputs are the worst outputs. If future agents learn from them, quality never improves.
 

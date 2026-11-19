@@ -6,8 +6,8 @@ Draft a reply in the user's own voice for every email flagged needs-reply, saved
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../01-triage/output/triage-report.md` | Rows where needs-reply = `Yes` | The emails to draft replies for |
-| Previous stage | `../01-triage/output/triage-report.md` | Rows where needs-reply = `Flag` | Ambiguous-age emails to surface to the user, not draft |
+| Previous stage | `<runs>/<KEY>/01-triage/triage-report.md` | Rows where needs-reply = `Yes` | The emails to draft replies for |
+| Previous stage | `<runs>/<KEY>/01-triage/triage-report.md` | Rows where needs-reply = `Flag` | Ambiguous-age emails to surface to the user, not draft |
 | Shared | `../../shared/tone-profile.md` | Full file | Voice reference for drafting |
 | Skill | `../../skills/outlook-automation/SKILL.md` | Full file, then `reference/cli.md` as needed | outlookctl `draft` command (never `send`) |
 
@@ -59,6 +59,6 @@ Live Outlook is the only source of email data (see "Source of Truth: Live Outloo
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Drafts created | `output/drafts-created.md` | Markdown table of created drafts (subject, recipient, entry ID, store ID, source triage row), plus a "Flagged for Review" section (rows needing a human call on age -- each noted as drafted-on-request or declined-and-marked-read once the checkpoint resolves) a "Skipped -- Went Stale" section (rows dropped by the step-2 safety net), and a "Skipped -- Changed in Outlook" section (rows dropped because the live message no longer matched the report) |
+| Drafts created | `<runs>/<KEY>/02-draft-replies/drafts-created.md` | Markdown table of created drafts (subject, recipient, entry ID, store ID, source triage row), plus a "Flagged for Review" section (rows needing a human call on age -- each noted as drafted-on-request or declined-and-marked-read once the checkpoint resolves) a "Skipped -- Went Stale" section (rows dropped by the step-2 safety net), and a "Skipped -- Changed in Outlook" section (rows dropped because the live message no longer matched the report) |
 | Outlook side effect | Drafts folder | One real draft per needs-reply email, unsent, confirmed present in the live Drafts folder after creation |
 | Outlook side effect | Inbox | Drafted, staleness-skipped, and checkpoint-resolved `Flag` rows marked read via `outlookctl mark-read` |

@@ -37,7 +37,7 @@ ticket-execution/
 | `commit <KEY>` | 07: commit only |
 | `stop <KEY>` | `dev_server.py down` with the key's state file |
 
-A run is keyed by the Jira key. Its records live in `stages/0N-*/output/<KEY>/` (`shared/run-records.md`).
+A run is keyed by the Jira key. Its records live in `<runs>/<KEY>/0N-*/` in the data root (`shared/run-records.md`).
 
 ## Orchestrator
 
@@ -45,9 +45,9 @@ The session that read this file only orchestrates, following `../../_core/skills
 
 On `start`, `plan`, `implement` or `change`, write `stages/.run-lock` before the first spawn (the skill's run lock: key on line 1, start time on line 2). If the file already names a different key, stop and report that key and time. Remove the file when stage 06 has posted, and on `stop <KEY>`.
 
-Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `output/<KEY>/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
+Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `<runs>/<KEY>/0N-*/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
 
-`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). Resolve it once per run and copy the real path into every brief.
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/ticket-execution/runs`, the run folders (never `stages/*/output/` in this repo). Resolve it once per run and copy the real path into every brief.
 
 Shape of a call, with the model filled in:
 
@@ -55,7 +55,7 @@ Shape of a call, with the model filled in:
 subagent_type: generalPurpose
 model: claude-sonnet-5-5-high
 description: stage 04 <KEY>
-prompt: Read stages/04-implement/CONTEXT.md (version line included) and every path in its Inputs table. Key: <KEY>. Write only stages/04-implement/output/<KEY>/. Return the output path, each audit row, and whether a checkpoint is waiting.
+prompt: Read stages/04-implement/CONTEXT.md (version line included) and every path in its Inputs table. Key: <KEY>. Write only <runs>/<KEY>/04-implement/. Return the output path, each audit row, and whether a checkpoint is waiting.
 ```
 
 A stage fails its check when the output file is missing, or when no checkpoint is waiting and the audit still fails. Retry and stop follow the skill. The orchestrator does not run `tools/write_record.py`.
@@ -123,7 +123,7 @@ This table is for the subagent of that stage. The orchestrator loads this file a
 
 ## Stage Handoffs
 
-Each stage writes into `output/<KEY>/`. The record's first line is the `version:` line from that stage's CONTEXT.md. The next stage's subagent reads those files. The orchestrator does not carry the work across in its prompt. The run stops after 06, when a checkpoint says the human must choose, or when ACLI fails. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
+Each stage writes into `<runs>/<KEY>/0N-*/`. The record's first line is the `version:` line from that stage's CONTEXT.md. The next stage's subagent reads those files. The orchestrator does not carry the work across in its prompt. The run stops after 06, when a checkpoint says the human must choose, or when ACLI fails. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
 
 ## Ground Rules
 

@@ -20,7 +20,7 @@ Profile the target repository before anything is measured.
 4. Run the recon commands it lists. Record every fact with its source.
 5. Decide which probes cannot apply, and why.
 6. Write the profile in the exact format. Put gaps under Unknowns. Never guess.
-7. Run the audit, then save to output/.
+7. Run the audit, then save to <runs>/<KEY>/01-recon/.
 
 ## Audit
 
@@ -35,4 +35,4 @@ Profile the target repository before anything is measured.
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Project profile | `output/project-profile.md` | Markdown with the sections defined in `references/profile-format.md` |
+| Project profile | `<runs>/<KEY>/01-recon/project-profile.md` | Markdown with the sections defined in `references/profile-format.md` |

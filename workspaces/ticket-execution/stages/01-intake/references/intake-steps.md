@@ -11,7 +11,7 @@ JIRA_API_TOKEN=<token from https://id.atlassian.com/manage-profile/security/api-
 
 The file is `~/.config/jira/jira.env`. You create it in your own terminal (`chmod 600`). Never paste the token into chat. The agent never prints, opens or copies this file; only `intake.py` reads it.
 
-Without the file, `ticket.md` shows `[image: <name>, not downloaded]` where each image sits, and the attachment table says `no credentials`. The run goes on. Say which images are missing and that you can drop them into `output/<KEY>/attachments/` under their Jira file names and type `start <KEY>` again; the re-run marks them `provided` and links them.
+Without the file, `ticket.md` shows `[image: <name>, not downloaded]` where each image sits, and the attachment table says `no credentials`. The run goes on. Say which images are missing and that you can drop them into `<runs>/<KEY>/01-intake/attachments/` under their Jira file names and type `start <KEY>` again; the re-run marks them `provided` and links them.
 
 ## intake.md
 

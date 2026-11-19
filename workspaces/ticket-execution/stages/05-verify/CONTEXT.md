@@ -8,9 +8,9 @@ Check each acceptance line in the running app with a headless browser, and recor
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 03 | `../03-plan/output/<KEY>/plan.md` | "Acceptance checklist", "Review URLs", "app root" | What to check, where, at which widths |
-| Stage 04 | `../04-implement/output/<KEY>/implement-record.md` | Full file | Work tree, app root, files, lint state |
-| Stage 01 | `../01-intake/output/<KEY>/attachments/` | Images the checklist names | What it should look like |
+| Stage 03 | `<runs>/<KEY>/03-plan/plan.md` | "Acceptance checklist", "Review URLs", "app root" | What to check, where, at which widths |
+| Stage 04 | `<runs>/<KEY>/04-implement/implement-record.md` | Full file | Work tree, app root, files, lint state |
+| Stage 01 | `<runs>/<KEY>/01-intake/attachments/` | Images the checklist names | What it should look like |
 | Steps | `references/verify-steps.md` | Full file | Server, browser commands, report shape |
 | Tools | `../../shared/tools.md` | "dev_server.py", "Writing records" | Start or reuse the server |
 | Browser | `../../../../_core/skills/browser-cdp/SKILL.md` | "Which script to run", "Output contract", "Interaction steps" | Screenshots, measure, interact, capture |
@@ -43,6 +43,6 @@ Check each acceptance line in the running app with a headless browser, and recor
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Report | `output/<KEY>/verify-report.md` | See `references/verify-steps.md` "Report" |
-| Screenshots | `output/<KEY>/shots/` | PNG |
-| Server state | `output/<KEY>/dev-server.json`, `dev-server.log` | Written by `dev_server.py up`; stage 06 and `stop <KEY>` read it |
+| Report | `<runs>/<KEY>/05-verify/verify-report.md` | See `references/verify-steps.md` "Report" |
+| Screenshots | `<runs>/<KEY>/05-verify/shots/` | PNG |
+| Server state | `<runs>/<KEY>/05-verify/dev-server.json`, `dev-server.log` | Written by `dev_server.py up`; stage 06 and `stop <KEY>` read it |

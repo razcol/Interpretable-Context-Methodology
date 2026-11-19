@@ -1,6 +1,6 @@
 # Verify steps
 
-Commands for stage 05. `<workspace>` is `/home/dev/ai-system/workspaces/figma-section-fields`. `B` is the browser-cdp skill folder (`/home/dev/ai-system/_core/skills/browser-cdp`), `R` is `<workspace>/stages/05-verify/output/<node-id>`, `S` is `<workspace>/stages/01-export/output/<node-id>`, and `$FIGMA` is the call in `shared/figma-cli-setup.md`. All three are absolute, so the commands run from any folder. Every script prints one JSON object.
+Commands for stage 05. `<workspace>` is `/home/dev/ai-system/workspaces/figma-section-fields`. `B` is the browser-cdp skill folder (`/home/dev/ai-system/_core/skills/browser-cdp`), `R` is `<runs>/<node-id>/05-verify`, `S` is `<runs>/<node-id>/01-export`, and `$FIGMA` is the call in `shared/figma-cli-setup.md`. All three are absolute, so the commands run from any folder. Every script prints one JSON object.
 
 ## Level 1: the export against Figma
 
@@ -31,7 +31,7 @@ Exit 0 passes. Exit 11 means overflow; `error.details.results` gives `overflowPx
 
 ## Desktop baseline for the mobile pass
 
-On a desktop PASS, when the export record has `pair: <M>` or `pair: pending`, save the baseline shots. Use the harness (it is deterministic, and 05m uses the same page). `<harness root>` is the folder holding `components/`: the profile's `appRoot` plus `sectionsDir` without its `components/...` tail (`code/app` in ora). `<props>` is `<workspace>/stages/05-verify/output/<D>/harness-props.json`: one object of `Client<Folder>` props in the shape the bound `Server<Folder>.js` passes, with texts from D's section map. Write it once; every harness build of the pair uses it.
+On a desktop PASS, when the export record has `pair: <M>` or `pair: pending`, save the baseline shots. Use the harness (it is deterministic, and 05m uses the same page). `<harness root>` is the folder holding `components/`: the profile's `appRoot` plus `sectionsDir` without its `components/...` tail (`code/app` in ora). `<props>` is `<runs>/<D>/05-verify/harness-props.json`: one object of `Client<Folder>` props in the shape the bound `Server<Folder>.js` passes, with texts from D's section map. Write it once; every harness build of the pair uses it.
 
 ```bash
 (cd <workspace>/skills/next-section-repo && python3 scripts/harness.py --repo <harness root> --folder <Folder> --out-dir $R/harness --props <props>)
@@ -42,7 +42,7 @@ This writes `$R/shots/baseline__1440x900.png` (and the other widths). Then ask t
 
 ## Mobile
 
-On a mobile pass, `S` is `<workspace>/stages/01-export/output/<M>`, `R` is `<workspace>/stages/05-verify/output/<M>`, and `<W>x<H>` is the PNG size of M's `figma.png`. `H` is the harness page `file://$R/harness/index.html`. `<page>` is `http://localhost:<port><route>`, or `H` when the app cannot start (a worktree without `node_modules` cannot). `<harness root>` and `<props>` are as in "Desktop baseline"; write the props file there when it is absent (Case B). `<trigger>` is the trigger selector the conform record lists for a reveal. The 1920/1440/1100 desktop checks above are not rerun; the regression check covers desktop.
+On a mobile pass, `S` is `<runs>/<M>/01-export`, `R` is `<runs>/<M>/05-verify`, and `<W>x<H>` is the PNG size of M's `figma.png`. `H` is the harness page `file://$R/harness/index.html`. `<page>` is `http://localhost:<port><route>`, or `H` when the app cannot start (a worktree without `node_modules` cannot). `<harness root>` and `<props>` are as in "Desktop baseline"; write the props file there when it is absent (Case B). `<trigger>` is the trigger selector the conform record lists for a reveal. The 1920/1440/1100 desktop checks above are not rerun; the regression check covers desktop.
 
 ```bash
 # Level 1 mobile
@@ -69,7 +69,7 @@ node $B/scripts/diff.js --baseline <baseline> --current $R/shots/regression__144
 node $B/scripts/interact.js --url "<page>" --viewport 393x852 --out-dir $R/shots --steps '[{"action":"screenshot","name":"touch-rest"},{"action":"click","selector":"<trigger>"},{"action":"screenshot","name":"touch-open"},{"action":"click","selector":"<trigger>"},{"action":"screenshot","name":"touch-closed"}]'
 ```
 
-`<baseline>` is `<workspace>/stages/05-verify/output/<D>/shots/baseline__1440x900.png` (Case A) or `$R/shots/regression__head__1440x900.png` (Case B).
+`<baseline>` is `<runs>/<D>/05-verify/shots/baseline__1440x900.png` (Case A) or `$R/shots/regression__head__1440x900.png` (Case B).
 
 | Check | Pass |
 |---|---|

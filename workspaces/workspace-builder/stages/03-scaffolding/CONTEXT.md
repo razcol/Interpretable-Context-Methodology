@@ -6,8 +6,8 @@ Generate the complete workspace folder structure, CONTEXT.md files, and placehol
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../02-mapping/output/stage-contracts.md` | Full file | The contracts to implement as folders and files |
-| Discovery output | `../01-discovery/output/workflow-map.md` | "Tool Prerequisites" and "Selected Skills" sections | Tools that need setup guides, skills to bundle |
+| Previous stage | `<runs>/<KEY>/02-mapping/stage-contracts.md` | Full file | The contracts to implement as folders and files |
+| Discovery output | `<runs>/<KEY>/01-discovery/workflow-map.md` | "Tool Prerequisites" and "Selected Skills" sections | Tools that need setup guides, skills to bundle |
 | Template | `/_core/templates/stage-context-template.md` | Full file | Template for stage CONTEXT.md files (includes Checkpoints and Audit sections) |
 | Template | `/_core/templates/workspace-claude-template.md` | Full file | Template for the workspace CLAUDE.md (includes What to Load section) |
 | Template | `/_core/templates/workspace-context-template.md` | Full file | Template for the workspace CONTEXT.md |
@@ -19,7 +19,7 @@ Generate the complete workspace folder structure, CONTEXT.md files, and placehol
 2. Create the workspace folder structure:
    - Root: CLAUDE.md, CONTEXT.md, setup/
    - Context folder (brand-vault or domain equivalent) with its own CONTEXT.md
-   - stages/ with one numbered subfolder per stage, each containing CONTEXT.md, output/, and references/
+   - stages/ with one numbered subfolder per stage, each containing CONTEXT.md and references/ (no output folder in the repo: stages write to `<runs>/<KEY>/<stage>/` in the data root, Pattern 2)
    - shared/ for cross-stage reference files
    - skills/ if any skills were selected during discovery
 3. Populate each stage CONTEXT.md using the template, filled with the contract's inputs, process, and outputs. For each stage, determine:
@@ -38,18 +38,18 @@ Generate the complete workspace folder structure, CONTEXT.md files, and placehol
     - Remove any custom reference files that the skill replaces (avoid duplication)
     - Update stage CONTEXT.md Inputs tables to reference `../../skills/[name]/SKILL.md` instead of deleted reference files
 11. If tools were identified that require system-level installation (Node.js, Python, LibreOffice), write a setup guide in the relevant stage's `references/` folder. Tools bundled inside skills do not need separate setup guides.
-12. Add .gitkeep files in all output/ directories
+12. Write the new workspace's run key and `<runs>` line into its CLAUDE.md "Stage Handoffs" section (template), and every stage Inputs and Outputs path as `<runs>/<KEY>/<stage>/...`
 13. Run the audit checks below. If any fail, fix before saving.
-14. Write everything to output/
+14. Write everything to <runs>/<KEY>/03-scaffolding/
 
 ## Audit
 
 | Check | Pass Condition |
 |-------|---------------|
-| Folder structure | Every stage has CONTEXT.md, output/, and references/ |
+| Folder structure | Every stage has CONTEXT.md and references/, and no output folder |
 | Contract fidelity | Every stage CONTEXT.md matches the contracts from Stage 02 |
 | Placeholder syntax | All placeholders use `{{SCREAMING_SNAKE_CASE}}` format |
-| .gitkeep coverage | Every output/ directory contains a .gitkeep file |
+| Run paths | Every stage Inputs and Outputs path for a run artifact is `<runs>/<KEY>/<stage>/...`; no repo-relative output path |
 | CONTEXT.md size | No CONTEXT.md file exceeds 80 lines |
 | Naming conventions | All folders and files use lowercase-with-hyphens |
 
@@ -57,4 +57,4 @@ Generate the complete workspace folder structure, CONTEXT.md files, and placehol
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Generated workspace | `output/` | Complete folder structure with all files. Ready for questionnaire design. |
+| Generated workspace | `<runs>/<KEY>/03-scaffolding/` | Complete folder structure with all files. Ready for questionnaire design. |

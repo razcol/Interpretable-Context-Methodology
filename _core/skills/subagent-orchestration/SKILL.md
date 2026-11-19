@@ -28,6 +28,8 @@ A workspace may let the orchestrator write one file (for example a run lock). No
 
 ## 3. Cut the work into units
 
+Output paths: inside a workspace, the run folder its CLAUDE.md names (`<runs>/<KEY>/...`). Work that belongs to a workspace run but to no stage, such as WP content for a Figma section, goes into that run's folder (the workspace's run-records file says where). Other results worth keeping go to `<data-root>/archive/<topic>/`; throwaway files go to the session's temp folder. Never into the ai-system repo. `<data-root>` is the path `python3 ../../data-root/data_root.py resolve` prints from this skill folder.
+
 For each unit write one row: name, inputs (paths), output (path or short value), depends on, tier. Use the format in [references/unit-table.md](references/unit-table.md).
 - A unit is one thing a worker can finish and you can check: one file, one probe, one stage, one module.
 - Units with no `depends on` may run in parallel. Units that read another unit's output run after it.

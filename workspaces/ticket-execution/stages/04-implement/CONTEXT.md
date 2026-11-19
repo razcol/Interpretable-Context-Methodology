@@ -8,10 +8,10 @@ Make the planned change on the planned branch and work tree. Nothing is staged, 
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 03 | `../03-plan/output/<KEY>/plan.md` | Full file, as written | What to build, where, including defaults |
-| Stage 01 | `../01-intake/output/<KEY>/intake.md` | "Acceptance", "Images" | The lines to satisfy |
-| Stage 01 | `../01-intake/output/<KEY>/attachments/` | Images the plan names | Visual target |
-| Stage 02 | `../02-research/output/<KEY>/research.md` | "Per acceptance line" | Paths and sibling patterns |
+| Stage 03 | `<runs>/<KEY>/03-plan/plan.md` | Full file, as written | What to build, where, including defaults |
+| Stage 01 | `<runs>/<KEY>/01-intake/intake.md` | "Acceptance", "Images" | The lines to satisfy |
+| Stage 01 | `<runs>/<KEY>/01-intake/attachments/` | Images the plan names | Visual target |
+| Stage 02 | `<runs>/<KEY>/02-research/research.md` | "Per acceptance line" | Paths and sibling patterns |
 | Work tree | `references/work-tree.md` | Full file | Branch and worktree commands, lint, record |
 | Git | `../../shared/git-rules.md` | "Allowed per stage", "Never staged", "Your work comes first" | Limits |
 | Repos | `<data-root>/workspaces/ticket-execution/repos.md` | "Lint" | The lint command for this root |
@@ -50,4 +50,4 @@ Do not read stage 05, 06 or 07 records, contexts or references. This stage's inp
 | Artifact | Location | Format |
 |----------|----------|--------|
 | Code | The work tree in `plan.md` | Unstaged changes |
-| Record | `output/<KEY>/implement-record.md` | See `references/work-tree.md` "Record" |
+| Record | `<runs>/<KEY>/04-implement/implement-record.md` | See `references/work-tree.md` "Record" |

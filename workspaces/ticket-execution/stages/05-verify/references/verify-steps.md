@@ -1,6 +1,6 @@
 # Verify steps
 
-`<ws>` is `/home/dev/ai-system/workspaces/ticket-execution`. `B` is `/home/dev/ai-system/_core/skills/browser-cdp`. `R` is `<ws>/stages/05-verify/output/<KEY>`. `<app>` is the app root from `implement-record.md`.
+`<ws>` is `/home/dev/ai-system/workspaces/ticket-execution`. `B` is `/home/dev/ai-system/_core/skills/browser-cdp`. `R` is `<runs>/<KEY>/05-verify`. `<app>` is the app root from `implement-record.md`.
 
 ## Server
 

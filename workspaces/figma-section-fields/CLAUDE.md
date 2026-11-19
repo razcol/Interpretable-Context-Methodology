@@ -33,9 +33,9 @@ figma-section-fields/
 | `resync <Folder> <figma-url> <repo> [--mobile]` | Design or exporter changed. 01, 04 (drift mode), 05. `--mobile` resyncs the mobile pass only |
 | `element <figma-url> <repo> <file> [--mobile]` | Restyle one existing control. 01 (inspect only), 04 (element mode). `--mobile` edits only in `bps.mobile` blocks |
 
-A run is keyed by the Figma node id. Its records live in `stages/0N-*/output/<node-id>/`. A mobile pass is its own run, linked to the desktop run by `pair:` lines. How `status` works and what each record holds: `shared/run-records.md`.
+A run is keyed by the Figma node id. Its records live in `<runs>/<node-id>/0N-*/` in the data root. A mobile pass is its own run, linked to the desktop run by `pair:` lines. How `status` works and what each record holds: `shared/run-records.md`.
 
-`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). Resolve it once per run and use the real path in every brief and command.
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/figma-section-fields/runs`, the run folders (never `stages/*/output/` in this repo). Resolve it once per run and use the real path in every brief and command.
 
 ## Routing
 
@@ -63,7 +63,7 @@ A run is keyed by the Figma node id. Its records live in `stages/0N-*/output/<no
 
 ## Stage Handoffs
 
-Each stage writes its record into `output/<node-id>/` and, on the same run, loads the next stage on its route. The run stops only where a route says so (`new` after 02), when 02 or 03 finds the live group differs from the plan, when export exits 9 or 10, or when 05 fails twice. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
+Each stage writes its record into `<runs>/<node-id>/0N-*/` and, on the same run, loads the next stage on its route. The run stops only where a route says so (`new` after 02), when 02 or 03 finds the live group differs from the plan, when export exits 9 or 10, or when 05 fails twice. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
 
 ## Ground Rules
 

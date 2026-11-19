@@ -1,6 +1,6 @@
 # Project Profile Format
 
-The shape of `output/project-profile.md`. Later stages load named sections, so keep the headings exact.
+The shape of `<runs>/<KEY>/01-recon/project-profile.md`. Later stages load named sections, so keep the headings exact.
 
 ## Sections
 

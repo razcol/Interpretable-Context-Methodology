@@ -21,4 +21,4 @@ Scope the request and determine whether this is a new skill or maintenance of an
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Intake note | `output/intake-note.md` | Skill slug, raw request, mode (new/existing), resolved skill folder path if existing |
+| Intake note | `<runs>/<KEY>/01-intake/intake-note.md` | Skill slug, raw request, mode (new/existing), resolved skill folder path if existing |

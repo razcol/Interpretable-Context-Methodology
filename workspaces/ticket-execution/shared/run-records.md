@@ -1,8 +1,8 @@
 # Run records
 
-A run is keyed by the Jira key. Each stage writes into `stages/0N-*/output/<KEY>/`. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates (do not copy another key's records). Output folders are git-ignored.
+A run is keyed by the Jira key. Each stage writes into `<runs>/<KEY>/0N-*/` (`<runs>` is `<data-root>/workspaces/ticket-execution/runs`; CLAUDE.md). Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates (do not copy another key's records). Run folders are in the data root, never in this repo. Records written before run folders moved to the data root name paths as `stages/0N-*/output/<KEY>/...`. Read such a path as `<runs>/<KEY>/0N-*/...`; never recreate it in the repo.
 
-| Stage | Folder `stages/.../output/<KEY>/` | Files | Holds |
+| Stage | Folder `<runs>/<KEY>/.../` | Files | Holds |
 |-------|-----------------------------------|-------|-------|
 | 01 | `01-intake/` | `issue.json`, `ticket.md`, `attachments/`, `intake.md` | Raw item, the readable ticket, the files, the working summary |
 | 02 | `02-research/` | `research.md` | Where the behavior lives, siblings, prior decisions, with paths |
@@ -16,7 +16,7 @@ A change pass (`change <KEY>: ...`) rewrites 04, 05 and 06 for the key. The old 
 
 ## How `status` works
 
-List each `<KEY>` folder under `stages/01-intake/output/`. For each key, a stage is COMPLETE when its main file exists (`intake.md`, `research.md`, `plan.md`, `implement-record.md`, `verify-report.md`, `handoff.md`, `release-record.md`), otherwise PENDING. Show the waiting state in words:
+List each `<KEY>` folder under `<runs>/` that has `01-intake/`. For each key, a stage is COMPLETE when its main file exists (`intake.md`, `research.md`, `plan.md`, `implement-record.md`, `verify-report.md`, `handoff.md`, `release-record.md`), otherwise PENDING. Show the waiting state in words:
 
 - `plan.md` and no `implement-record.md`: "04 not started" (an interrupted run, not waiting on you).
 - `handoff.md` newer than any `release-record.md`: "06 waiting for your review", followed by the URLs from `handoff.md` and whether the server still answers (`tools/dev_server.py status --app-root <app root>`).

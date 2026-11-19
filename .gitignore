@@ -9,17 +9,6 @@
 /workspaces/*/targets/repos.md
 /workspaces/ticket-execution/targets/logins/
 
-# Stage outputs (per-run artifacts, not part of the workspace definition)
-**/stages/*/output/*
-!**/stages/*/output/.gitkeep
-
-# Local flowchart read of a workspace (generated diagram, not the workspace definition)
-workspaces/figma-section-fields/flowchart/
-
-# Workspace-builder stage outputs (intermediate build artifacts)
-workspaces/workspace-builder/stages/*/output/*
-!workspaces/workspace-builder/stages/*/output/.gitkeep
-
 # Claude Code local settings
 .claude/
 

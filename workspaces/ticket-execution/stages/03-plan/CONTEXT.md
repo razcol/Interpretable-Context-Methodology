@@ -8,8 +8,8 @@ Write the plan stage 04 will follow: scope, files, branch, work tree, the accept
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 01 | `../01-intake/output/<KEY>/intake.md` | Full file | Acceptance, root, gaps |
-| Stage 02 | `../02-research/output/<KEY>/research.md` | Full file | Paths, siblings, tree state |
+| Stage 01 | `<runs>/<KEY>/01-intake/intake.md` | Full file | Acceptance, root, gaps |
+| Stage 02 | `<runs>/<KEY>/02-research/research.md` | Full file | Paths, siblings, tree state |
 | Shape | `references/plan-shape.md` | Full file | `plan.md` sections and rules |
 | Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row and "Rules" | Branch pattern, work tree, test route |
 | Git | `../../shared/git-rules.md` | "The stop", "Your work comes first" | What the plan may promise |
@@ -39,4 +39,4 @@ Write the plan stage 04 will follow: scope, files, branch, work tree, the accept
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Plan | `output/<KEY>/plan.md` | See `references/plan-shape.md` |
+| Plan | `<runs>/<KEY>/03-plan/plan.md` | See `references/plan-shape.md` |

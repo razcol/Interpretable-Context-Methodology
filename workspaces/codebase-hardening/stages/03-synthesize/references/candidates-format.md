@@ -4,7 +4,7 @@ How to turn probe reports into convention candidates. The block fields are defin
 
 ## Reading The Reports
 
-Read every report in `../02-measure/output/reports/`. Do not open the evidence folder, and do not open source files. If a claim needs more detail, use a drill-down task: name one evidence file, read a slice of at most 50 lines, and write down at most 10 lines of what you found.
+Read every report in `<runs>/<KEY>/02-measure/reports/`. Do not open the evidence folder, and do not open source files. If a claim needs more detail, use a drill-down task: name one evidence file, read a slice of at most 50 lines, and write down at most 10 lines of what you found.
 
 ## From Facts To Candidates
 
@@ -40,7 +40,7 @@ Present candidates to the ratifier as one table: id, rule, dominant, trend, corr
 ## Validation
 
 ```
-node ../../scripts/probe-runner.mjs validate-candidates output/conventions-candidates.md --final
+node ../../scripts/probe-runner.mjs validate-candidates <runs>/<KEY>/03-synthesize/conventions-candidates.md --final
 ```
 
 Run it after the decisions are applied. It fails on pending decisions and on ratified candidates with no corroboration and no note.

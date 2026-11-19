@@ -4,8 +4,9 @@ version: 1
 # A layout change raises the version and ships with a migration step.
 #
 # workspaces/<ws>/              settings for one workspace (repo tables, login steps)
-# workspaces/<ws>/runs/<KEY>/   run records and produced artifacts, per run key
+# workspaces/<ws>/runs/<KEY>/   run records and produced artifacts, per run key (<KEY>/<NN-stage>/)
+# workspaces/<ws>/flowchart/    a generated diagram of the workspace
 # log/<skill>/LOG.md            one log per skill, append only
 # log/briefs/                   session briefs, handoffs and debriefs
-# archive/                      kept history
+# archive/<ws>/                 kept history, per workspace
 # .worktrees/<branch>/          paired data worktrees for ai-system maintenance (ignored)

@@ -19,7 +19,7 @@ The fragment arrives on the Server component's props under the field names it se
 
 ### Class map
 
-Whenever this pass renames or restructures scaffold classes in the repo, write `stages/04-conform-bind/output/<D>/class-map.json`, one entry per changed class: `{ "<scaffold class>": "<repo selector>" }`. On OND-7 that is `"card-2": ".grid-card.slot-tall-end"` and `"card-title-3": ".card-title"`. A later mobile pass passes the file to figma-cli `--class-map`, so its map finds the renamed targets. No renamed class, no file.
+Whenever this pass renames or restructures scaffold classes in the repo, write `<runs>/<D>/04-conform-bind/class-map.json`, one entry per changed class: `{ "<scaffold class>": "<repo selector>" }`. On OND-7 that is `"card-2": ".grid-card.slot-tall-end"` and `"card-title-3": ".card-title"`. A later mobile pass passes the file to figma-cli `--class-map`, so its map finds the renamed targets. No renamed class, no file.
 
 ## resync: merge drift
 
@@ -41,13 +41,13 @@ The section is already bound. The new scaffold is the design truth for structure
 
 The run is M (`viewport: mobile`) and the section is already built from D. The mobile frame is the truth for mobile values, and the existing files are the truth for everything else. How a mobile rule is written is in `skills/next-section-repo/references/mobile-patterns.md`. This section says what to apply and in what order.
 
-Inputs, all in `stages/01-export/output/<M>/`:
+Inputs, all in `<runs>/<M>/01-export/`:
 
 - `viewport-map.md`, as you edited it at the 01m checkpoint (`viewport-map.json` carries the same edits). The `desktop target` column names the repo selector for each row.
 - `mobile-overlay.json`: per target selector, the decls, `hide`, order hints, decor and `touch`, plus `reparented` (elements whose parent changes on mobile).
 - `mobile-overlay.styled.txt`: per target selector, the ready `${({ theme }) => theme.bps?.mobile} { ... }` block with the deltas. Its `# note:` lines say what figma-cli left out on purpose (an inherited value that would reach another target, the size of a container whose repo children differ), which alignment values it flipped for the section's direction, and where it routed a shade. Its `# resets:` line lists what it emitted as initial values (`height: auto`, `max-width: none`) and what it could not reset.
 
-Before the first write, copy `Styled<Folder>.js` and `Client<Folder>.js` to `stages/04-conform-bind/output/<M>/before/`. The desktop-frozen audit diffs against these copies. When the export record says `baseline: from-head <sha>`, also check that the repo HEAD is that sha and `git status` shows no change in the section folder, so 05m can rebuild the baseline from it. Stop and say so if either fails.
+Before the first write, copy `Styled<Folder>.js` and `Client<Folder>.js` to `<runs>/<M>/04-conform-bind/before/`. The desktop-frozen audit diffs against these copies. When the export record says `baseline: from-head <sha>`, also check that the repo HEAD is that sha and `git status` shows no change in the section folder, so 05m can rebuild the baseline from it. Stop and say so if either fails.
 
 Rules:
 
@@ -70,7 +70,7 @@ Audit (mobile):
 
 | Check | Pass condition |
 |---|---|
-| Desktop frozen | `git diff --no-index` of `output/<M>/before/` against the section files shows changes only inside `bps.mobile` blocks, plus the recorded hover gates |
+| Desktop frozen | `git diff --no-index` of `<runs>/<M>/04-conform-bind/before/` against the section files shows changes only inside `bps.mobile` blocks, plus the recorded hover gates |
 | Nesting | Every mobile rule is nested, or the record gives the reason for each trailing block |
 | Touch | Every hover reveal has its touch path: `design` from the overlay, or the recorded checkpoint decision |
 | Icons | Every new icon lists the repo candidates that were rejected. No SVG was drawn before you said none fits |
@@ -81,7 +81,7 @@ Audit (mobile):
 
 `conform-record.md` lists every file written or changed, the binding table (field, prop, where it renders) or the drift list, and the `check_section.py` summary with each warning.
 
-On a mobile pass, `stages/04-conform-bind/output/<M>/conform-record.md` holds instead:
+On a mobile pass, `<runs>/<M>/04-conform-bind/conform-record.md` holds instead:
 
 - pair: `<D>`
 - rows applied: map row, target selector, what changed

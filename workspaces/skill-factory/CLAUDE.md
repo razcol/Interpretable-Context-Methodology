@@ -34,7 +34,7 @@ skill-factory/
 
 ### How `status` works
 
-Scan `stages/*/output/` folders. For each stage, if the output folder contains files (other than .gitkeep), the stage is COMPLETE. Otherwise PENDING. Render:
+List each `<KEY>` folder under `<runs>/`. For each key, a stage is COMPLETE when `<runs>/<KEY>/<stage>/` holds files, otherwise PENDING. Render one block per key:
 
 ```
 Pipeline Status: skill-factory
@@ -59,15 +59,17 @@ Pipeline Status: skill-factory
 | Task | Load These | Do NOT Load |
 |------|-----------|-------------|
 | Intake a request | `shared/skill-index.md`; if an existing-skill lookup isn't found there, also search `_core/skills/*/SKILL.md` and every `workspaces/*/skills/*/SKILL.md` (skill-factory's own folder is not the only place skills live) | Everything else -- intake is a routing decision only |
-| Clarify requirements | `stages/01-intake/output/`, `stages/02-clarify/references/*` | `shared/authoring-conventions.md`, stages 03-06 |
-| Research approaches | `stages/02-clarify/output/` (or `stages/01-intake/output/` for existing-mode approach changes), `shared/authoring-conventions.md`, `shared/preferences.md` | stages 01-02 references, stages 04-06 |
-| Draft and test | `stages/03-research/output/` (or resolved skill folder for existing-mode), `shared/authoring-conventions.md`, `shared/test-log-format.md` | stages 01-03 references, stages 05-06 |
-| Approve and refine | `stages/04-draft-and-test/output/` | Everything upstream of stage 04 |
-| Publish | `stages/05-approval-and-refine/output/`, `shared/skill-index.md`, `shared/preferences.md`, `shared/retention.md` | Everything upstream of stage 05 |
+| Clarify requirements | `<runs>/<KEY>/01-intake/`, `stages/02-clarify/references/*` | `shared/authoring-conventions.md`, stages 03-06 |
+| Research approaches | `<runs>/<KEY>/02-clarify/` (or `<runs>/<KEY>/01-intake/` for existing-mode approach changes), `shared/authoring-conventions.md`, `shared/preferences.md` | stages 01-02 references, stages 04-06 |
+| Draft and test | `<runs>/<KEY>/03-research/` (or resolved skill folder for existing-mode), `shared/authoring-conventions.md`, `shared/test-log-format.md` | stages 01-03 references, stages 05-06 |
+| Approve and refine | `<runs>/<KEY>/04-draft-and-test/` | Everything upstream of stage 04 |
+| Publish | `<runs>/<KEY>/05-approval-and-refine/`, `shared/skill-index.md`, `shared/preferences.md`, `shared/retention.md` | Everything upstream of stage 05 |
 
 ## Stage Handoffs
 
-Each stage writes its output to its own `output/` folder. The next stage reads from there. If you edit an output file between stages, the next stage picks up your edits.
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/skill-factory/runs`. A run's key is the skill slug from stage 01's intake note (for example `subagent-orchestration`). Each stage writes into `<runs>/<KEY>/<stage folder>/`, for example `<runs>/<KEY>/01-intake/`, never into this repo. Resolve the data root once per run and use the real path.
+
+Each stage writes its output to its own run folder, `<runs>/<KEY>/<stage>/`. The next stage reads from there. If you edit an output file between stages, the next stage picks up your edits.
 
 New-skill requests flow 01 through 06 in sequence. Existing-skill maintenance requests skip 02-clarify (always) and usually skip 03-research, entering directly at 04-draft-and-test with the current skill folder as input.
 

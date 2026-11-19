@@ -2,7 +2,7 @@
 
 How long pipeline artifacts in this workspace should stick around, and when it's safe to clear them.
 
-## Stage Outputs (`stages/*/output/`)
+## Stage Outputs (`<runs>/<KEY>/`, in the data root)
 
 Each stage's output is an input to the next stage, so keep it until the skill it belongs to reaches **Stage 06: Publish**.
 
@@ -12,7 +12,7 @@ Once a skill is published:
 
 For existing-skill maintenance runs (which skip `02-clarify` and usually `03-research`), the same rule applies to whichever stage outputs were produced.
 
-## Test Run Log (`stages/04-draft-and-test/output/test-log.md`)
+## Test Run Log (`<runs>/<KEY>/04-draft-and-test/test-log.md`)
 
 Explicitly ephemeral and disposable (see `shared/test-log-format.md`). It's not read by any later stage as a canonical source.
 
@@ -27,4 +27,4 @@ Explicitly ephemeral and disposable (see `shared/test-log-format.md`). It's not 
 
 ## Applying This
 
-This workspace does not run automated cleanup. Treat this file as the rule to follow manually (or delegate to the agent) after a skill completes Stage 06 -- clear that skill's `stages/*/output/` contents once the publish step confirms the skill is live at its destination.
+This workspace does not run automated cleanup. Treat this file as the rule to follow manually (or delegate to the agent) after a skill completes Stage 06 -- clear that skill's `<runs>/<KEY>/` contents once the publish step confirms the skill is live at its destination. The data repo's history keeps what was cleared.

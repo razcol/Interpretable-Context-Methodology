@@ -8,7 +8,7 @@
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../0N-prev/output/artifact.md` | Full file | The artifact to work from |
+| Previous stage | `<runs>/<KEY>/0N-prev/artifact.md` | Full file | The artifact to work from |
 | Reference | `references/example.md` | "Relevant Section" | What it provides |
 
 ## Process
@@ -28,7 +28,7 @@
 1. Read the input artifact from the previous stage
 2. [Step two]
 3. [Step three]
-4. Save to output/
+4. Save to `<runs>/<KEY>/0N-this/`
 
 ## Checkpoints
 
@@ -59,10 +59,11 @@
 
 ## Outputs
 
-<!-- What this stage produces and where it goes. -->
+<!-- What this stage produces and where it goes: always the run folder in the data
+     root (`<runs>` from the workspace CLAUDE.md), never a folder in the repo. -->
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| [Name] | `output/[slug]-[type].md` | [Description of the format] |
+| [Name] | `<runs>/<KEY>/0N-this/[slug]-[type].md` | [Description of the format] |
 
 <!-- Target: keep this file under 80 lines. -->

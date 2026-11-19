@@ -6,11 +6,11 @@ Decide which ACF fields the section has, and write the click list you follow in 
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 01 | `../01-export/output/<node-id>/export-record.md` | Full file | Route, repo, folder |
-| Profile | `../01-export/output/<node-id>/profile.json` | `fragments`, `breadcrumbs`, `appRoot`, `sectionsDir` | Shared fragments and page data |
-| Scaffold | `../01-export/output/<node-id>/scaffold/<Folder>/Client<Folder>.js` | Props and defaults | The content pieces |
-| Inspect | `../01-export/output/<node-id>/inspect.txt` | Hover lines | Hover-only content |
-| Mobile preflight | `../01-export/output/<M>/inspect.txt`, `figma.png` | Only when the export record has `pair: <M>` (a node id) | Mobile crops and mobile-only content |
+| Stage 01 | `<runs>/<node-id>/01-export/export-record.md` | Full file | Route, repo, folder |
+| Profile | `<runs>/<node-id>/01-export/profile.json` | `fragments`, `breadcrumbs`, `appRoot`, `sectionsDir` | Shared fragments and page data |
+| Scaffold | `<runs>/<node-id>/01-export/scaffold/<Folder>/Client<Folder>.js` | Props and defaults | The content pieces |
+| Inspect | `<runs>/<node-id>/01-export/inspect.txt` | Hover lines | Hover-only content |
+| Mobile preflight | `<runs>/<M>/01-export/inspect.txt`, `figma.png` | Only when the export record has `pair: <M>` (a node id) | Mobile crops and mobile-only content |
 | Rules | `references/field-plan-rules.md` | Full file | What is and is not a field |
 | Schema | `references/field-plan-schema.md` | Full file | `field-plan.json` shape |
 | Report | `references/field-report-template.md` | Full file | Report layout and branches |
@@ -22,8 +22,8 @@ Decide which ACF fields the section has, and write the click list you follow in 
 1. Read the export record and the scaffold props. List the content pieces: headings, paragraphs, cards, pictures, buttons, links, disclaimer. When the record has `pair: <M>`, compare each piece with M's `figma.png` and `inspect.txt`.
 2. Run `patterns` and `section <Folder> --refresh` with `--repo` set to the app root in the record. On `new`, a `<Folder>` that is already a live layout in `patterns` is a name question for step 4.
 3. Apply `references/field-plan-rules.md`. On `sync`, the live `tree` is the plan: copy it, then add only what the design has and the group lacks.
-4. Write `output/<node-id>/field-plan.json` (schema in the reference) and `output/<node-id>/field-plan.md`: a table of field, ACF type, shape or clone source, repeater min and max, and why, then the questions the design raises, then the folder name. When you rename the folder at the checkpoint, rerun `section` with the new name, update `folder:` and `section path:` in D's export record, and rerun stage 01 step 6's scaffold with the new `--component`.
-5. On `sync`, run `diff-group <Folder> --plan output/<node-id>/field-plan.json`. `matches` true: go to step 7. Otherwise stop at the checkpoint with the differences.
+4. Write `<runs>/<node-id>/02-field-plan/field-plan.json` (schema in the reference) and `<runs>/<node-id>/02-field-plan/field-plan.md`: a table of field, ACF type, shape or clone source, repeater min and max, and why, then the questions the design raises, then the folder name. When you rename the folder at the checkpoint, rerun `section` with the new name, update `folder:` and `section path:` in D's export record, and rerun stage 01 step 6's scaffold with the new `--component`.
+5. On `sync`, run `diff-group <Folder> --plan <runs>/<node-id>/02-field-plan/field-plan.json`. `matches` true: go to step 7. Otherwise stop at the checkpoint with the differences.
 6. On `new`, write `<app root>/<sectionsDir>/<Folder>/field-report.md` from the template, creating that folder. Do not add it to `.gitignore`. Stop at the checkpoint and end the run with: "The run ends here. Reply `continue <node-id>` after you save the group in WordPress."
 7. Run the audit. On `sync`, load `../03-fragment/CONTEXT.md`.
 
@@ -43,11 +43,11 @@ Decide which ACF fields the section has, and write the click list you follow in 
 | Shapes | Every picture or button field names its shape, and its clone source from `patterns` when the shape has one (a hand-built `responsiveMedia` has none) |
 | Plan file | `field-plan.json` passes `diff-group` validation (no `USAGE` error) |
 | Report | The report's first step matches its branch in `references/field-report-template.md` |
-| Report place | `field-report.md` is beside the component, not in this stage's `output/` |
+| Report place | `field-report.md` is beside the component, not in this stage's run folder |
 
 ## Outputs
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Field plan | `output/<node-id>/field-plan.md`, `field-plan.json` | Table and JSON |
+| Field plan | `<runs>/<node-id>/02-field-plan/field-plan.md`, `field-plan.json` | Table and JSON |
 | Field report (`new`) | `<app root>/<sectionsDir>/<Folder>/field-report.md` | `references/field-report-template.md` |

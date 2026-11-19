@@ -63,23 +63,25 @@ workspace/
     01-research/
       CONTEXT.md            # Layer 2: stage contract
       references/           # Layer 3: reference material for this stage
-      output/               # Layer 4: working artifacts
     02-script/
       CONTEXT.md
       references/
-      output/
     03-production/
       CONTEXT.md
       references/
-      output/
   _config/                  # Layer 3: brand, voice, design system
   shared/                   # Layer 3: cross-stage resources
   skills/                   # Layer 3: bundled domain knowledge
   setup/
     questionnaire.md        # One-time onboarding
+
+<data root>/workspaces/workspace/runs/<KEY>/   # Layer 4: working artifacts, outside the repo
+  01-research/
+  02-script/
+  03-production/
 ```
 
-The numbering encodes execution order. The folder boundaries enforce separation of concerns. The `output/` directories are the Layer 4 handoff points: the output of stage 01 becomes available as input to stage 02. If a human edits a file in `01-research/output/` before running stage 02, the agent picks up the edited version. The `references/` directories and `_config/` folder hold Layer 3 material -- stable knowledge that persists across runs.
+The numbering encodes execution order. The folder boundaries enforce separation of concerns. The run folders are the Layer 4 handoff points: the output of stage 01 becomes available as input to stage 02. They live in the data root (`_core/CONVENTIONS.md`, "Data root"), not in the repo, so the repo holds only definitions. If a human edits a file in `<runs>/<KEY>/01-research/` before running stage 02, the agent picks up the edited version. The `references/` directories and `_config/` folder hold Layer 3 material -- stable knowledge that persists across runs.
 
 Layer 2 is the control point. Each stage contract includes an Inputs table that specifies exactly which files from Layers 3 and 4 to load, and which sections of those files are relevant. Without this scoping, an agent would either load everything or guess. The Inputs table makes the selection explicit, editable, and auditable.
 
@@ -93,7 +95,7 @@ Each stage defines a contract in its CONTEXT.md with three parts: what it reads,
 ## Inputs
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | ../01-research/output/ | Full file | Source material |
+| Previous stage | <runs>/<KEY>/01-research/ | Full file | Source material |
 | Style guide | ../../brand-vault/voice-rules.md | Voice Rules section | Tone guidance |
 
 ## Process
@@ -101,12 +103,12 @@ Each stage defines a contract in its CONTEXT.md with three parts: what it reads,
 2. Identify the narrative angle
 3. Write the script following voice-rules
 4. Run audit checks
-5. Save to output/
+5. Save to <runs>/<KEY>/02-script/
 
 ## Outputs
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Script | output/[slug]-script.md | Markdown with metadata header |
+| Script | <runs>/<KEY>/02-script/[slug]-script.md | Markdown with metadata header |
 ```
 
 Creative stages also include **checkpoints** (where the agent pauses for human steering) and **audits** (quality checklists the agent runs before writing output). Not every stage needs these. Linear stages like extraction or rendering often run straight through. But any stage where the model is making creative decisions benefits from at least one checkpoint and a quality gate.
@@ -123,7 +125,7 @@ If stage 3 produces bad output, you know exactly where to look. You can read the
 
 A workspace is a folder. It can be copied to another machine, committed to Git, emailed as a zip file, or synced through any cloud storage service. It carries its own prompts, its own context structure, its own stage definitions. There is no server to configure, no environment to replicate, no deployment step.
 
-Every change to a prompt, every edit to a stage output, every configuration adjustment is diffable and reversible through standard version control. Stage outputs can be committed after each run, creating a version history of the entire pipeline's behavior over time.
+Every change to a prompt, every edit to a stage output, every configuration adjustment is diffable and reversible through standard version control. Stage outputs can be committed to the data repo (a git repo of its own, outside this one; `data_root.py commit`) after each run, creating a version history of the entire pipeline's behavior over time.
 
 If you build a workspace for a client's weekly reporting workflow, handing it over means copying a folder. The client can run it, edit the prompts to match their evolving needs, and adjust stages without involving a developer.
 
@@ -189,7 +191,7 @@ Every workspace follows 15 patterns defined in [`_core/CONVENTIONS.md`](_core/CO
 ### Architecture
 
 - **Stage contracts** -- Every stage CONTEXT.md has Inputs, Process, and Outputs. Simple enough for anyone to read. Structured enough for an agent to follow.
-- **Stage handoffs** -- Output folders connect stages. Edit any output and the next stage picks up your changes.
+- **Stage handoffs** -- Run folders in the data root connect stages. Edit any output and the next stage picks up your changes.
 - **One-way references** -- If A references B, B does not reference A. Prevents circular dependencies and scales linearly.
 - **Selective section routing** -- CONTEXT.md tables specify which sections of which files to load. Not the whole file. The section you need.
 - **Canonical sources** -- Every piece of information has one home. Other files point there. The moment the same rule exists in two files, they drift.
@@ -235,7 +237,7 @@ Every workspace follows 15 patterns defined in [`_core/CONVENTIONS.md`](_core/CO
 - [ ] Workspace was built using the workspace-builder (not hand-assembled)
 - [ ] `setup` runs cleanly and all placeholders resolve
 - [ ] At least one end-to-end run completed successfully
-- [ ] No stage outputs committed (output folders should only contain `.gitkeep`)
+- [ ] No stage outputs committed, and no stage has an `output/` folder (run artifacts go to the data root)
 - [ ] All CONTEXT.md files are under 80 lines
 - [ ] All reference files are under 200 lines
 - [ ] Creative stages have at least one checkpoint and an audit section

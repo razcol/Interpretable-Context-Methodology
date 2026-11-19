@@ -51,4 +51,4 @@ Understand the domain workflow through conversation with the user.
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Workflow map | `output/workflow-map.md` | Structured doc: stages with inputs/outputs, shared context, user-specific variables, optional stages, tool prerequisites, selected skills |
+| Workflow map | `<runs>/<KEY>/01-discovery/workflow-map.md` | Structured doc: stages with inputs/outputs, shared context, user-specific variables, optional stages, tool prerequisites, selected skills |

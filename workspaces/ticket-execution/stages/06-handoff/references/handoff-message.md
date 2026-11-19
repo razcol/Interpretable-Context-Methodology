@@ -54,7 +54,7 @@ Running from `<app root>` on port <port> (<started for this run | your server, r
 Branch `<branch>` in `<work tree>`, nothing staged or committed. Diff in Source Control, or:
 <git diff --stat lines, at most 15; then "and N more">
 
-Checklist: <N> of <M> passed. Report: `stages/05-verify/output/<KEY>/verify-report.md`. Screenshots: `stages/05-verify/output/<KEY>/shots/`.
+Checklist: <N> of <M> passed. Report: `<runs>/<KEY>/05-verify/verify-report.md`. Screenshots: `<runs>/<KEY>/05-verify/shots/`.
 
 Next:
 - `approve <KEY>`: commit, push, and give you the PR link against `dev`

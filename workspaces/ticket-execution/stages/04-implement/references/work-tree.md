@@ -42,7 +42,7 @@ When `node_modules` is missing in a fresh worktree, lint runs in stage 05 after 
 
 ## Record
 
-`output/<KEY>/implement-record.md`:
+`<runs>/<KEY>/04-implement/implement-record.md`:
 
 ```markdown
 # <KEY> implement

@@ -6,9 +6,9 @@ Check the result in a browser: the export against Figma's own picture, and the s
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 01 | `../01-export/output/<node-id>/` | `export-record.md`, `figma.png`, `preview.html` | Figma URL, viewport, pair, baseline, reference image, preview |
-| Stage 04 | `../04-conform-bind/output/<node-id>/conform-record.md` | Full file | What changed. Mobile: the touch decisions and triggers |
-| Baseline | `output/<D>/shots/baseline__1440x900.png` | The file (mobile, Case A) | Desktop regression reference |
+| Stage 01 | `<runs>/<node-id>/01-export/` | `export-record.md`, `figma.png`, `preview.html` | Figma URL, viewport, pair, baseline, reference image, preview |
+| Stage 04 | `<runs>/<node-id>/04-conform-bind/conform-record.md` | Full file | What changed. Mobile: the touch decisions and triggers |
+| Baseline | `<runs>/<D>/05-verify/shots/baseline__1440x900.png` | The file (mobile, Case A) | Desktop regression reference |
 | Targets | `<data-root>/workspaces/figma-section-fields/repos.md` | The repo's test route | Where the section is placed |
 | Steps | `references/verify-steps.md` | Full file, or "Mobile" on a mobile pass | Commands and pass marks |
 | Harness | `../../skills/next-section-repo/scripts/harness.py` | Usage line | Deterministic page for baseline, regression and tap |
@@ -20,7 +20,7 @@ Check the result in a browser: the export against Figma's own picture, and the s
 2. Level 1: follow `references/verify-steps.md` to screenshot the preview at the Figma size and diff it against `figma.png`. Then export the fluid preview and run `measure.js` on it at 1920, 1440 and 1100.
 3. Level 2, when the repo has a test route and the route is not `element` without a page: check whether `http://localhost:<dev port>` answers. If not, run `npm run dev` from the repo's app root in the background and wait for it. Run `measure.js` on the route with `--selector` set to the section's element.
 4. Compare the Level 2 screenshot with `figma.png` by eye for row order, hover and borders, and say what differs.
-5. Write `output/<node-id>/verify-report.md` with PASS or FAIL per check.
+5. Write `<runs>/<node-id>/05-verify/verify-report.md` with PASS or FAIL per check.
 6. On FAIL, go back to `../04-conform-bind/CONTEXT.md` with the failing checks (in mobile mode on a mobile pass). After a second FAIL on the same run, stop and show the report.
 7. Desktop PASS with `pair: <M>` or `pair: pending`: save the baseline shots (`verify-steps.md` "Desktop baseline"). On `pair: pending`, ask once at the end: "Mobile design URL, or `mobile out of scope`?" Apply the answer as `shared/run-records.md` "Pair rules" says. With `pair: <M>`, load `../01-export/CONTEXT.md` for the mobile pass.
 8. Stop the dev server only if this stage started it, and stop the browser.
@@ -52,7 +52,7 @@ Check the result in a browser: the export against Figma's own picture, and the s
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Verify report | `output/<node-id>/verify-report.md` | Checks with PASS or FAIL, widths, diff ratio, screenshot paths |
-| Screenshots | `output/<node-id>/shots/` | PNG |
-| Baseline | `output/<D>/shots/baseline__<W>x<H>.png` | Harness shots at the desktop widths |
-| Regression | `output/<M>/shots/regression__*.png`, `regression-diff.png` | The 1440 shot after 04m, the HEAD shot (Case B), the diff |
+| Verify report | `<runs>/<node-id>/05-verify/verify-report.md` | Checks with PASS or FAIL, widths, diff ratio, screenshot paths |
+| Screenshots | `<runs>/<node-id>/05-verify/shots/` | PNG |
+| Baseline | `<runs>/<D>/05-verify/shots/baseline__<W>x<H>.png` | Harness shots at the desktop widths |
+| Regression | `<runs>/<M>/05-verify/shots/regression__*.png`, `regression-diff.png` | The 1440 shot after 04m, the HEAD shot (Case B), the diff |
