@@ -18,7 +18,7 @@ Read the repo's structure, read the Figma layer, and write the repo-shaped scaff
 
 ## Process
 
-D is the desktop node id and M the mobile one. `$FIGMA` paths are from the workspace root, `<workspace>` (`/home/dev/ai-system/workspaces/figma-section-fields`); the skill scripts run from `skills/next-section-repo/`.
+D is the desktop node id and M the mobile one. `$FIGMA` paths are from the workspace root, `<workspace>` (`<checkout>/workspaces/figma-section-fields`, real path from the brief; `CLAUDE.md`); the skill scripts run from `skills/next-section-repo/`.
 
 1. Read the route, the Figma URL and the repo from the trigger, and `--mobile <url>` (Case A). The `mobile` route (Case B) gives M's URL. Record `viewport: mobile` for M, otherwise `viewport: desktop`. Resolve the repo from `<data-root>/workspaces/figma-section-fields/repos.md`, or use the path the user gave (a worktree counts). Take the node id from the URL's `node-id`, written with `-`. Stop if a URL has no node id.
    - `resync <Folder> <mobile-url> <repo> --mobile` is a mobile pass on M: step 6m, then 04m in drift mode (the new overlay is diffed against the existing `bps.mobile` rules only), then 05m. It never runs desktop 04 drift on D.

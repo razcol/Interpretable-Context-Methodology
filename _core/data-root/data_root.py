@@ -5,6 +5,7 @@ The rules live in the "Data root" section of _core/CONVENTIONS.md. Python 3
 standard library only.
 
   resolve                    print the data checkout this ai-system checkout uses
+  checkout                   print this ai-system checkout (its top folder: main, clone or worktree)
   init                       create the data root when missing and seed it (setup runs this)
   commit -m MSG [PATH...]    commit in the data checkout, one commit at a time
   add BRANCH [--from REF]    ai-system worktree + data worktree on the same branch name
@@ -389,6 +390,7 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="ai-system data root helper (see _core/CONVENTIONS.md, Data root)")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("resolve", help="print the data checkout this ai-system checkout uses")
+    sub.add_parser("checkout", help="print the top folder of the ai-system checkout this script is in")
     sub.add_parser("init", help="create and seed the data root when missing (setup)")
     c = sub.add_parser("commit", help="commit in the data checkout, serialized")
     c.add_argument("-m", "--message", required=True)
@@ -409,6 +411,8 @@ def main(argv=None):
     try:
         if args.cmd == "resolve":
             print(resolve())
+        elif args.cmd == "checkout":
+            print(checkout_info()[0])
         elif args.cmd == "init":
             init()
         elif args.cmd == "commit":

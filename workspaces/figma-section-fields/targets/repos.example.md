@@ -9,3 +9,5 @@ The section repos this workspace writes into: one row per repo.
 | <repo name> | <absolute repo root> | <test route, or none yet> |
 
 When a run does not name a repo, use <default repo name>.
+
+Figma token file: <absolute path of the env file with a FIGMA_ACCESS_TOKEN= line>

@@ -1,6 +1,6 @@
 # Verify steps
 
-`<ws>` is `/home/dev/ai-system/workspaces/ticket-execution`. `B` is `/home/dev/ai-system/_core/skills/browser-cdp`. `R` is `<runs>/<KEY>/05-verify`. `<app>` is the app root from `implement-record.md`.
+`<ws>` is the workspace folder `../../../shared/tools.md` names (the brief gives its real path). `B` is `<checkout>/_core/skills/browser-cdp`, the browser-cdp folder of the same checkout (`<ws>/../../_core/skills/browser-cdp`). `R` is `<runs>/<KEY>/05-verify`. `<app>` is the app root from `implement-record.md`.
 
 ## Run ports and browser
 

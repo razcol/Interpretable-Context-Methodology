@@ -53,7 +53,7 @@ Stages claim the rest themselves under the run's key: stage 04 its work tree and
 
 Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `<runs>/<KEY>/0N-*/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
 
-`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/ticket-execution/runs`, the run folders (never `stages/*/output/` in this repo). Resolve it once per run and copy the real path into every brief.
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/ticket-execution/runs`, the run folders (never `stages/*/output/` in this repo). `<checkout>` is the ai-system checkout this run is in: the path `python3 ../../_core/data-root/data_root.py checkout` prints from this workspace folder. `<ws>` is `<checkout>/workspaces/ticket-execution`. Tool paths in the stage files start at `<ws>` or `<checkout>`, so a run uses the tools of the checkout it runs in (a main checkout, another clone or a maintenance worktree), never another checkout's. Resolve all of them once per run and copy the real paths into every brief.
 
 Shape of a call, with the model filled in:
 
@@ -61,7 +61,7 @@ Shape of a call, with the model filled in:
 subagent_type: generalPurpose
 model: claude-sonnet-5-5-high
 description: stage 04 <KEY>
-prompt: Read stages/04-implement/CONTEXT.md (version line included) and every path in its Inputs table. Key: <KEY>. Write only <runs>/<KEY>/04-implement/. Return the output path, each audit row, and whether a checkpoint is waiting.
+prompt: Read stages/04-implement/CONTEXT.md (version line included) and every path in its Inputs table. Key: <KEY>. <checkout> is <real path>, <ws> is <real path>, <runs> is <real path>. Write only <runs>/<KEY>/04-implement/. Return the output path, each audit row, and whether a checkpoint is waiting.
 ```
 
 A stage fails its check when the output file is missing, or when no checkpoint is waiting and the audit still fails. Retry and stop follow the skill. The orchestrator does not run `tools/write_record.py`.

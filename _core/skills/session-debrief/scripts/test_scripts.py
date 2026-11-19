@@ -253,7 +253,7 @@ class DigestTests(unittest.TestCase):
         }
         for key, value in samples.items():
             self.assertNotEqual(session_digest.redact(value), value, key)
-        keep = "/home/dev/ai-system/workspaces/skill-factory/stages/04-draft-and-test/output/draft-skill/scripts"
+        keep = "/opt/app/ai-system/workspaces/skill-factory/stages/04-draft-and-test/output/draft-skill/scripts"
         self.assertEqual(session_digest.redact("/Users/aaaa/bbbbbbbbb/cccccccccc/ddddddddd/eeeeeeeeee/fffffffff/gggggggg/hhhhhhhh"),
                          "/Users/aaaa/bbbbbbbbb/cccccccccc/ddddddddd/eeeeeeeeee/fffffffff/gggggggg/hhhhhhhh")
         self.assertEqual(session_digest.redact(keep), keep)

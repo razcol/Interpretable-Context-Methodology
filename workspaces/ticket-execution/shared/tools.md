@@ -1,6 +1,6 @@
 # Tools
 
-Four scripts in `tools/`, plus the shared run claim helper `_core/data-root/run_claim.py` ("run_claim.py" below). Python 3 standard library only. Each prints one JSON object. `<ws>` is `/home/dev/ai-system/workspaces/ticket-execution`. Tests: `python3 <ws>/tools/test_tools.py`.
+Four scripts in `tools/`, plus the shared run claim helper `_core/data-root/run_claim.py` ("run_claim.py" below). Python 3 standard library only. Each prints one JSON object. `<ws>` is this workspace folder in the ai-system checkout the run is in, `<checkout>/workspaces/ticket-execution`. `<checkout>` is the path `python3 ../../_core/data-root/data_root.py checkout` prints from the workspace folder; the brief gives both as real paths (`CLAUDE.md`). Never type another checkout's path. Tests: `python3 <ws>/tools/test_tools.py`.
 
 ## Permissions
 

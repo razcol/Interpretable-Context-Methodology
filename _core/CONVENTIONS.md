@@ -159,6 +159,7 @@ Tools never type the path. They ask the helper, `_core/data-root/data_root.py` (
 | Command | What it does |
 |---|---|
 | `resolve` | Prints the data checkout this ai-system checkout uses: the main checkout uses the data root, a worktree on branch X uses data worktree X. Stops when there is none. |
+| `checkout` | Prints the top folder of the ai-system checkout the helper is in: a main checkout, another clone, or a maintenance worktree each print their own. |
 | `init` | Creates the data root when it is missing and seeds what is missing. Never overwrites. `setup` runs it. |
 | `commit -m MSG [PATH...]` | Commits in the data checkout. Stages named paths (all changes when none are given), refuses secret-looking files, and holds a short lock so commits into one checkout never overlap. |
 | `add <branch> [--from REF]` | Maintenance only: an ai-system worktree (default `<checkout>.worktrees/<branch>` next to the main checkout, started at `REF` or the main checkout's HEAD) and a data worktree at `<data root>/.worktrees/<branch>`, on the same branch name. |
@@ -168,6 +169,8 @@ Tools never type the path. They ask the helper, `_core/data-root/data_root.py` (
 From a shell: `"$(python3 _core/data-root/data_root.py resolve)"`.
 
 **In docs** a path inside the data root is written `<data-root>/<path>`, for example `<data-root>/workspaces/ticket-execution/repos.md` or `<data-root>/log/browser-cdp/LOG.md`. `<data-root>` is the folder `resolve` prints for the checkout you are working in. Resolve it once, then use the real path in commands and briefs. Never type `~/.config/ai-system` or a `/home/<user>/` path in its place, and never write a log, brief or table into the repo instead (a skill never keeps its log in its own folder).
+
+**Tool paths in docs** are relative to the ai-system checkout the run is in, never to one machine's folder. A doc that needs an absolute tool path writes `<checkout>/<path>` (for example `<checkout>/_core/skills/browser-cdp`), where `<checkout>` is the folder `data_root.py checkout` prints. Resolve it once per run, with `<data-root>`, and copy the real path into commands and briefs. A run from a main checkout, another clone or a maintenance worktree then uses its own tools and its own data checkout. Never type `/home/<user>/...` for a tool.
 
 **Layout** (version 1, named in the data root's `LAYOUT` file):
 

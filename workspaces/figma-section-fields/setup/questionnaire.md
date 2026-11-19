@@ -17,10 +17,9 @@ These questions configure the workspace. Per-run facts (Figma URL, repo for this
 - Default: the default the table already names; with none yet, the first row
 
 ### Q3: Which file holds the Figma token?
-- Placeholder: `{{FIGMA_ENV_FILE}}`
-- Files: `shared/figma-cli-setup.md`, `shared/export-contract.md`
-- Type: free text, an env file with a `FIGMA_ACCESS_TOKEN=` line
-- Default: `/home/dev/cli/figma-cli/.env`
+- Files: `<data-root>/workspaces/figma-section-fields/repos.md`, its "Figma token file" line (when the file does not exist, start from `targets/repos.example.md`). Never write the path into a file of this repo.
+- Type: free text, the path of an env file with a `FIGMA_ACCESS_TOKEN=` line (record the path only; never open the file)
+- Default: the path the line already names; with none yet, `~/cli/figma-cli/.env`
 
 ### Q4: Which local page should stage 05 open to see a section in the app, per repo?
 - Files: `<data-root>/workspaces/figma-section-fields/repos.md` (when it does not exist, start from `targets/repos.example.md`)

@@ -6,7 +6,7 @@ Which Next.js repo receives the section.
 
 | Need | Go To |
 |------|-------|
-| Repo roots, default repo, test routes | `<data-root>/workspaces/figma-section-fields/repos.md` (your data: one row per repo; example in `repos.example.md`) |
+| Repo roots, default repo, test routes, Figma token file | `<data-root>/workspaces/figma-section-fields/repos.md` (your data: one row per repo; example in `repos.example.md`) |
 | Repo structure for this run | `../skills/next-section-repo/SKILL.md` (`probe_repo.py`) |
 
 ## Rules

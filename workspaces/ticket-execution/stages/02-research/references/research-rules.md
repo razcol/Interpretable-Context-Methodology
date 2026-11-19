@@ -29,7 +29,7 @@ The siblings are the repos the "Siblings" line in `<data-root>/workspaces/ticket
 
 ### How to run
 
-Working directory is the folder that contains the SKILL.md named in this stage's Inputs (`/home/dev/ai-system/_core/skills/wp-graphql`):
+Working directory is the folder that contains the SKILL.md named in this stage's Inputs (`<checkout>/_core/skills/wp-graphql`, in the ai-system checkout the run is in; the brief gives `<checkout>` as a real path):
 `python3 scripts/wp_graphql.py <command> [<arg>] --repo <root>`, with `required_permissions: all` on the first call.
 
 - `--repo` is the root from `intake.md`, or the sibling root cited under "sibling:". Never a stage 04 worktree.

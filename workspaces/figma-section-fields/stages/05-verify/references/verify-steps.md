@@ -1,6 +1,6 @@
 # Verify steps
 
-Commands for stage 05. `<workspace>` is `/home/dev/ai-system/workspaces/figma-section-fields`. `B` is the browser-cdp skill folder (`/home/dev/ai-system/_core/skills/browser-cdp`), `R` is `<runs>/<node-id>/05-verify`, `S` is `<runs>/<node-id>/01-export`, and `$FIGMA` is the call in `shared/figma-cli-setup.md`. All three are absolute, so the commands run from any folder. Every script prints one JSON object.
+Commands for stage 05. `<workspace>` is `<checkout>/workspaces/figma-section-fields`, this workspace in the ai-system checkout the run is in (`CLAUDE.md`; the brief gives the real path). `B` is the browser-cdp skill folder of the same checkout (`<checkout>/_core/skills/browser-cdp`), `R` is `<runs>/<node-id>/05-verify`, `S` is `<runs>/<node-id>/01-export`, and `$FIGMA` is the call in `shared/figma-cli-setup.md`. All three are absolute, so the commands run from any folder. Every script prints one JSON object.
 
 ## Run ports and browser
 

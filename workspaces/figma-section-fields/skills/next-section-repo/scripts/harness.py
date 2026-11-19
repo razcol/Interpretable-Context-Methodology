@@ -19,7 +19,8 @@ import jsread  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 RUNNER = HERE / "harness.mjs"
-FALLBACK_NODE_MODULES = Path("/home/dev/cli/figma-cli/node_modules")
+# figma-cli source checkout (shared/figma-cli-setup.md); FIGMA_CLI_HOME overrides it
+FALLBACK_NODE_MODULES = Path(os.environ.get("FIGMA_CLI_HOME") or "~/cli/figma-cli").expanduser() / "node_modules"
 REQUIRED_PACKAGES = ("react", "react-dom", "styled-components")
 THEME_CANDIDATES = ("styles/theme/index.js", "styles/theme/index.ts", "styles/theme/index.mjs", "styles/theme.js")
 BUNDLE_TIMEOUT = 300

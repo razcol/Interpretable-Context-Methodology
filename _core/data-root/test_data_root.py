@@ -100,6 +100,17 @@ class ResolutionTests(Sandbox):
         r = self.run_helper(self.tmp / "loose", "resolve", ok=False)
         self.assertIn("no data worktree", r.stderr)
 
+    def test_checkout_prints_the_checkout_the_script_is_in(self):
+        # a main checkout, a clone and a maintenance worktree each name their own folder,
+        # so a run's tool paths never point into another checkout
+        self.run_helper(self.code, "init")
+        self.assertEqual(self.run_helper(self.code, "checkout").stdout.strip(), str(self.code))
+        clone = self.tmp / "clone"
+        self.git(self.tmp, "clone", "-q", str(self.code), str(clone))
+        self.assertEqual(self.run_helper(clone, "checkout").stdout.strip(), str(clone))
+        wt, _ = self.add("maint-c")
+        self.assertEqual(self.run_helper(wt, "checkout").stdout.strip(), str(wt))
+
     def test_example_target_mapping(self):
         t = dr.example_target
         self.assertEqual(str(t("workspaces/w/targets/repos.example.md")), "workspaces/w/repos.md")
@@ -276,6 +287,19 @@ class PairingTests(Sandbox):
         self.run_helper(self.code, "add", "taken", "--code-path", str(self.tmp / "wt/taken"), ok=False)
         self.assertFalse((self.tmp / "wt/taken").exists())
         self.assertFalse(dr.branch_exists(self.code, "taken"))
+
+
+class TrackedFileTests(unittest.TestCase):
+    def test_no_tracked_file_names_a_home_folder(self):
+        # tool paths start at <checkout> and user facts live in the data root, so no
+        # tracked file names one machine's /home/<user>/ folder (the rule text itself may
+        # name the placeholder /home/<user>/)
+        repo = HERE.parent.parent
+        r = subprocess.run(["git", "-C", str(repo), "grep", "-n", "-I", "-i", "-E",
+                            r"/home/[a-z0-9_.-]+|\\home\\[a-z0-9_.-]+"],
+                           capture_output=True, text=True)
+        self.assertIn(r.returncode, (0, 1), r.stderr)
+        self.assertEqual(r.stdout.splitlines(), [])
 
 
 if __name__ == "__main__":
