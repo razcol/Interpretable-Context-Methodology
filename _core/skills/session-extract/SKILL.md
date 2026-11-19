@@ -42,4 +42,4 @@ python3 <skill-folder>/scripts/scan_transcripts.py \
 - Do not claim sessions from another machine or from the Windows Cursor profile were included.
 - Separate "still open" from "a later session or the current code already fixed it."
 - Recommendations only. Do not edit the skill, tool, or workspace named in Implications.
-- Before a follow-up edits `workspaces/ticket-execution/`, read `workspaces/ticket-execution/stages/.run-lock`. When that file exists, do not edit the workspace. Say the key and the start time, and wait until the file is gone.
+- Before a follow-up edits `workspaces/ticket-execution/`, list its running claims from the ai-system checkout being edited: `python3 _core/data-root/run_claim.py list --ws ticket-execution`. When a run is `live`, do not edit the workspace. Say its key and `startedAt`, and wait until it is released or stale. There is no `.run-lock` file to read.

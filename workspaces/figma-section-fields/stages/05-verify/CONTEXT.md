@@ -16,9 +16,9 @@ Check the result in a browser: the export against Figma's own picture, and the s
 
 ## Process
 
-1. Start the browser with browser-cdp `browser.js start`, or reuse it when it already runs (05m after 05). Headless only. On `viewport: mobile`, run the "Mobile" section of `references/verify-steps.md` instead of steps 2 to 4, then continue at step 5.
+1. Start the browser with browser-cdp `browser.js start` on this run's own profile and port (`references/verify-steps.md` "Run ports and browser"), or reuse it when it already runs. Headless only. On `viewport: mobile`, run the "Mobile" section of `references/verify-steps.md` instead of steps 2 to 4, then continue at step 5.
 2. Level 1: follow `references/verify-steps.md` to screenshot the preview at the Figma size and diff it against `figma.png`. Then export the fluid preview and run `measure.js` on it at 1920, 1440 and 1100.
-3. Level 2, when the repo has a test route and the route is not `element` without a page: check whether `http://localhost:<dev port>` answers. If not, run `npm run dev` from the repo's app root in the background and wait for it. Run `measure.js` on the route with `--selector` set to the section's element.
+3. Level 2, when the repo has a test route and the route is not `element` without a page: find or start the server for this run's app root as `references/verify-steps.md` "Level 2" says (the run's own dev port). Run `measure.js` on the route with `--selector` set to the section's element.
 4. Compare the Level 2 screenshot with `figma.png` by eye for row order, hover and borders, and say what differs.
 5. Write `<runs>/<node-id>/05-verify/verify-report.md` with PASS or FAIL per check.
 6. On FAIL, go back to `../04-conform-bind/CONTEXT.md` with the failing checks (in mobile mode on a mobile pass). After a second FAIL on the same run, stop and show the report.

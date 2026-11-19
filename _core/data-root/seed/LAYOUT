@@ -10,3 +10,5 @@ version: 1
 # log/briefs/                   session briefs, handoffs and debriefs
 # archive/<ws>/                 kept history, per workspace
 # .worktrees/<branch>/          paired data worktrees for ai-system maintenance (ignored)
+# workspaces/<ws>/runs/<KEY>/claim.lock  the run's key claim while it runs (ignored)
+# claims/                      machine-wide port and work-tree claims (ignored)

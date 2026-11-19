@@ -161,7 +161,7 @@ Tools never type the path. They ask the helper, `_core/data-root/data_root.py` (
 | `resolve` | Prints the data checkout this ai-system checkout uses: the main checkout uses the data root, a worktree on branch X uses data worktree X. Stops when there is none. |
 | `init` | Creates the data root when it is missing and seeds what is missing. Never overwrites. `setup` runs it. |
 | `commit -m MSG [PATH...]` | Commits in the data checkout. Stages named paths (all changes when none are given), refuses secret-looking files, and holds a short lock so commits into one checkout never overlap. |
-| `add <branch>` | Maintenance only: an ai-system worktree (default `<checkout>.worktrees/<branch>` next to the main checkout) and a data worktree at `<data root>/.worktrees/<branch>`, on the same branch name. |
+| `add <branch> [--from REF]` | Maintenance only: an ai-system worktree (default `<checkout>.worktrees/<branch>` next to the main checkout, started at `REF` or the main checkout's HEAD) and a data worktree at `<data root>/.worktrees/<branch>`, on the same branch name. |
 | `merge <branch>` | Commits the data worktree, merges data into the main data checkout, then merges code. Stops before the code merge if the data merge conflicts. |
 | `remove <branch>` | Removes both worktrees and both branches after a confirmation. Uncommitted or unmerged work is dropped only with `--discard`. |
 
@@ -180,18 +180,32 @@ From a shell: `"$(python3 _core/data-root/data_root.py resolve)"`.
 | `log/briefs/` | Session briefs, handoffs and debriefs |
 | `archive/` | Kept history (`archive/<ws>/` per workspace) |
 | `.worktrees/<branch>/` | Paired data worktrees (ignored) |
+| `workspaces/<ws>/runs/<KEY>/claim.lock`, `claims/` | Run claims (ignored, never committed; see Run claims) |
 
 A layout change raises the `LAYOUT` version and ships with a migration step that runs on merge.
 
-**Data repo rules** (seeded from `_core/data-root/seed/`): `.gitignore` keeps env and secret files, caches and run locks out; `.gitattributes` sets `LOG.md` and `log/briefs/` to `merge=union`, so two branches that both append never conflict.
+**Data repo rules** (seeded from `_core/data-root/seed/`): `.gitignore` keeps env and secret files, caches and claim files (`*.lock`) out; `.gitattributes` sets `LOG.md` and `log/briefs/` to `merge=union`, so two branches that both append never conflict.
 
 **Seeding.** A tracked `workspaces/<ws>/targets/<path>.example.<ext>` seeds `workspaces/<ws>/<path>.<ext>` in the data root, once. Example files show every column with `<...>` placeholders, never a user's data.
 
-**Project practices are rows.** How a target project works (root, branch and commit patterns, base branch, PR target and PR link, main tree or worktree and where, lint command, test route, test logins, form submits, and any rule that holds for that project only) is that project's row in its workspace's repo table in the data root. The repo keeps only the generic rule for reading a row (for example `workspaces/ticket-execution/shared/repo-rows.md`), so adding or changing a project never needs an edit in the repo. ai-system's own maintenance worktrees and their paired data worktrees ("Two modes" below) are ai-system's own mechanism, not a project row.
+**Project practices are rows.** How a target project works (root, branch and commit patterns, base branch, PR target and PR link, main tree or worktree and where, lint command, test route, test logins, form submits, and any rule that holds for that project only) is that project's row in its workspace's repo table in the data root. The repo keeps only the generic rule for reading a row (for example `workspaces/ticket-execution/shared/repo-rows.md`), so adding or changing a project never needs an edit in the repo. ai-system's own maintenance worktrees and their paired data worktrees ("Two modes" below) are ai-system's own mechanism, not a project row. A ticket on ai-system itself is the one row whose worktree is made with `add` (its row's note says so), so that branch gets its paired data worktree; a run on any other repo never creates an ai-system worktree.
 
 **Run folders** (`workspaces/<ws>/runs/<KEY>/<stage>/`) hold every stage output and run record (Pattern 2). Tools that write a record resolve the data root themselves (for example `workspaces/ticket-execution/tools/write_record.py`). A generated diagram of a workspace goes to `workspaces/<ws>/flowchart/`. Kept history that belongs to no run goes to `archive/<ws>/`. A session's throwaway files go to its own temp folder, never into the repo; anything worth keeping goes to the data root.
 
 **Large outputs** (screenshots, exports) are committed to the data repo like everything else, so discarding a worktree never loses them. Env and secret files are never committed in either repo.
+
+**Run claims.** Runs on different keys run at the same time. Instead of one lock file per workspace, a run claims only what runs really share, with `_core/data-root/run_claim.py` (every command prints one JSON object; exit 3 names the live run that holds what was asked for):
+
+| Command | What it does |
+|---|---|
+| `claim --ws <ws> --key <KEY>` | Before a run's first stage. Writes `workspaces/<ws>/runs/<KEY>/claim.lock` in the data checkout `resolve` prints: start time, the ai-system checkout, the PID of the agent session that runs it, and a token. A live claim on the key stops the second run and names the first. A stale claim (its process gone or replaced, its checkout gone, or untouched for 2 hours) is replaced and reported, so the next run continues from the records. `--takeover` replaces a live-looking claim only when the user says that run is not running. |
+| `target --path <work tree> --root <root> --branch <b>` | Claims the target-repo work tree and branch a run edits. Another live run on the same work tree or branch gets exit 3. Whether a run uses a worktree comes from the repo's row. |
+| `port --kind dev\|cdp` | The run's own dev-server or browser (CDP) port: free, not claimed by a live run, and the same on every call of that run. Each run also starts its own browser profile, so sign-ins and screenshots never mix. |
+| `commit [--stage S]` | Commits only `workspaces/<ws>/runs/<KEY>/` through `data_root.py commit` (serialized, named paths only). Workflows run it after each stage's record. |
+| `release --token T` | When the run stops: drops its claims, then commits its run folder. |
+| `list [--ws <ws>]` | Every claim, `live` or `stale`. `status` shows the live ones. |
+
+Port and work-tree claims are machine-wide, so they live in the main data checkout's `claims/` folder, also for test runs from a maintenance worktree; key claims live in the run's own data checkout. Claim files end in `.lock`, which the data repo ignores. Stages within one run still run in order. Log writes stay single small appends.
 
 **Two modes.** Normal work runs on the main ai-system checkout and writes to the main data checkout; a run never gets its own ai-system worktree. Changing ai-system itself happens in a worktree from `add`, whose test runs write to its paired data worktree; finish with `merge` (data first, then code) or `remove --discard`.
 
@@ -214,6 +228,8 @@ Pipeline Status: [workspace-name]
 ```
 
 For each stage: if `<runs>/<KEY>/<stage>/` contains files, the stage is COMPLETE and the filenames are listed. If it is missing or empty, the stage is PENDING.
+
+Then it lists the runs that hold a claim now (`python3 _core/data-root/run_claim.py list --ws <ws>`): each live run's key, start time and ports, and each stale claim as stopped without release.
 
 Workspaces can define additional trigger keywords in their own CLAUDE.md.
 

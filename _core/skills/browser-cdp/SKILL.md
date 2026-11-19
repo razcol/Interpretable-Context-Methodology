@@ -30,7 +30,7 @@ node scripts/browser.js status
 node scripts/browser.js stop
 ```
 
-Use `--profile NAME --port N` on `browser.js start` for a separate login/identity. Each profile has its own cookie jar on disk. The port is stored in the profile state file. Later scripts take `--profile` and do not take `--port`.
+Inside a workflow run, never use the default profile or port: start the run's own profile on the CDP port the run's claim gives (`run_claim.py port --kind cdp`, see "Run claims" in `_core/CONVENTIONS.md`), and pass that `--profile` to every script, so two runs never share sign-ins, tabs or screenshots. Use `--profile NAME --port N` on `browser.js start` for a separate login/identity. Each profile has its own cookie jar on disk. The port is stored in the profile state file. Later scripts take `--profile` and do not take `--port`.
 
 `--port` is accepted only by `browser.js`. Passing it to `navigate.js`, `snapshot.js`, `interact.js`, `screenshot.js`, `measure.js` or `capture.js` exits USAGE.
 

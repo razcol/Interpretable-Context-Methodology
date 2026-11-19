@@ -7,7 +7,7 @@ standard library only.
   resolve                    print the data checkout this ai-system checkout uses
   init                       create the data root when missing and seed it (setup runs this)
   commit -m MSG [PATH...]    commit in the data checkout, one commit at a time
-  add BRANCH                 ai-system worktree + data worktree on the same branch name
+  add BRANCH [--from REF]    ai-system worktree + data worktree on the same branch name
   merge BRANCH               commit the data worktree, merge data, then merge code
   remove BRANCH              remove both worktrees and both branches, after a confirmation
 """
@@ -272,7 +272,7 @@ def init(code=HERE):
 
 # ---------- maintenance pairing ----------
 
-def add(branch, code_path=None, code=HERE):
+def add(branch, code_path=None, code=HERE, start=None):
     check_branch_name(branch)
     _, main_top, _, _ = checkout_info(code)
     root = data_root(code)
@@ -287,7 +287,7 @@ def add(branch, code_path=None, code=HERE):
     for p in (code_wt, data_wt):
         if p.exists():
             raise Stop(f"{p} already exists; nothing created")
-    git(main_top, "worktree", "add", "-q", "-b", branch, str(code_wt))
+    git(main_top, "worktree", "add", "-q", "-b", branch, str(code_wt), *([start] if start else []))
     try:
         git(root, "worktree", "add", "-q", "-b", branch, str(data_wt))
     except Stop:
@@ -397,6 +397,8 @@ def main(argv=None):
     a.add_argument("branch")
     a.add_argument("--code-path", help="where the ai-system worktree goes "
                    "(default: <checkout>.worktrees/<branch> next to the main checkout)")
+    a.add_argument("--from", dest="start", help="start the code branch here, e.g. origin/my-changes "
+                   "(default: the main checkout's HEAD); the data branch starts at the data HEAD")
     m = sub.add_parser("merge", help="merge data, then code, into the main checkouts")
     m.add_argument("branch")
     r = sub.add_parser("remove", help="remove both worktrees and both branches")
@@ -413,7 +415,7 @@ def main(argv=None):
             sha = commit(resolve(), args.message, args.paths)
             print(sha or "nothing to commit")
         elif args.cmd == "add":
-            add(args.branch, args.code_path)
+            add(args.branch, args.code_path, start=args.start)
         elif args.cmd == "merge":
             merge(args.branch)
         elif args.cmd == "remove":

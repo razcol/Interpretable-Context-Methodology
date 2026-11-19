@@ -21,6 +21,8 @@ List each `<KEY>` folder under `<runs>/` that has `01-intake/`. For each key, a 
 - `plan.md` and no `implement-record.md`: "04 not started" (an interrupted run, not waiting on you).
 - `handoff.md` newer than any `release-record.md`: "06 waiting for your review", followed by the URLs from `handoff.md` and whether the server still answers (`tools/dev_server.py status --app-root <app root>`).
 
+Then the runs that hold a claim now: `python3 ../../_core/data-root/run_claim.py list --ws ticket-execution` from this workspace folder. Each `live` run is "running since <startedAt> (pid <pid>, checkout <checkout>)" with its ports and work tree; a `stale` one is "stopped without release; the next `start` continues it". A run folder may hold `claim.lock`: it is the claim, not a record, and the data repo never commits it.
+
 ```
 Pipeline Status: ticket-execution
 
@@ -28,4 +30,7 @@ ABC-7  rich image grid section
   [01-intake] -> [02-research] -> [03-plan] -> [04-implement] -> [05-verify] -> [06-handoff] -> [07-release]
    COMPLETE       COMPLETE         COMPLETE      COMPLETE          COMPLETE       COMPLETE        PENDING
   06 waiting for your review: http://localhost:3001/<test route>/ (server answers)
+
+Running now:
+  XYZ-9  running since 2026-11-19T10:02 (pid 4242), dev 3002, browser 9341, work tree <root>/.worktrees/XYZ-9
 ```

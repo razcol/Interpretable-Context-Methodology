@@ -1,10 +1,20 @@
 # Work tree
 
-`<root>`, `<branch>` and `<path>` come from `plan.md`. `<base>` is the plan's `base` line (the row's Base, from `intake.md`). Run git outside the sandbox when the root is outside this workspace.
+`<root>`, `<branch>` and `<path>` come from `plan.md`. `<ws>` is the workspace folder `../../../shared/tools.md` names. `<base>` is the plan's `base` line (the row's Base, from `intake.md`). Run git outside the sandbox when the root is outside this workspace.
+
+## Claim
+
+Other runs may edit the same repo at the same time. Before any `switch` or `worktree add`, claim the work tree and the branch for this run (`../../../shared/tools.md` "run_claim.py"):
+
+```bash
+python3 <ws>/../../_core/data-root/run_claim.py target --ws ticket-execution --key <KEY> --path <work tree> --root <root> --branch <branch>
+```
+
+`<work tree>` is `<root>` for the main tree, or the worktree `<path>`. Exit 3 on the main tree means another run is editing it: use a worktree as the row or "main tree" in `../../../shared/repo-rows.md` says, claim that path, and say so in the record. Exit 3 on a worktree path or on the branch: stop and return the run it names. Never edit a work tree this run has not claimed.
 
 ## Branch in the main tree
 
-Only when `git -C <root> status --short` is empty.
+Only when `git -C <root> status --short` is empty and this run holds the claim on `<root>`.
 
 ```bash
 git -C <root> fetch origin
@@ -23,6 +33,8 @@ git -C <root> worktree add <path> <branch>                  # existing branch, n
 ```
 
 When `git worktree list` already shows `<path>` on `<branch>`, reuse it.
+
+When the row's "Notes" line names the command that makes this repo's worktree, use that command instead of `git worktree add` (with the same path, branch and base).
 
 Only when `<path>` is inside the root (`<root>/.worktrees/<KEY>`), make sure git ignores that folder, once:
 

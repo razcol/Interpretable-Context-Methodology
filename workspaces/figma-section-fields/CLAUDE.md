@@ -25,7 +25,7 @@ figma-section-fields/
 | Keyword | Action |
 |---------|--------|
 | `setup` | Run the onboarding questionnaire |
-| `status` | List runs. A desktop and mobile pair shows as one block |
+| `status` | List runs (a desktop and mobile pair shows as one block), and the runs that hold a claim now |
 | `new <figma-url> <repo> [--mobile <url>]` | New section. 01, 02, then stop until you build the ACF group. With `--mobile`, the mobile pass follows desktop 05 |
 | `continue <node-id>` | After you saved the group: 03, 04, 05 for that run |
 | `sync <Folder> <figma-url> <repo> [--mobile <url>]` | The ACF group already exists. 01, 02 (compare only), 03, 04, 05. With `--mobile`, the mobile pass follows desktop 05 |
@@ -36,6 +36,15 @@ figma-section-fields/
 A run is keyed by the Figma node id. Its records live in `<runs>/<node-id>/0N-*/` in the data root. A mobile pass is its own run, linked to the desktop run by `pair:` lines. How `status` works and what each record holds: `shared/run-records.md`.
 
 `<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/figma-section-fields/runs`, the run folders (never `stages/*/output/` in this repo). Resolve it once per run and use the real path in every brief and command.
+
+Runs on different node ids run at the same time; only what they share is claimed ("Run claims" in `../../_core/CONVENTIONS.md`). `C` is `python3 ../../_core/data-root/run_claim.py` from this workspace folder:
+
+1. Before a route's first stage: `C claim --ws figma-section-fields --key <node-id> --note <route>`, and the same for M when the route includes a mobile pass. Keep each `token`. Exit 3 means a live run holds that node id: stop and name the claim it reports. A `staleCleared` line means an earlier run was killed: say so and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
+2. Before stage 01 writes anything into the repo: `C target --ws figma-section-fields --key <node-id> --path <repo work tree> --root <repo root> --branch <its current branch>`. Exit 3 means another run edits that work tree or branch: stop and name it (a worktree of the repo, named in the run, avoids the clash).
+3. After each stage writes its record: `C commit --ws figma-section-fields --key <node-id> --stage <0N-name>`. It commits only that run's folder.
+4. When the route stops (its last stage, a checkpoint, a second FAIL, an export exit): `C release --ws figma-section-fields --key <node-id> --token <token>` for each key it claimed.
+
+Stage 05 takes the run's own dev and browser ports and browser profile from the claim (`stages/05-verify/references/verify-steps.md` "Run ports and browser"). No `.run-lock` file is written anywhere.
 
 ## Routing
 
@@ -72,7 +81,7 @@ Each stage writes its record into `<runs>/<node-id>/0N-*/` and, on the same run,
 - The live schema and the repo files win over saved records. Re-read them at each stage.
 - The Figma token is loaded with `node --env-file`. Never print it, paste it into a command, or write it to a file. If you paste a token into chat, rotate it.
 - On `new`, never bind or write a fragment before you say the ACF group is saved.
-- Never edit a repo's main working tree when the user named a worktree. Never push.
+- Never edit a repo's main working tree when the user named a worktree, and never a work tree this run has not claimed. Never push.
 - One repo per run, from `<data-root>/workspaces/figma-section-fields/repos.md`, read with `targets/CONTEXT.md` "Rules" (default repo, worktree roots). Each repo has its own WordPress and its own fields.
 - Never derive a mobile design from a desktop frame or the reverse. A mobile pass needs the mobile URL from the user.
 - The mobile touch path comes from the mobile frame ([mobile-patterns.md "Hover and touch"](skills/next-section-repo/references/mobile-patterns.md#hover-and-touch)).

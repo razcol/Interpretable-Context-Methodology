@@ -28,22 +28,28 @@ ticket-execution/
 | Keyword | Action |
 |---------|--------|
 | `setup` | Run the onboarding questionnaire |
-| `status` | List keys and where each one waits (`shared/run-records.md`) |
+| `status` | List keys and where each one waits, and the runs that hold a claim now (`shared/run-records.md`) |
 | `start <url or KEY>` | Orchestrate 01 through 06, then stop for your review. On a key with an earlier run, continue on the same branch |
 | `plan <KEY>` | Redo 03, then 04, 05, 06, then stop for your review |
 | `implement <KEY>` | Resume when `plan.md` exists and `implement-record.md` does not: 04, 05, 06. `start` does not need this word |
 | `change <KEY>: <what>` | 04 (change pass), 05, 06, then stop again |
 | `approve <KEY>` | 07: commit, push, PR link |
 | `commit <KEY>` | 07: commit only |
-| `stop <KEY>` | `dev_server.py down` with the key's state file |
+| `stop <KEY>` | `dev_server.py down` with the key's state file, then release the key's claim |
 
 A run is keyed by the Jira key. Its records live in `<runs>/<KEY>/0N-*/` in the data root (`shared/run-records.md`).
 
 ## Orchestrator
 
-The session that read this file only orchestrates, following `../../_core/skills/subagent-orchestration/SKILL.md` (role, briefs, model and effort, checking returns, retry, blocked, progress lines). This section keeps only what is specific to this workflow. Each stage is one unit, run in number order, never in parallel. The orchestrator does not intake, research, plan, edit the repo, or verify. It writes no files except `stages/.run-lock`, and that includes skill logs.
+The session that read this file only orchestrates, following `../../_core/skills/subagent-orchestration/SKILL.md` (role, briefs, model and effort, checking returns, retry, blocked, progress lines). This section keeps only what is specific to this workflow. Each stage is one unit, run in number order, never in parallel. The orchestrator does not intake, research, plan, edit the repo, or verify. It writes no files, and that includes skill logs. Its only writes are the run claim commands below, which keep the claim and commit the run folder.
 
-On `start`, `plan`, `implement` or `change`, write `stages/.run-lock` before the first spawn (the skill's run lock: key on line 1, start time on line 2). If the file already names a different key, stop and report that key and time. Remove the file when stage 06 has posted, and on `stop <KEY>`.
+Runs on different keys run at the same time; only what they really share is claimed (the skill's run claim, "Run claims" in `../../_core/CONVENTIONS.md`). `C` is `python3 ../../_core/data-root/run_claim.py` from this workspace folder (`required_permissions: all`):
+
+1. On `start`, `plan`, `implement` or `change`, before the first spawn: `C claim --ws ticket-execution --key <KEY> --note <trigger>`. Keep the `token` it prints for this run. Exit 3 means a live run holds the key: stop and report the claim it names (pid, start time, checkout). A `staleCleared` line means an earlier run on this key was killed: say so in one line and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
+2. After each stage passes its check: `C commit --ws ticket-execution --key <KEY> --stage <0N-name>`. It commits only `<runs>/<KEY>/` into the data repo, one commit at a time.
+3. When the run stops (stage 06 has posted, a checkpoint asks you to choose, a stage is blocked, or `stop <KEY>`): `C release --ws ticket-execution --key <KEY> --token <token>`. It drops the key, port and work-tree claims and commits the run folder. The dev server stays up for your review; its port stays taken because it listens.
+
+Stages claim the rest themselves under the run's key: stage 04 its work tree and branch (`C target`), stages 05 and 06 the run's dev-server and browser ports (`C port`). No `.run-lock` file is written anywhere.
 
 Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `<runs>/<KEY>/0N-*/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
 

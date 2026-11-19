@@ -24,7 +24,7 @@ Once you split, you plan, spawn, check returns and report. You do not:
 - carry one worker's content into another worker's brief (pass the output **path**);
 - write a worker's record for it. A return that pastes the record text instead of writing the file counts as a missing file.
 
-A workspace may let the orchestrator write one file (for example a run lock). Nothing else.
+A workspace may let the orchestrator keep its run claim (claim, commit, release with the workspace's claim helper). Nothing else.
 
 ## 3. Cut the work into units
 
@@ -94,5 +94,5 @@ One line per finished unit:
 
 ## 8. Optional pieces
 
-- **Run lock** (single-run workflows): before the first spawn, write the lock file with the run key on line 1 and the start time on line 2. If it names a different key, stop and report it. Remove it when the run ends or is stopped.
+- **Run claim** (keyed workflows): before the first spawn, claim the run key (`python3 ../../data-root/run_claim.py claim --ws <ws> --key <KEY>` from this skill folder; "Run claims" in `_core/CONVENTIONS.md`) and keep the token it prints. A live claim on the same key stops the run: report the claim it names. A stale one (its process or checkout is gone) is replaced and reported, and the run continues from its records. Runs on other keys go on at the same time; never a workspace-wide lock file. After each unit passes its check, commit the run folder (`run_claim.py commit`). Release it with the token when the run ends or is stopped (`run_claim.py release`).
 - **Independent verifier**: a fresh worker that gets only the change summary and the paths to check, never the implementer's brief or return. Tier at least the implementer's.

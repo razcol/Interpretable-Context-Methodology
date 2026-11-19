@@ -273,6 +273,31 @@ class DevServerTests(unittest.TestCase):
         self.assertEqual([m["port"] for m in matches], [3000, 3002])
         self.assertEqual([o["port"] for o in others], [3001])
 
+    def test_runs_in_one_repo_keep_their_own_servers(self):
+        """Two runs in one repo (main tree and a worktree inside it, plus a sibling worktree) never
+        reuse each other's dev server: each app root matches only its own listener."""
+        fake = [{"port": 3000, "pid": 1, "cwd": "/r/code", "cmd": "next-server (v16)"},
+                {"port": 3001, "pid": 2, "cwd": "/r/.worktrees/OND-2/code", "cmd": "next-server (v16)"},
+                {"port": 3002, "pid": 3, "cwd": "/r-NSS-1/code", "cmd": "next-server (v16)"}]
+        with mock.patch.object(dev_server, "listeners", lambda: fake):
+            for root, port in (("/r/code", 3000), ("/r/.worktrees/OND-2/code", 3001), ("/r-NSS-1/code", 3002)):
+                matches, others = dev_server.split(root)
+                self.assertEqual([m["port"] for m in matches], [port], root)
+                self.assertEqual(len(others), 2, root)
+
+    def test_up_refuses_the_run_port_when_something_else_listens(self):
+        import socket
+        with tempfile.TemporaryDirectory() as tmp, socket.socket() as busy:
+            busy.bind(("127.0.0.1", 0))
+            busy.listen()
+            Path(tmp, "package.json").write_text("{}")
+            Path(tmp, "node_modules").mkdir()
+            res = run(HERE / "dev_server.py", "up", "--app-root", tmp, "--state", Path(tmp, "s.json"),
+                      "--port", busy.getsockname()[1], "--timeout", "1")
+            self.assertEqual(res.returncode, 2, res.stdout)
+            self.assertIn("in use", json.loads(res.stdout)["error"])
+            self.assertFalse(Path(tmp, "s.json").exists())
+
     def test_reuse_of_foreign_server_is_recorded_not_ours(self):
         with tempfile.TemporaryDirectory() as tmp:
             state = Path(tmp, "s.json")

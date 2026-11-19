@@ -73,4 +73,4 @@ Each stage writes its output to its own run folder, `<runs>/<KEY>/<stage>/`. The
 
 New-skill requests flow 01 through 06 in sequence. Existing-skill maintenance requests skip 02-clarify (always) and usually skip 03-research, entering directly at 04-draft-and-test with the current skill folder as input.
 
-Before editing `workspaces/ticket-execution/`, read `workspaces/ticket-execution/stages/.run-lock`. When that file exists, do not edit the workspace. Tell the user the key on line 1 and the start time on line 2, and wait until the file is gone.
+Before editing `workspaces/ticket-execution/` or `workspaces/figma-section-fields/`, list that workspace's running claims from the ai-system checkout you are editing: `python3 _core/data-root/run_claim.py list --ws <workspace>`. When a run is `live`, do not edit that workspace. Tell the user its key and `startedAt`, and wait until it is released or stale. There is no `.run-lock` file to read.

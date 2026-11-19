@@ -61,6 +61,8 @@ Later records start with the same `# <Stage> record <node-id>` line and list fac
 
 List each `<node-id>` folder under `<runs>/` that has `01-export/`. For each, read `route`, `viewport`, `pair` and `folder` from its `export-record.md`. Mark every stage on that route COMPLETE when its record exists in `<runs>/<node-id>/0N-*/`, otherwise PENDING. A `new` run with a field plan and no fragment record is "02 waiting for you". A mobile run with a viewport map that still has `unmatched` or `target-missing` rows and no 04m record is "01m waiting for you". Say when the section folder named in the record no longer exists.
 
+Then the runs that hold a claim now: `python3 ../../_core/data-root/run_claim.py list --ws figma-section-fields` from this workspace folder. Each `live` run is "running since <startedAt> (pid <pid>)" with its ports and work tree; a `stale` one is "stopped without release; the next run on that node id continues it". `claim.lock` in a run folder is the claim, not a record, and the data repo never commits it.
+
 A run without a mobile pair:
 
 ```

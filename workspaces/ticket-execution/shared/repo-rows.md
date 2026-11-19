@@ -24,7 +24,7 @@ Patterns fill in `<id>` (the ticket number), `<kebab>`, `<Sentence>` (from plan 
 - Stage 01 resolves the key to one row. When more than one row has the key, pick one only as that key's line under "Notes" says. Otherwise stop and ask which root.
 - A key not in the table: stop and ask for the root and the other columns, then add the row.
 - `<kebab>` is three to six English words from the summary, lowercase, hyphens. A bare ticket key (`<KEY>`) is not a branch name.
-- "main tree" means the branch is checked out in the root folder. Use a worktree instead when the root has uncommitted work or is on a branch with unpushed commits. Worktrees go where the row says, or `<root>/.worktrees/<KEY>` when it says main tree.
+- "main tree" means the branch is checked out in the root folder. Use a worktree instead when the root has uncommitted work, is on a branch with unpushed commits, or is claimed by another run (`stages/04-implement/references/work-tree.md` "Claim"). Worktrees go where the row says, or `<root>/.worktrees/<KEY>` when it says main tree.
 - `<base>` is the row's Base. Stage 01 writes it into `intake.md`, stage 03 copies it into `plan.md`, and stages 04 to 06 take it from `plan.md`. A record without a `base:` line (an older run) means the row's Base.
 - Stage 06 adds a test route to the row the first time you give one.
 - PR link: replace `<branch>` with the branch name, URL-encoded, except that a `/` stays as `/` (it works in the query as is). A row whose PR link is `none` has no link: stage 07 reports the pushed branch and its PR target instead.

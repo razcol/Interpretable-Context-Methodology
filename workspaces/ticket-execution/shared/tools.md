@@ -1,6 +1,6 @@
 # Tools
 
-Four scripts in `tools/`. Python 3 standard library only. Each prints one JSON object. `<ws>` is `/home/dev/ai-system/workspaces/ticket-execution`. Tests: `python3 <ws>/tools/test_tools.py`.
+Four scripts in `tools/`, plus the shared run claim helper `_core/data-root/run_claim.py` ("run_claim.py" below). Python 3 standard library only. Each prints one JSON object. `<ws>` is `/home/dev/ai-system/workspaces/ticket-execution`. Tests: `python3 <ws>/tools/test_tools.py`.
 
 ## Permissions
 
@@ -15,6 +15,7 @@ The chat is often rooted in the app repo, so the records, the browser and the ot
 | `curl` to `localhost` | `all` |
 | `npm run lint` or `npx eslint` in an app root | `all` |
 | `write_record.py` | `all` (it writes outside the app-repo sandbox) |
+| `run_claim.py` (every command) | `all` (it writes claims and commits in the data root) |
 | wp-graphql `python3 scripts/wp_graphql.py` (every command, run from the skill folder) | `all` |
 
 `git status`, `git diff` and reads need none. `dev_server.py status` needs `all`: a sandboxed status reports "not answering" when the server is up. Never restart on that result.
@@ -50,17 +51,36 @@ python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <runs>/<KEY>/01-intake 
 - Exit 0 done, 2 no key in the argument, 3 ACLI missing, failed or signed out (`acli jira auth status`), 4 no such item or no access.
 - Read `attachmentsMissing` and `commentsTruncated` in the JSON. Either one non-empty or true is a gap stage 01 reports.
 
+## run_claim.py (orchestrator, stages 04 to 06)
+
+`C` is `python3 <ws>/../../_core/data-root/run_claim.py`. Each command prints one JSON object. Exit 0 ok, 2 bad arguments or no live claim for the key (claim first), 3 a live run holds it (the JSON names that run in `heldBy`; stop and report it, never wait in a loop).
+
+```bash
+C claim   --ws ticket-execution --key <KEY> --note <trigger>          # orchestrator, before the first spawn; prints token
+C target  --ws ticket-execution --key <KEY> --path <work tree> --root <root> --branch <branch>   # stage 04, before any switch or worktree add
+C port    --ws ticket-execution --key <KEY> --kind dev                 # stage 05 (and 06): the run's dev-server port
+C port    --ws ticket-execution --key <KEY> --kind cdp                 # stage 05 (and 06): the run's browser (CDP) port
+C commit  --ws ticket-execution --key <KEY> --stage <0N-name>          # orchestrator, after each stage
+C release --ws ticket-execution --key <KEY> --token <token>            # orchestrator, when the run stops
+C list    --ws ticket-execution                                        # status
+```
+
+- `port` gives the same port to every call of the same run, and a different one to every other live run. Ports are machine-wide, so a run in a maintenance worktree never gets a port a normal run has.
+- `target` on a work tree or branch another live run holds exits 3. On the main tree that means: use a worktree (`stages/04-implement/references/work-tree.md`).
+- The run's browser profile is the key in lowercase (`ond-123`). Start it on the run's cdp port and pass `--profile` to every browser-cdp script; never the default profile or port.
+- A claim whose process is gone, whose ai-system checkout is gone, or that nothing touched for 2 hours is stale; the next `claim` on that key replaces it and reports `staleCleared`.
+
 ## dev_server.py (stages 05 and 06)
 
 ```bash
 python3 <ws>/tools/dev_server.py status --app-root <app root>
-python3 <ws>/tools/dev_server.py up --app-root <app root> --state <runs>/<KEY>/05-verify/dev-server.json --path <first review path>
+python3 <ws>/tools/dev_server.py up --app-root <app root> --state <runs>/<KEY>/05-verify/dev-server.json --port <run's dev port> --path <first review path>
 python3 <ws>/tools/dev_server.py down --state <runs>/<KEY>/05-verify/dev-server.json
 ```
 
 - `status` and `up` must run unsandboxed (`required_permissions: all`). A sandboxed `status` reports "not answering" falsely. Never restart on that result. Confirm with an unsandboxed `status` before `up`.
 - `<app root>` is the work tree's `code/` folder, never the main root when the run uses a worktree.
-- `up` reuses a server whose working directory is the app root. A server on port 3000 from another folder is listed under `others` and left alone; `up` takes the next free port.
+- `--port` is the run's dev port from `run_claim.py port --kind dev`, so two runs never race for one port. `up` reuses a server whose working directory is the app root (on whatever port it has); use the `port` the JSON returns. A server from another folder (another run's worktree or the main tree) is listed under `others` and left alone.
 - On reuse, `up` writes the state file too. When the server is the one this key's earlier `up` started, `startedByUs` stays true. Any other server is recorded with its live pid and `startedByUs: false`, and `down` leaves it running. Do not edit `dev-server.json` by hand. `up` probes `--path` on a reused server until it answers below 500 or `--timeout` runs out, and exits 7 otherwise, like a fresh start. The state file records `listenerPid`, the process on the port, next to `pid`, the npm process group that `down` stops.
 - Run `up` as a background shell command (do not block on it), then wait for its JSON. A foreground call that ends can take the server down with it. `up` needs full network access (AWS for `loadenv`, the database for `prisma db pull`) and no sandbox.
 - First start in a fresh worktree runs `npm ci` and can take several minutes. First page compile takes about 30 seconds.
