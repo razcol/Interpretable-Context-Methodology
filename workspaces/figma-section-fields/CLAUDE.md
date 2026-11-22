@@ -39,10 +39,10 @@ A run is keyed by the Figma node id. Its records live in `<runs>/<node-id>/0N-*/
 
 Runs on different node ids run at the same time; only what they share is claimed ("Run claims" in `../../_core/CONVENTIONS.md`). `C` is `python3 ../../_core/data-root/run_claim.py` from this workspace folder:
 
-1. Before a route's first stage: `C claim --ws figma-section-fields --key <node-id> --note <route>`, and the same for M when the route includes a mobile pass. Keep each `token`. Exit 3 means a live run holds that node id: stop and name the claim it reports. A `staleCleared` line means an earlier run was killed: say so and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
+1. Before a route's first stage: `C claim --ws figma-section-fields --key <node-id> --note <route>`, and the same for M when the route includes a mobile pass. Keep each `claimId`. Exit 3 means a live run holds that node id: stop and name the claim it reports. A `staleCleared` line means an earlier run was killed: say so and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
 2. Before stage 01 writes anything into the repo: `C target --ws figma-section-fields --key <node-id> --path <repo work tree> --root <repo root> --branch <its current branch>`. Exit 3 means another run edits that work tree or branch: stop and name it (a worktree of the repo, named in the run, avoids the clash).
 3. After each stage writes its record: `C commit --ws figma-section-fields --key <node-id> --stage <0N-name>`. It commits only that run's folder.
-4. When the route stops (its last stage, a checkpoint, a second FAIL, an export exit): `C release --ws figma-section-fields --key <node-id> --token <token>` for each key it claimed.
+4. When the route stops (its last stage, a checkpoint, a second FAIL, an export exit): `C end --ws figma-section-fields --key <node-id> --claim-id <claimId>` for each key it claimed, in its own shell call, never chained after `commit` with `&&`. `release --token` is the deprecated name of `end --claim-id`; do not use it.
 
 Stage 05 takes the run's own dev and browser ports and browser profile from the claim (`stages/05-verify/references/verify-steps.md` "Run ports and browser"). No `.run-lock` file is written anywhere.
 

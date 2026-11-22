@@ -2,6 +2,14 @@
 
 `<ws>` is the workspace folder `../../../shared/tools.md` names (the brief gives its real path). `B` is `<checkout>/_core/skills/browser-cdp`, the browser-cdp folder of the same checkout (`<ws>/../../_core/skills/browser-cdp`). `R` is `<runs>/<KEY>/05-verify`. `<app>` is the app root from `implement-record.md`.
 
+## Write scope
+
+Everything this stage writes goes under `R` (`<runs>/<KEY>/05-verify/`). Do not write `/tmp/*.json` scratch files: pass JSON inline (`--steps '[...]'`) or keep a temporary file inside `R`. Stage 05 workers do not append to `log/browser-cdp/LOG.md` or any other skill log; the orchestrator owns logs.
+
+## Lint
+
+When lint was deferred to this stage, run the command from `<data-root>/workspaces/ticket-execution/repos.md` "Lint" on the changed files. `eslint` ignoring a JSON or config file (for example `He.json`), or printing nothing for it, is an expected no-op, not a failure. Do not retry with another config and do not count it as a lint error.
+
 ## Run ports and browser
 
 Runs on other keys may be verifying at the same time, so this run uses only its own ports and browser profile. Get them once (each call returns the same port again):
@@ -50,7 +58,7 @@ node $B/scripts/interact.js --profile <p> --fresh-context --viewport <W>x<H> --t
   --steps '[{"action":"goto","url":"http://localhost:<port><path>"}, <row steps>, {"action":"screenshot","name":"row<N>__<W>x<H>"}]'
 ```
 
-- The sign-in takes about 35 seconds. One `interact.js` call per page and width covers all of that page's remaining rows. The number of sign-ins equals the number of distinct page and width pairs. A second sign-in for the same pair fails the Sign-ins audit row.
+- The sign-in takes about 35 seconds. One `interact.js` call per page and width covers all of that page's remaining rows. The number of sign-ins equals the number of distinct page and width pairs. A second sign-in for the same pair fails the Sign-ins audit row, with one exception: when a page's single sign-in call aborted on an overlay or selector error before reading any evidence (no assert or screenshot result for a row), retry that page once instead of leaving its rows NOT VERIFIED. Record it in the report as `sign-ins: N (1 retry on <page>)`. A call that read evidence and then failed is not retried, and a retry that aborts again leaves the rows NOT VERIFIED with the failed step.
 - PASS when that call shows the acceptance UI. A sign-in done any other way (values typed from a prompt, your own steps, `sessionStorage` written by hand) is NOT VERIFIED with "needs login".
 - A root with no "Test logins" row, or a call that fails inside the steps file: NOT VERIFIED with "needs login" and the failed step. A captcha that blocks the sign-in is recorded as such. Do not look for a bypass in the code or the env.
 - `screenshot.js`, `measure.js` and `capture.js` open new tabs without the session. On these pages, use the `screenshot` step and `consoleErrors` from `interact.js` instead.
@@ -71,7 +79,8 @@ When you submit, add `--responses '<request path or service name>'` and quote th
 version: 1
 
 - server: http://localhost:<port> from <app> (<reused | started | not started>)
-- lint: <result>
+- lint: <result> (an ignored JSON or config file is a no-op, not a failure)
+- sign-ins: <N> (add `(1 retry on <page>)` when a page was retried once)
 - result: <N PASS, N FAIL, N NOT VERIFIED>
 
 | # | Line | Check | Result | Evidence |

@@ -19,7 +19,7 @@ Write the plan stage 04 will follow: scope, files, branch, work tree, the accept
 ## Process
 
 1. The record's first line is `version: 1`. Pick the branch name and the work tree from the repo row, the tree state in `research.md`, and "Rules" in `../../shared/repo-rows.md`. A re-run on an existing branch keeps that branch.
-2. Write `plan.md` as `references/plan-shape.md` says. Only what the acceptance lines need. Every question includes the default this run will take.
+2. Write `plan.md` as `references/plan-shape.md` says. Only what the acceptance lines need. Every question includes the default this run will take. When the Jira text or a comment disagrees with a ticket screenshot (casing, copy, numbers), flag it in the plan: a "conflict" line under "Questions" naming both sides and the default this run follows. Do not settle it silently. Stage 06 reads that line and surfaces it in `handoff.md`.
 3. Run the audit. Fix and rewrite until it passes.
 4. Return the path to `plan.md` and each audit row. Do not create the branch. Do not open stage 04. Do not wait for an edit.
 

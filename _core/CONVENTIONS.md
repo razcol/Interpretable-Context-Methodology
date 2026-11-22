@@ -201,11 +201,11 @@ A layout change raises the `LAYOUT` version and ships with a migration step that
 
 | Command | What it does |
 |---|---|
-| `claim --ws <ws> --key <KEY>` | Before a run's first stage. Writes `workspaces/<ws>/runs/<KEY>/claim.lock` in the data checkout `resolve` prints: start time, the ai-system checkout, the PID of the agent session that runs it, and a token. A live claim on the key stops the second run and names the first. A stale claim (its process gone or replaced, its checkout gone, or untouched for 2 hours) is replaced and reported, so the next run continues from the records. `--takeover` replaces a live-looking claim only when the user says that run is not running. |
+| `claim --ws <ws> --key <KEY>` | Before a run's first stage. Writes `workspaces/<ws>/runs/<KEY>/claim.lock` in the data checkout `resolve` prints: start time, the ai-system checkout, the PID of the agent session that runs it, and a claim id (printed as `claimId`). A live claim on the key stops the second run and names the first. A stale claim (its process gone or replaced, its checkout gone, or untouched for 2 hours) is replaced and reported, so the next run continues from the records. `--takeover` replaces a live-looking claim only when the user says that run is not running. |
 | `target --path <work tree> --root <root> --branch <b>` | Claims the target-repo work tree and branch a run edits. Another live run on the same work tree or branch gets exit 3. Whether a run uses a worktree comes from the repo's row. |
 | `port --kind dev\|cdp` | The run's own dev-server or browser (CDP) port: free, not claimed by a live run, and the same on every call of that run. Each run also starts its own browser profile, so sign-ins and screenshots never mix. |
 | `commit [--stage S]` | Commits only `workspaces/<ws>/runs/<KEY>/` through `data_root.py commit` (serialized, named paths only). Workflows run it after each stage's record. |
-| `release --token T` | When the run stops: drops its claims, then commits its run folder. |
+| `end --claim-id <id>` | When the run stops: drops its claims, then commits its run folder. Always its own shell call, never chained after `commit` with `&&`. (`release --token` is the deprecated name; it still works.) |
 | `list [--ws <ws>]` | Every claim, `live` or `stale`. `status` shows the live ones. |
 
 Port and work-tree claims are machine-wide, so they live in the main data checkout's `claims/` folder, also for test runs from a maintenance worktree; key claims live in the run's own data checkout. Claim files end in `.lock`, which the data repo ignores. Stages within one run still run in order. Log writes stay single small appends.
@@ -232,7 +232,7 @@ Pipeline Status: [workspace-name]
 
 For each stage: if `<runs>/<KEY>/<stage>/` contains files, the stage is COMPLETE and the filenames are listed. If it is missing or empty, the stage is PENDING.
 
-Then it lists the runs that hold a claim now (`python3 _core/data-root/run_claim.py list --ws <ws>`): each live run's key, start time and ports, and each stale claim as stopped without release.
+Then it lists the runs that hold a claim now (`python3 _core/data-root/run_claim.py list --ws <ws>`): each live run's key, start time and ports, and each stale claim as stopped without `end`.
 
 Workspaces can define additional trigger keywords in their own CLAUDE.md.
 

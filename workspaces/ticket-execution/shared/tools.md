@@ -56,14 +56,17 @@ python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <runs>/<KEY>/01-intake 
 `C` is `python3 <ws>/../../_core/data-root/run_claim.py`. Each command prints one JSON object. Exit 0 ok, 2 bad arguments or no live claim for the key (claim first), 3 a live run holds it (the JSON names that run in `heldBy`; stop and report it, never wait in a loop).
 
 ```bash
-C claim   --ws ticket-execution --key <KEY> --note <trigger>          # orchestrator, before the first spawn; prints token
+C claim   --ws ticket-execution --key <KEY> --note <trigger>          # orchestrator, before the first spawn; prints claimId
 C target  --ws ticket-execution --key <KEY> --path <work tree> --root <root> --branch <branch>   # stage 04, before any switch or worktree add
 C port    --ws ticket-execution --key <KEY> --kind dev                 # stage 05 (and 06): the run's dev-server port
 C port    --ws ticket-execution --key <KEY> --kind cdp                 # stage 05 (and 06): the run's browser (CDP) port
 C commit  --ws ticket-execution --key <KEY> --stage <0N-name>          # orchestrator, after each stage
-C release --ws ticket-execution --key <KEY> --token <token>            # orchestrator, when the run stops
+C end     --ws ticket-execution --key <KEY> --claim-id <claimId>       # orchestrator, when the run stops
 C list    --ws ticket-execution                                        # status
 ```
+
+- `commit` and `end` are always two separate shell calls. Never chain them (`commit ... && end ...`): run `commit`, read its JSON, then run `end`.
+- `release --token` is the deprecated name of `end --claim-id`, and `claim` still prints `token` next to `claimId`. Use `end` and `claimId` in every new call.
 
 - `port` gives the same port to every call of the same run, and a different one to every other live run. Ports are machine-wide, so a run in a maintenance worktree never gets a port a normal run has.
 - `target` on a work tree or branch another live run holds exits 3. On the main tree that means: use a worktree (`stages/04-implement/references/work-tree.md`).

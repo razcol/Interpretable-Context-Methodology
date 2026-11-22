@@ -5,21 +5,25 @@
 // --responses records responses whose URL or request body contains one of the substrings (status, body start).
 // Stops at the first failing step. Actions:
 //   {"action":"goto","url":"https://..."}
-//   {"action":"click","selector":"css"}
+//   {"action":"click","selector":"css","jsClick":false}   (jsClick:true dispatches DOM .click() on the element, so overlapping fixed widgets cannot intercept it)
+//   {"action":"hover","selector":"css"}
 //   {"action":"type","selector":"css","text":"...","clear":true}   (clear defaults to true)
 //   {"action":"type","selector":"css","secret":"NAME"}   (types NAME from --secrets-file; the value is never printed)
 //   {"action":"press","key":"Enter"}
 //   {"action":"select","selector":"css","value":"..."}
 //   {"action":"wait_for","selector":"css","state":"visible|hidden"}  or  {"action":"wait_for","text":"..."}
 //   {"action":"get_text","selector":"css"}
+//   {"action":"get_attr","selector":"css","attr":"aria-label"}   (value is null when the attribute is absent)
+//   {"action":"eval","expression":"document.title"}   (read-only DOM inspection; mutating expressions are refused; the result is scrubbed)
 //   {"action":"assert_text","contains":"...","selector":"css(optional, default body)"}
 //   {"action":"assert_url","contains":"..."}
-//   {"action":"screenshot","name":"file-base"}
+//   {"action":"screenshot","name":"file-base","fullPage":false,"selector":"css(optional)"}
+// On a failing step the error carries details.consoleErrors, details.responses and details.steps (steps completed so far), scrubbed like normal output.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, run, withBrowser, freshPage, gotoStable, freezeAnimations, parseViewport, ensureDir, fileInfo, profileOf, timeoutOf, waitForSelector, CliError, EXIT, DEFAULT_OUT } from './lib.js';
 
-const ACTIONS = ['goto', 'click', 'type', 'press', 'select', 'wait_for', 'get_text', 'assert_text', 'assert_url', 'screenshot'];
+const ACTIONS = ['goto', 'click', 'hover', 'type', 'press', 'select', 'wait_for', 'get_text', 'get_attr', 'eval', 'assert_text', 'assert_url', 'screenshot'];
 
 async function settle(page) {
   try {
@@ -93,6 +97,23 @@ function scrub(value, secrets) {
   return JSON.parse(json);
 }
 
+// Best-effort guard for the eval action: only expressions that read the DOM. String and template literals are
+// stripped first so quoted text such as a[href="x"] does not trip the checks. This is a safety net, not a sandbox.
+const EVAL_DENY = [
+  [/(^|[^=!<>])=(?![=>])/, 'assignment'],
+  [/\+\+|--/, 'increment/decrement'],
+  [/\b(delete|new|import|eval|Function|fetch|XMLHttpRequest|WebSocket|sendBeacon|setTimeout|setInterval|localStorage|sessionStorage|indexedDB|cookie|location|history|alert|confirm|prompt)\b/, 'forbidden identifier'],
+  [/\.\s*(click|submit|focus|blur|remove|replaceWith|replaceChildren|append|prepend|appendChild|removeChild|insertBefore|insertAdjacentHTML|insertAdjacentElement|setAttribute|removeAttribute|toggleAttribute|toggle|add|dispatchEvent|write|writeln|open|close|reset|scroll\w*|set\w*|execCommand|requestFullscreen|play|pause|click\w*)\s*\(/, 'mutating call'],
+];
+function assertReadOnlyExpression(expr) {
+  const stripped = expr
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')
+    .replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g, '""');
+  for (const [re, why] of EVAL_DENY) {
+    if (re.test(stripped)) throw new CliError('USAGE', `eval expression refused (${why}). Only read-only DOM inspection is allowed.`, EXIT.USAGE);
+  }
+}
+
 const redactBody = (t) => t.replace(/[A-Za-z0-9+/_=-]{32,}/g, '<redacted>').slice(0, 2000);
 
 run(async () => {
@@ -157,9 +178,29 @@ async function runSteps(browser, args, steps, secrets, { timeout, outDir, vp, wa
     }
 
     const results = [];
+    // Evidence gathered so far is attached to every failure, so a failed probe never wipes out earlier console errors.
+    const fail = async (label, e, extra = {}) => {
+      const timedOut = e && e.name === 'TimeoutError';
+      const base = e instanceof CliError ? e : new CliError(timedOut ? 'TIMEOUT' : 'STEP_FAILED', e && e.message ? e.message : String(e), timedOut ? EXIT.TIMEOUT : EXIT.INTERNAL);
+      const responses = await Promise.all(pending).catch(() => []);
+      return new CliError(base.code, `${label} failed: ${base.message}`, base.exit, {
+        ...(base.details || {}),
+        ...extra,
+        steps: results,
+        completed: results,
+        currentUrl: page.url(),
+        consoleErrors: consoleErrors.slice(0, 20),
+        responses,
+      });
+    };
+
     if (args.url) {
-      const nav = await gotoStable(page, args.url, { timeout });
-      results.push({ step: -1, action: 'goto(--url)', status: nav.status, url: nav.finalUrl });
+      try {
+        const nav = await gotoStable(page, args.url, { timeout });
+        results.push({ step: -1, action: 'goto(--url)', status: nav.status, url: nav.finalUrl });
+      } catch (e) {
+        throw await fail('--url navigation', e, { failedStep: -1 });
+      }
     }
 
     for (let i = 0; i < steps.length; i++) {
@@ -174,8 +215,18 @@ async function runSteps(browser, args, steps, secrets, { timeout, outDir, vp, wa
           }
           case 'click': {
             const el = await waitForSelector(page, need(s, i, 'selector'), timeout, { visible: true });
-            await el.click();
+            if (s.jsClick === true) {
+              await el.evaluate((e) => e.click());
+              r.jsClick = true;
+            } else {
+              await el.click();
+            }
             await settle(page);
+            break;
+          }
+          case 'hover': {
+            await waitForSelector(page, need(s, i, 'selector'), timeout, { visible: true });
+            await page.hover(s.selector);
             break;
           }
           case 'type': {
@@ -212,6 +263,23 @@ async function runSteps(browser, args, steps, secrets, { timeout, outDir, vp, wa
             r.text = (await el.evaluate((e) => e.innerText)).slice(0, 2000);
             break;
           }
+          case 'get_attr': {
+            const el = await waitForSelector(page, need(s, i, 'selector'), timeout);
+            const attr = String(need(s, i, 'attr'));
+            const v = await el.evaluate((e, a) => e.getAttribute(a), attr);
+            r.attr = attr;
+            r.value = scrub(v === null ? null : String(v).slice(0, 2000), secrets);
+            break;
+          }
+          case 'eval': {
+            const expression = String(need(s, i, 'expression'));
+            assertReadOnlyExpression(expression);
+            const v = await page.evaluate(expression);
+            let json = JSON.stringify(v === undefined ? null : v);
+            if (json.length > 4000) json = JSON.stringify({ truncated: true, preview: json.slice(0, 4000) });
+            r.value = scrub(JSON.parse(json), secrets);
+            break;
+          }
           case 'assert_text': {
             const text = await page.evaluate((sel) => (sel ? document.querySelector(sel) : document.body)?.innerText ?? null, s.selector || null);
             if (text === null) throw new CliError('ELEMENT_NOT_FOUND', `Selector "${s.selector}" not found`, EXIT.ELEMENT);
@@ -224,7 +292,15 @@ async function runSteps(browser, args, steps, secrets, { timeout, outDir, vp, wa
           case 'screenshot': {
             await freezeAnimations(page);
             const file = path.join(outDir, `${String(need(s, i, 'name')).replace(/[^a-zA-Z0-9._-]/g, '-')}.png`);
-            await page.screenshot({ path: file });
+            if (s.selector !== undefined) {
+              const el = await waitForSelector(page, s.selector, timeout, { visible: true });
+              await el.evaluate((e) => e.scrollIntoView({ block: 'center', inline: 'center' }));
+              await el.screenshot({ path: file });
+              r.selector = s.selector;
+            } else {
+              await page.screenshot({ path: file, fullPage: s.fullPage === true });
+              if (s.fullPage === true) r.fullPage = true;
+            }
             r.file = fileInfo(file);
             break;
           }
@@ -233,14 +309,7 @@ async function runSteps(browser, args, steps, secrets, { timeout, outDir, vp, wa
         }
         results.push(r);
       } catch (e) {
-        const base = e instanceof CliError ? e : new CliError(e && e.name === 'TimeoutError' ? 'TIMEOUT' : 'STEP_FAILED', e.message, e && e.name === 'TimeoutError' ? EXIT.TIMEOUT : EXIT.INTERNAL);
-        const responses = await Promise.all(pending);
-        throw new CliError(base.code, `Step ${i} (${s.action}) failed: ${base.message}`, base.exit, {
-          failedStep: i,
-          completed: results,
-          currentUrl: page.url(),
-          ...(watch.length ? { responses } : {}),
-        });
+        throw await fail(`Step ${i} (${s.action})`, e, { failedStep: i });
       }
     }
     await settle(page);

@@ -20,10 +20,10 @@ Check each acceptance line in the running app with a headless browser, and recor
 ## Process
 
 0. Sort the checklist before any server or browser. When "Form submits" is not `yes`, every row that sends a form is NOT VERIFIED with "submit not allowed", and it gets no browser. A row whose Check says `not checkable locally` is NOT VERIFIED with that text, and it gets no browser. When no row remains, write the report and return. Do not start the server or the browser for an empty remainder.
-1. Start or reuse the dev server for the app root as `references/verify-steps.md` "Server" says. When lint was deferred, run it now.
+1. Start or reuse the dev server for the app root as `references/verify-steps.md` "Server" says. When lint was deferred, run it now. `eslint` reporting a JSON or config file (for example `He.json`) as ignored, or printing no output for it, is an expected no-op, not a failure (`references/verify-steps.md` "Lint").
 2. Start the headless browser only when a row remains: the run's own profile and port (`references/verify-steps.md` "Run ports and browser"), or reuse it when it already runs.
-3. For each remaining row, run its check on its URL at its widths in a fresh browser context. One `interact.js` call covers every remaining row on the same page and width. For a page behind a login, that context signs in only through the root's steps file (`references/verify-steps.md` "Pages behind a login"). Send a form only as "Form submits" says. Open every screenshot and compare it with the ticket image. Console and page errors: on a page behind a login, take `consoleErrors` from that page's sign-in call, and do not run `capture.js` there. On a page with no login, run `capture.js` once per review URL. Errors never add a sign-in call.
-4. Write `verify-report.md`.
+3. For each remaining row, run its check on its URL at its widths in a fresh browser context. One `interact.js` call covers every remaining row on the same page and width. For a page behind a login, that context signs in only through the root's steps file (`references/verify-steps.md` "Pages behind a login"). Send a form only as "Form submits" says. Open every screenshot and compare it with the ticket image. Console and page errors: on a page behind a login, take `consoleErrors` from that page's sign-in call, and do not run `capture.js` there. On a page with no login, run `capture.js` once per review URL. Errors never add a sign-in call. One exception: when a page's single sign-in call aborts on an overlay or selector error before it read any evidence, retry that page once (`references/verify-steps.md` "Pages behind a login") instead of leaving its rows NOT VERIFIED.
+4. Write `verify-report.md`. Write only inside `<runs>/<KEY>/05-verify/`: no `/tmp/*.json` scratch files (keep temporary JSON in that folder or pass it inline), and no append to `log/browser-cdp/LOG.md` (stage 05 workers do not write skill logs).
 5. On any FAIL caused by the change, keep the rows in the report. Do not edit code and do not open stage 04.
 6. Stop the browser. Leave the dev server running. Return the report path and each audit row. Do not open stage 06.
 
@@ -38,7 +38,8 @@ Check each acceptance line in the running app with a headless browser, and recor
 | Errors | New console or page errors on the review URLs are listed. On a page behind a login they come from the sign-in call's `consoleErrors`. A `capture.js` result for that page is not evidence |
 | Clean | Browser stopped; dev server running; `git diff --cached` still empty |
 | No idle browser | No browser was started when no row needed one |
-| Sign-ins | The number of sign-in calls equals the number of distinct page and width pairs among the rows that needed a browser |
+| Sign-ins | The number of sign-in calls equals the number of distinct page and width pairs among the rows that needed a browser. A page whose first call aborted before reading evidence may add one retry; the report line reads `sign-ins: N (1 retry on <page>)` |
+| Write scope | Every file written is under `<runs>/<KEY>/05-verify/`. No `/tmp/*.json`, no `log/browser-cdp/LOG.md` entry |
 
 ## Outputs
 

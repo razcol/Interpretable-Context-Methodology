@@ -32,7 +32,7 @@ Do not read stage 05, 06 or 07 records, contexts or references. This stage's inp
    - a display string that falls back to an error code, for example `ErrorMessage || ErrorCode`, `?? code`, or a code placed in rendered text.
 
    Remove each one, or say in one line why it stays.
-5. Run lint on the changed files with the command in `<data-root>/workspaces/ticket-execution/repos.md` "Lint" (`references/work-tree.md` "Lint"). Fix what the change caused. Do not look for another eslint or prettier config.
+5. Run lint on the changed files with the command in `<data-root>/workspaces/ticket-execution/repos.md` "Lint" (`references/work-tree.md` "Lint"). Fix what the change caused. Do not look for another eslint or prettier config. When a changed file is not JS or TS (a JSON or config file such as `He.json`), `eslint` ignoring it or printing nothing for it is an expected no-op, not a failure: leave it out of the lint count and do not retry with another config.
 6. Finish `implement-record.md`. Return its path and each audit row. Do not open stage 05.
 
 ## Audit

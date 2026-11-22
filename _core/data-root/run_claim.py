@@ -4,13 +4,17 @@
 The rules live in "Run claims" under "Data root" in _core/CONVENTIONS.md. Python 3
 standard library only. Every command prints one JSON object.
 
-  claim   --ws WS --key KEY             claim a run key before the run's first stage (prints a token)
+  claim   --ws WS --key KEY             claim a run key before the run's first stage (prints claimId)
   port    --ws WS --key KEY --kind K    the run's own port (dev or cdp), the same one on every call
   target  --ws WS --key KEY --path P --root R --branch B
                                         claim the target-repo work tree (and branch) the run edits
   commit  --ws WS --key KEY [--stage S] commit only this run's folder in the data repo (serialized)
-  release --ws WS --key KEY --token T   end the run: drop its claims, then commit its folder
+  end     --ws WS --key KEY --claim-id ID
+                                        end the run: drop its claims, then commit its folder
   list    [--ws WS]                     every claim, live or stale (`status` shows the live ones)
+
+Deprecated: `release` is `end`, `--token` is `--claim-id`, and `claim` still prints `token`
+next to `claimId`, so callers written before `end` keep working.
 
 Where claims live:
   key claim      <data checkout>/workspaces/<ws>/runs/<KEY>/claim.lock (the checkout `resolve` prints)
@@ -244,7 +248,8 @@ def claim(ws, key, data=None, pid=None, checkout=None, note=None, takeover=False
         if cleared and old:
             record["continues"] = old.get("startedAt")
         touch(path, record)
-    result = {"claimed": True, "token": record["token"], "claim": summary(record), "file": str(path)}
+    result = {"claimed": True, "claimId": record["token"], "token": record["token"],
+              "claim": summary(record), "file": str(path)}
     if cleared:
         result["staleCleared"] = cleared
     return result
@@ -361,7 +366,7 @@ def commit_run(ws, key, data=None, stage=None, message=None):
     return {"commit": sha, "paths": [str(rel)], "message": msg}
 
 
-def release(ws, key, data=None, token=None, pid=None, force=False, no_commit=False):
+def end_run(ws, key, data=None, claim_id=None, pid=None, force=False, no_commit=False):
     check_names(ws, key)
     data, shared, _ = places(data)
     path = key_file(data, ws, key)
@@ -371,16 +376,19 @@ def release(ws, key, data=None, token=None, pid=None, force=False, no_commit=Fal
             me = pid or owner_pid()
             st = proc_stat(me)
             same_owner = record.get("pid") == me and st is not None and record.get("pidStart") == st[2]
-            if not same_owner and (not token or token != record.get("token")):
+            if not same_owner and (not claim_id or claim_id != record.get("token")):
                 raise Held(f"{ws} {key} is held by a live run (pid {record.get('pid')}, started "
-                           f"{record.get('startedAt')}); only that run releases it", summary(record))
+                           f"{record.get('startedAt')}); only that run ends it", summary(record))
         dropped = drop_shared(shared, ws, key)
-        released = path.exists()
+        ended = path.exists()
         path.unlink(missing_ok=True)
-    result = {"released": released, "dropped": dropped}
+    result = {"ended": ended, "released": ended, "dropped": dropped}
     if not no_commit:
         result.update(commit_run(ws, key, data, message=f"{key} end of run ({ws})"))
     return result
+
+
+release = end_run
 
 
 def list_claims(ws=None, data=None):
@@ -436,13 +444,15 @@ def main(argv=None):
     cm = sub.add_parser("commit", help="commit only this run's folder")
     common(cm)
     cm.add_argument("--stage", help="the stage that just wrote its record, e.g. 04-implement")
-    r = sub.add_parser("release", help="end the run")
-    common(r)
-    r.add_argument("--token", help="the token `claim` returned")
-    r.add_argument("--pid", type=int, help="the caller's owner process (tests)")
-    r.add_argument("--force", action="store_true", help="release a claim held by another live process "
-                   "(only when the user says that run is not running)")
-    r.add_argument("--no-commit", action="store_true")
+    for name, extra in (("end", {"help": "end the run"}), ("release", {})):
+        e = sub.add_parser(name, **extra)
+        common(e)
+        e.add_argument("--claim-id", "--token", dest="claim_id", help="the claimId `claim` returned "
+                       "(--token is the deprecated name)")
+        e.add_argument("--pid", type=int, help="the caller's owner process (tests)")
+        e.add_argument("--force", action="store_true", help="end a claim held by another live process "
+                       "(only when the user says that run is not running)")
+        e.add_argument("--no-commit", action="store_true")
     ls = sub.add_parser("list", help="every claim, live or stale")
     common(ls, key=False)
     args = p.parse_args(argv)
@@ -461,8 +471,8 @@ def main(argv=None):
             res = target(args.ws, args.key, args.path, args.root, args.branch, args.data_root)
         elif args.cmd == "commit":
             res = commit_run(args.ws, args.key, args.data_root, args.stage)
-        elif args.cmd == "release":
-            res = release(args.ws, args.key, args.data_root, args.token, args.pid, args.force, args.no_commit)
+        elif args.cmd in ("end", "release"):
+            res = end_run(args.ws, args.key, args.data_root, args.claim_id, args.pid, args.force, args.no_commit)
         else:
             res = list_claims(args.ws, args.data_root)
     except Held as e:

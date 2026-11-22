@@ -78,7 +78,8 @@ class KeyClaimTests(ClaimSandbox):
         self.assertEqual(record["pid"], owner.pid)
         self.assertEqual(record["checkout"], str(self.code))
         self.assertTrue(record["startedAt"])
-        self.assertEqual(res["token"], record["token"])
+        self.assertEqual(res["claimId"], record["token"])
+        self.assertEqual(res["token"], res["claimId"])
         self.git(self.data, "check-ignore", "-q", "workspaces/ticket-execution/runs/ABC-1/claim.lock")
         self.assertEqual(self.git(self.data, "status", "--porcelain", "--untracked-files=all"), "")
 
@@ -244,7 +245,7 @@ class TargetTests(ClaimSandbox):
         self.rc("target", "--ws", WS, "--key", "ABC-2", "--path", str(root), "--root", str(root), "--branch", "b2")
 
 
-class CommitAndReleaseTests(ClaimSandbox):
+class CommitAndEndTests(ClaimSandbox):
     def committed(self, rev="HEAD"):
         return set(self.git(self.data, "show", "--name-only", "--format=", rev).splitlines())
 
@@ -264,30 +265,96 @@ class CommitAndReleaseTests(ClaimSandbox):
         self.assertNotIn("claim.lock", left)
         self.assertIsNone(self.rc("commit", "--ws", WS, "--key", "ABC-1")["commit"])
 
-    def test_release_needs_the_token_then_drops_claims_and_commits(self):
+    def test_claim_commit_then_end_needs_the_claim_id_and_drops_claims(self):
         owner, other = self.fake_owner(), self.fake_owner()
-        token = self.claim("ABC-1", owner)["token"]
+        claim_id = self.claim("ABC-1", owner)["claimId"]
         self.port("ABC-1", "dev")
         self.rc("target", "--ws", WS, "--key", "ABC-1", "--path", str(self.tmp / "r"), "--root",
                 str(self.tmp / "r"), "--branch", "b")
         self.write(self.data / "workspaces" / WS / "runs/ABC-1/06-handoff/handoff.md", "version: 1\n")
-        res = self.rc("release", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), code=3)
-        self.assertIn("only that run releases it", res["error"])
-        self.rc("release", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), "--token", "wrong", code=3)
-        res = self.rc("release", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), "--token", token)
+        res = self.rc("commit", "--ws", WS, "--key", "ABC-1", "--stage", "06-handoff")
+        self.assertEqual(res["message"], "ABC-1 06-handoff (ticket-execution)")
+        self.assertEqual(self.committed(), {"workspaces/ticket-execution/runs/ABC-1/06-handoff/handoff.md"})
+        self.assertTrue(self.claim_file("ABC-1").exists())
+        res = self.rc("end", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), code=3)
+        self.assertIn("only that run ends it", res["error"])
+        self.rc("end", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), "--claim-id", "wrong", code=3)
+        self.write(self.data / "workspaces" / WS / "runs/ABC-1/06-handoff/notes.md", "late\n")
+        res = self.rc("end", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), "--claim-id", claim_id)
+        self.assertTrue(res["ended"])
         self.assertTrue(res["released"])
         self.assertEqual(len(res["dropped"]), 2)
         self.assertEqual(res["message"], "ABC-1 end of run (ticket-execution)")
-        self.assertEqual(self.committed(), {"workspaces/ticket-execution/runs/ABC-1/06-handoff/handoff.md"})
+        self.assertEqual(self.committed(), {"workspaces/ticket-execution/runs/ABC-1/06-handoff/notes.md"})
         self.assertFalse(self.claim_file("ABC-1").exists())
         self.assertEqual(self.rc("list")["runs"], [])
 
-    def test_release_of_a_stale_claim_needs_no_token(self):
+    def test_the_owner_session_ends_its_claim_without_the_claim_id(self):
+        owner = self.fake_owner()
+        self.claim("ABC-1", owner)
+        self.assertTrue(self.rc("end", "--ws", WS, "--key", "ABC-1", "--pid", str(owner.pid), "--no-commit")["ended"])
+        self.assertFalse(self.claim_file("ABC-1").exists())
+
+    def test_deprecated_release_and_token_still_work(self):
+        owner, other = self.fake_owner(), self.fake_owner()
+        token = self.claim("ABC-1", owner)["token"]
+        res = self.rc("release", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), code=3)
+        self.assertIn("only that run ends it", res["error"])
+        self.rc("release", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), "--token", "wrong", code=3)
+        res = self.rc("release", "--ws", WS, "--key", "ABC-1", "--pid", str(other.pid), "--token", token, "--no-commit")
+        self.assertTrue(res["released"])
+        self.assertTrue(res["ended"])
+        self.assertFalse(self.claim_file("ABC-1").exists())
+        # the new command takes the old flag name too
+        token = self.claim("ABC-2", owner)["token"]
+        self.assertTrue(self.rc("end", "--ws", WS, "--key", "ABC-2", "--pid", str(other.pid), "--token", token,
+                                "--no-commit")["ended"])
+        self.assertIs(rc.release, rc.end_run)
+
+    def test_end_of_a_stale_claim_needs_no_claim_id(self):
         dead = self.fake_owner()
         self.claim("ABC-1", dead)
         dead.kill()
         dead.wait()
-        self.assertTrue(self.rc("release", "--ws", WS, "--key", "ABC-1", "--no-commit")["released"])
+        self.assertTrue(self.rc("end", "--ws", WS, "--key", "ABC-1", "--no-commit")["ended"])
+
+    def test_approve_reclaims_commits_07_and_ends(self):
+        start, approve = self.fake_owner(), self.fake_owner()
+        run = self.data / "workspaces" / WS / "runs/ABC-1"
+        first = self.claim("ABC-1", start, WS, 0, "--note", "start")["claimId"]
+        self.write(run / "06-handoff/handoff.md", "version: 1\n")
+        self.rc("commit", "--ws", WS, "--key", "ABC-1", "--stage", "06-handoff")
+        self.rc("end", "--ws", WS, "--key", "ABC-1", "--claim-id", first)
+        # approve <KEY>: a fresh claim with its own id, then 07, then end
+        res = self.claim("ABC-1", approve, WS, 0, "--note", "approve")
+        self.assertNotIn("staleCleared", res)
+        second = res["claimId"]
+        self.assertNotEqual(second, first)
+        record = json.loads(self.claim_file("ABC-1").read_text())
+        self.assertEqual((record["note"], record["pid"]), ("approve", approve.pid))
+        self.write(run / "07-release/release-record.md", "version: 1\n")
+        res = self.rc("commit", "--ws", WS, "--key", "ABC-1", "--stage", "07-release")
+        self.assertEqual(res["message"], "ABC-1 07-release (ticket-execution)")
+        self.assertEqual(self.committed(), {"workspaces/ticket-execution/runs/ABC-1/07-release/release-record.md"})
+        self.assertTrue(self.claim_file("ABC-1").exists())
+        self.rc("end", "--ws", WS, "--key", "ABC-1", "--claim-id", first, "--pid", str(start.pid), code=3)
+        res = self.rc("end", "--ws", WS, "--key", "ABC-1", "--claim-id", second, "--pid", str(start.pid))
+        self.assertTrue(res["ended"])
+        self.assertIsNone(res["commit"])
+        self.assertEqual(self.rc("list")["runs"], [])
+
+    def test_approve_after_a_claim_never_ended_reports_it(self):
+        held, approve = self.fake_owner(), self.fake_owner()
+        self.claim("ABC-1", held, WS, 0, "--note", "start")
+        # the session that held it is still live: approve stops and names it
+        res = self.claim("ABC-1", approve, WS, 3, "--note", "approve")
+        self.assertIn("ABC-1 is already running", res["error"])
+        self.assertEqual(res["heldBy"]["pid"], held.pid)
+        held.kill()
+        held.wait()
+        res = self.claim("ABC-1", approve, WS, 0, "--note", "approve")
+        self.assertEqual(res["staleCleared"]["pid"], held.pid)
+        self.assertEqual(json.loads(self.claim_file("ABC-1").read_text())["note"], "approve")
 
 
 RUN = r'''
@@ -300,7 +367,7 @@ def call(*a):
     if r.returncode:
         raise SystemExit(f"{a[0]} exit {r.returncode}: {out}")
     return out
-token = call("claim", "--ws", ws, "--key", key, "--pid", owner)["token"]
+claim_id = call("claim", "--ws", ws, "--key", key, "--pid", owner)["claimId"]
 deadline = time.time() + 30
 seen = call("list")["running"]
 while seen < int(expect) and time.time() < deadline:  # wait until every run holds its claim
@@ -319,7 +386,7 @@ for stage in ("01-intake", "04-implement", "05-verify", "06-handoff"):
         (folder / "shots" / "row1.png").write_bytes(b"png-" + key.encode())
     time.sleep(0.05)
     call("commit", "--ws", ws, "--key", key, "--stage", stage)
-call("release", "--ws", ws, "--key", key, "--token", token, "--pid", owner)
+call("end", "--ws", ws, "--key", key, "--claim-id", claim_id, "--pid", owner)
 print(json.dumps({"key": key, "dev": dev, "cdp": cdp, "runningSeen": seen}))
 '''
 

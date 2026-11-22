@@ -33,9 +33,9 @@ ticket-execution/
 | `plan <KEY>` | Redo 03, then 04, 05, 06, then stop for your review |
 | `implement <KEY>` | Resume when `plan.md` exists and `implement-record.md` does not: 04, 05, 06. `start` does not need this word |
 | `change <KEY>: <what>` | 04 (change pass), 05, 06, then stop again |
-| `approve <KEY>` | 07: commit, push, PR link |
-| `commit <KEY>` | 07: commit only |
-| `stop <KEY>` | `dev_server.py down` with the key's state file, then release the key's claim |
+| `approve <KEY>` | Re-claim the key, then 07: commit, push, PR link (Orchestrator step 4) |
+| `commit <KEY>` | Re-claim the key, then 07: commit only (Orchestrator step 4) |
+| `stop <KEY>` | `dev_server.py down` with the key's state file, then end the key's claim (`C end`) |
 
 A run is keyed by the Jira key. Its records live in `<runs>/<KEY>/0N-*/` in the data root (`shared/run-records.md`).
 
@@ -45,9 +45,14 @@ The session that read this file only orchestrates, following `../../_core/skills
 
 Runs on different keys run at the same time; only what they really share is claimed (the skill's run claim, "Run claims" in `../../_core/CONVENTIONS.md`). `C` is `python3 ../../_core/data-root/run_claim.py` from this workspace folder (`required_permissions: all`):
 
-1. On `start`, `plan`, `implement` or `change`, before the first spawn: `C claim --ws ticket-execution --key <KEY> --note <trigger>`. Keep the `token` it prints for this run. Exit 3 means a live run holds the key: stop and report the claim it names (pid, start time, checkout). A `staleCleared` line means an earlier run on this key was killed: say so in one line and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
+1. On `start`, `plan`, `implement` or `change`, before the first spawn: `C claim --ws ticket-execution --key <KEY> --note <trigger>`. Keep the `claimId` it prints for this run. Exit 3 means a live run holds the key: stop and report the claim it names (pid, start time, checkout). A `staleCleared` line means an earlier run on this key was killed: say so in one line and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
 2. After each stage passes its check: `C commit --ws ticket-execution --key <KEY> --stage <0N-name>`. It commits only `<runs>/<KEY>/` into the data repo, one commit at a time.
-3. When the run stops (stage 06 has posted, a checkpoint asks you to choose, a stage is blocked, or `stop <KEY>`): `C release --ws ticket-execution --key <KEY> --token <token>`. It drops the key, port and work-tree claims and commits the run folder. The dev server stays up for your review; its port stays taken because it listens.
+3. When the run stops (stage 06 has posted, a checkpoint asks you to choose, a stage is blocked, or `stop <KEY>`): `C end --ws ticket-execution --key <KEY> --claim-id <claimId>`. It drops the key, port and work-tree claims and commits the run folder. The dev server stays up for your review; its port stays taken because it listens.
+4. On `approve <KEY>` or `commit <KEY>`, the key is claimed again, every time, even when the same session ran 01 to 06: `C claim --ws ticket-execution --key <KEY> --note approve` before spawning stage 07 (exit 3 and `staleCleared` as in step 1), and keep its new `claimId`. After stage 07 passes its check: `C commit --ws ticket-execution --key <KEY> --stage 07-release`. When 07 is done (passed, blocked or failed twice): `C end --ws ticket-execution --key <KEY> --claim-id <claimId>`.
+
+`commit` and `end` are always separate shell calls. Never chain them (`C commit ... && C end ...`): run `commit`, read its JSON, then run `end`. `release --token` is the deprecated name of `end --claim-id`; do not use it.
+
+Claim status: right after stage 06 and right after stage 07, the orchestrator's message has one line for the claim, so a stale lock is never silent. `claim: ended` when `end` printed `"ok": true`. Otherwise `claim: still held — <reason>` (the exit code and error `end` printed, or why `end` did not run yet, for example a checkpoint is waiting). Never leave the line out.
 
 Stages claim the rest themselves under the run's key: stage 04 its work tree and branch (`C target`), stages 05 and 06 the run's dev-server and browser ports (`C port`). No `.run-lock` file is written anywhere.
 
@@ -81,7 +86,7 @@ This table is the user's instruction for every stage spawn, in the skill's unit-
 | 06 handoff | mid | Verify had a FAIL row. Sign-in alone stays mid |
 | 07 release | mid | The tree has files the handoff did not list |
 
-Today `models.py` gives mid `claude-sonnet-5-5-high` and strong `claude-opus-5-5-medium` (`claude-opus-5-5-high` for a strong retry). No fast tier.
+Today `models.py` gives mid `claude-sonnet-5-5-high` (fallbacks `gpt-5.6-sol-medium`, `gemini-4-neon-medium`), strong `claude-opus-5-5-medium` (fallbacks `claude-opus-5-5-high`, `grok-4.7-high`) and, for a strong retry, `claude-opus-5-5-high` (fallbacks `grok-4.7-high`, `gpt-5.6-sol-medium`). When the IDE has not enabled the primary, use the fallbacks in that order (`pick ... --available <enabled slugs>` chooses for you); if none of the 3 is enabled, stop and report the stage. No fast tier.
 
 ### Before stage 05 on a login root
 
