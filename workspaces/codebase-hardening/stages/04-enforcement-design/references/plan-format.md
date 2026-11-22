@@ -43,7 +43,7 @@ One entry per DEFERRED rule:
 Set each rule's status from its measured count using `../../../shared/deferral-policy.md`. Then run:
 
 ```
-node ../../scripts/probe-runner.mjs validate-rules output/enforcement-plan.md
+node ../../scripts/probe-runner.mjs validate-rules <runs>/<KEY>/04-enforcement-design/enforcement-plan.md
 ```
 
 It must exit 0 before the checkpoint.

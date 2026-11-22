@@ -14,7 +14,7 @@ Every script prints exactly one JSON object and exits non-zero on failure.
 
 Tested so far: headless Chrome inside WSL2, fixture pages, and public pages.
 Not tested: Windows Chrome from WSL, authenticated real sites. Headed mode starts and captures correctly under WSLg, but window visibility was not checked.
-**Every time this skill is used, append to `LOG.md`** (what was attempted, outcome, surprises). If you were told not to modify the skill folder, put the same note in your own report instead.
+**Every time this skill is used, append to `<data-root>/log/browser-cdp/LOG.md`** (what was attempted, outcome, surprises). `<data-root>` is the folder `python3 ../../data-root/data_root.py resolve` prints when run from this skill folder (see "Data root" in `_core/CONVENTIONS.md`). Never create a log file in this skill folder. If you were told not to write outside your task's files, put the same note in your own report instead.
 
 ## First-time setup
 
@@ -30,7 +30,7 @@ node scripts/browser.js status
 node scripts/browser.js stop
 ```
 
-Use `--profile NAME --port N` on `browser.js start` for a separate login/identity. Each profile has its own cookie jar on disk. The port is stored in the profile state file. Later scripts take `--profile` and do not take `--port`.
+Inside a workflow run, never use the default profile or port: start the run's own profile on the CDP port the run's claim gives (`run_claim.py port --kind cdp`, see "Run claims" in `_core/CONVENTIONS.md`), and pass that `--profile` to every script, so two runs never share sign-ins, tabs or screenshots. Use `--profile NAME --port N` on `browser.js start` for a separate login/identity. Each profile has its own cookie jar on disk. The port is stored in the profile state file. Later scripts take `--profile` and do not take `--port`.
 
 `--port` is accepted only by `browser.js`. Passing it to `navigate.js`, `snapshot.js`, `interact.js`, `screenshot.js`, `measure.js` or `capture.js` exits USAGE.
 
@@ -75,7 +75,7 @@ Success: `{"ok": true, ...}` and exit 0. Failure: `{"ok": false, "error": {"code
 | 6 | ASSERTION_FAILED | An `assert_*` step did not hold. |
 | 10 | DIFF_DETECTED | Only with `diff.js --fail-on-diff`. |
 | 11 | OVERFLOW_DETECTED | `measure.js`: at least one viewport scrolls sideways. `error.details` holds the full per-viewport result. |
-| 99 | INTERNAL | Unexpected. Log it in `LOG.md`. |
+| 99 | INTERNAL | Unexpected. Log it in `<data-root>/log/browser-cdp/LOG.md`. |
 
 An HTTP 404 or 500 is not a script failure. Check `status` in the JSON.
 
@@ -89,8 +89,28 @@ An HTTP 404 or 500 is not a script failure. Check `status` in the JSON.
 ## Interaction steps
 
 `interact.js` reuses the current tab, so a login flow can span several calls. It stops at the first failing step and reports `failedStep`.
-Actions: `goto`, `click`, `type`, `press`, `select`, `wait_for` (selector or text), `get_text`, `assert_text`, `assert_url`, `screenshot`.
+Actions: `goto`, `click`, `hover`, `type`, `press`, `select`, `wait_for` (selector or text), `get_text`, `get_attr`, `eval`, `assert_text`, `assert_url`, `screenshot`.
 Full examples: `references/recipes.md`.
+
+| Action | Fields | Notes |
+|--------|--------|-------|
+| `click` | `selector`, optional `jsClick: true` | `jsClick` waits for the selector, then calls the DOM `.click()` on the element directly. Use it when a fixed overlay (for example the Next.js dev badge) sits over the target and swallows a real pointer click. Result has `jsClick: true`. |
+| `hover` | `selector` | Waits for the element to be visible, then moves the pointer over it (`page.hover`). A fixed overlay on top of the element receives the hover instead. |
+| `get_attr` | `selector`, `attr` | Result `{attr, value}`; `value` is `null` when the attribute is absent. Truncated at 2000 characters. |
+| `eval` | `expression` | Evaluates a read-only DOM inspection expression on the page (for example `document.title` or `[...document.querySelectorAll("a")].length`). The result is scrubbed through the secrets list and returned as `value` (JSON-serializable, over 4000 characters becomes `{truncated, preview}`). |
+| `screenshot` | `name`, optional `fullPage: true`, optional `selector` | `fullPage` captures the whole scrollable page. `selector` scrolls the element into view and captures just that element (it wins over `fullPage`). The result has `file` and echoes `fullPage` or `selector`. |
+
+`eval` is a safety net, not a sandbox. It refuses with `USAGE` any expression that, after string literals are removed, contains an assignment, `++`/`--`, `new`, `delete`, `fetch`/`XMLHttpRequest`/`WebSocket`/`sendBeacon`, timers, `eval`/`Function`/`import`, storage or `cookie` or `location`/`history` access, or a mutating call (`.click(`, `.submit(`, `.remove(`, `.append*(`, `.setAttribute(`, `.set*(`, `.dispatchEvent(`, `.scroll*(` and similar). Use `click`/`type` steps to change the page, never `eval`.
+
+### Errors keep the evidence
+
+When a step fails, the error is `{"ok": false, "error": {"code", "message", "details"}}` and `details` always holds what was gathered up to that point, scrubbed of secrets exactly like normal output:
+
+- `failedStep`: index of the failing step (`-1` for the `--url` navigation).
+- `steps`: results of the steps completed before the failure (same shape as `results` on success; `completed` is the same list, kept for older callers).
+- `consoleErrors`: console errors and page errors seen so far (first 20), so a failed probe click or wait never hides an earlier error.
+- `responses`: matched `--responses` entries so far (`[]` when none).
+- `currentUrl`, plus any step-specific detail such as `selector`.
 
 - `--steps-file` and `--steps` together: the file's steps run first, then `--steps`. Use it for a shared login file followed by the page check.
 - `--fresh-context`: the steps run in a new browser context (no cookies, storage or cache from the profile), closed when the call ends. Put a login and the page check in the same call.
@@ -111,7 +131,7 @@ Full examples: `references/recipes.md`.
 - `references/recipes.md`: the first test case, visual regression loop, login reuse, data gathering
 - `references/troubleshooting.md`: common failures and fixes
 - `fixtures/`: a local test page and server plus `run-all.sh`, `run-extra.sh`, `run-persist.sh` to re-verify the scripts after any change
-- `LOG.md`: usage log, keep updating
+- `<data-root>/log/browser-cdp/LOG.md`: usage log, keep updating
 
 ## Checking a section export
 

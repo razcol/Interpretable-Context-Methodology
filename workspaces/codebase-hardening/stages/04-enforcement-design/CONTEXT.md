@@ -6,8 +6,8 @@ Map each ratified rule to a mechanism, measure its violations, and sort rules in
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../03-synthesize/output/conventions-candidates.md` | Candidates with decision ratified or changed | The rules to design |
-| Earlier stage | `../01-recon/output/project-profile.md` | "Run" and "Tooling" sections | Repo path, sha, existing tools |
+| Previous stage | `<runs>/<KEY>/03-synthesize/conventions-candidates.md` | Candidates with decision ratified or changed | The rules to design |
+| Earlier stage | `<runs>/<KEY>/01-recon/project-profile.md` | "Run" and "Tooling" sections | Repo path, sha, existing tools |
 | Routing | `../../playbooks/CONTEXT.md` | "What Loads" table, Enforcement column | Which enforcement file to load |
 | Shared | `../../shared/enforcement-ladder.md` | Full file | Choosing the mechanism |
 | Shared | `../../shared/rules-manifest-schema.md` | "Rule Block" and "Status Rules" | Fields and status checks |
@@ -46,5 +46,5 @@ Map each ratified rule to a mechanism, measure its violations, and sort rules in
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Enforcement plan | `output/enforcement-plan.md` | Coverage matrix, rule blocks, tamper plan |
-| Deferred rules | `output/deferred-rules.md` | One cleanup brief per DEFERRED rule |
+| Enforcement plan | `<runs>/<KEY>/04-enforcement-design/enforcement-plan.md` | Coverage matrix, rule blocks, tamper plan |
+| Deferred rules | `<runs>/<KEY>/04-enforcement-design/deferred-rules.md` | One cleanup brief per DEFERRED rule |

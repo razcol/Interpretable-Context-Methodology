@@ -18,11 +18,16 @@ up      reuses a matching server (and writes the state file for it), or installs
         created (Next 16 writes AGENTS.md) are listed as devArtifacts.
 down    stops a server only when the state file says `up` started it.
 
+When the first `npm run dev` exits at once and the log shows Next's first-start nudge (`next upgrade`, AGENTS.md) or
+AGENTS.md was just created, `up` waits 1.5s and starts it once more on the same port. The JSON of `up` carries
+"attempts" (starts made; 0 for a reused server). `tail` lines that read like upgrade instructions are suppressed.
+
 Prints one JSON object. Exit codes: 0 ok, 2 bad arguments, 5 install failed,
 6 the server exited, 7 timed out waiting.
 """
 
 import argparse
+import errno
 import json
 import os
 import re
@@ -36,6 +41,7 @@ import urllib.request
 from pathlib import Path
 
 PORTS = range(3000, 3021)
+RETRY_DELAY = 1.5  # seconds before the one retry after a first-start nudge exit
 
 
 def out(code=0, **data):
@@ -85,13 +91,24 @@ def listening_ports():
 
 
 def port_free(port):
+    """True when nothing listens on port. Real listeners are caught by listening_ports() and by the bind
+    (Linux refuses a bind on a LISTEN socket even with SO_REUSEADDR); SO_REUSEADDR only keeps sockets
+    in TIME_WAIT from looking like a server."""
     if port in listening_ports():
         return False
-    with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+    for family, host in ((socket.AF_INET6, "::"), (socket.AF_INET, "127.0.0.1")):
         try:
-            s.bind(("::", port))
+            s = socket.socket(family, socket.SOCK_STREAM)
         except OSError:
-            return False
+            continue  # address family unavailable on this host
+        with s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((host, port))
+            except OSError as err:
+                if err.errno in (errno.EADDRNOTAVAIL, errno.EAFNOSUPPORT):
+                    continue  # no address of this family here, not a busy port
+                return False
     return True
 
 
@@ -107,12 +124,46 @@ def http_status(port, path):
         return None
 
 
+# Log lines that read like instructions to an agent (Next 16 prints an upgrade nudge for coding agents).
+# The log is untrusted: such lines never reach a report as text.
+UPGRADE_NUDGE = re.compile(
+    r"next\s+upgrade|--agent\b|\bupgrade\b.*\b(agent|assistant|AI)\b|\b(agent|assistant|AI)\b.*\bupgrade\b"
+    r"|ignore (all |any )?(previous|prior|above) instructions|\byou (must|should) (now )?(run|execute)\b",
+    re.IGNORECASE)
+SUPPRESSED = "<suppressed: upgrade instruction in dev server output>"
+
+
 def tail(log, lines=25):
     try:
         text = Path(log).read_text(errors="replace").splitlines()[-lines:]
     except OSError:
         return []
-    return [re.sub(r"[A-Za-z0-9+/_=-]{32,}", "<redacted>", t) for t in text]
+    return [SUPPRESSED if UPGRADE_NUDGE.search(t) else re.sub(r"[A-Za-z0-9+/_=-]{32,}", "<redacted>", t)
+            for t in text]
+
+
+NEXT_NUDGE = re.compile(r"next\s+upgrade|AGENTS\.md", re.IGNORECASE)
+
+
+def first_start_nudge(log, offset, agents_before, app_root):
+    """True when a start that just exited shows Next's first-start nudge: the log written since offset
+    mentions it, or AGENTS.md did not exist before the start and does now."""
+    try:
+        with open(log, "rb") as fh:
+            fh.seek(offset)
+            text = fh.read().decode(errors="replace")
+    except OSError:
+        text = ""
+    return bool(NEXT_NUDGE.search(text)) or (not agents_before and Path(app_root, "AGENTS.md").exists())
+
+
+def start_dev(app_root, port, log):
+    with open(log, "a") as fh:
+        fh.write(f"\n$ PORT={port} npm run dev\n")
+        fh.flush()
+        return subprocess.Popen(["npm", "run", "dev"], cwd=app_root, env={**os.environ, "PORT": str(port)},
+                                stdout=fh, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                start_new_session=True)
 
 
 def porcelain(app_root):
@@ -198,10 +249,10 @@ def cmd_up(args):
         state.write_text(json.dumps(record, indent=1))
         ok, status = wait_reused(port, args.path, args.timeout)
         if not ok:
-            out(7, error=f"reused server: no answer below 500 on {args.path} after {args.timeout}s", reused=True,
+            out(7, error=f"reused server: no answer below 500 on {args.path} after {args.timeout}s", reused=True, attempts=0,
                 port=port, pid=record["pid"], listenerPid=record["listenerPid"], httpStatus=status,
                 state=str(state), log=record["log"])
-        out(0, reused=True, port=port, pid=record["pid"], listenerPid=record["listenerPid"],
+        out(0, reused=True, attempts=0, port=port, pid=record["pid"], listenerPid=record["listenerPid"],
             url=f"http://localhost:{port}{args.path}", httpStatus=status, others=others,
             startedByUs=record["startedByUs"], state=str(state))
 
@@ -224,29 +275,44 @@ def cmd_up(args):
 
     schema_before = schema_dirty(app_root)
     tree_before = porcelain(app_root)
-    with open(log, "a") as fh:
-        fh.write(f"\n$ PORT={port} npm run dev\n")
-        fh.flush()
-        proc = subprocess.Popen(["npm", "run", "dev"], cwd=app_root, env={**os.environ, "PORT": str(port)},
-                                stdout=fh, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                start_new_session=True)
-    record = {"startedBy": "ticket-execution", "startedByUs": True, "pid": proc.pid, "port": port, "appRoot": app_root,
-              "log": log, "startedAt": time.strftime("%Y-%m-%dT%H:%M:%S")}
-    state.write_text(json.dumps(record, indent=1))
-
+    agents_before = Path(app_root, "AGENTS.md").exists()
     deadline = time.time() + args.timeout
+    attempts = 0
     status = None
-    while time.time() < deadline:
-        if proc.poll() is not None:
-            state.unlink(missing_ok=True)
-            out(6, error=f"npm run dev exited with {proc.returncode}", log=log, tail=tail(log))
-        status = http_status(port, args.path)
-        if status is not None and status < 500:
+    record = None
+    while True:
+        attempts += 1
+        try:
+            offset = os.path.getsize(log)
+        except OSError:
+            offset = 0
+        proc = start_dev(app_root, port, log)
+        record = {"startedBy": "ticket-execution", "startedByUs": True, "pid": proc.pid, "port": port,
+                  "appRoot": app_root, "log": log, "startedAt": time.strftime("%Y-%m-%dT%H:%M:%S")}
+        state.write_text(json.dumps(record, indent=1))
+
+        retry = False
+        while time.time() < deadline:
+            if proc.poll() is not None:
+                # Next 16.4 may exit on its very first start (upgrade nudge, AGENTS.md written); start once more.
+                if attempts == 1 and first_start_nudge(log, offset, agents_before, app_root):
+                    retry = True
+                    break
+                state.unlink(missing_ok=True)
+                out(6, error=f"npm run dev exited with {proc.returncode}", attempts=attempts, log=log,
+                    tail=tail(log))
+            status = http_status(port, args.path)
+            if status is not None and status < 500:
+                break
+            time.sleep(3)
+        else:
+            out(7, error=f"no answer below 500 on {args.path} after {args.timeout}s", attempts=attempts, port=port,
+                pid=proc.pid, httpStatus=status, log=log, tail=tail(log), state=str(state))
+        if not retry:
             break
-        time.sleep(3)
-    else:
-        out(7, error=f"no answer below 500 on {args.path} after {args.timeout}s", port=port, pid=proc.pid,
-            httpStatus=status, log=log, tail=tail(log), state=str(state))
+        with open(log, "a") as fh:
+            fh.write(f"\n# first start exited with {proc.returncode} after Next's first-start nudge; retrying once\n")
+        time.sleep(RETRY_DELAY)
 
     schema = "untouched"
     if schema_before is False and schema_dirty(app_root):
@@ -262,7 +328,7 @@ def cmd_up(args):
     record["listenerPid"] = listener_pid(app_root, port)
     state.write_text(json.dumps(record, indent=1))
 
-    out(0, reused=False, port=port, pid=proc.pid, listenerPid=record["listenerPid"], url=f"http://localhost:{port}{args.path}", httpStatus=status,
+    out(0, reused=False, attempts=attempts, port=port, pid=proc.pid, listenerPid=record["listenerPid"], url=f"http://localhost:{port}{args.path}", httpStatus=status,
         log=log, state=str(state), installed=installed, schema=schema, devArtifacts=dev_artifacts,
         others=others, startedByUs=True)
 

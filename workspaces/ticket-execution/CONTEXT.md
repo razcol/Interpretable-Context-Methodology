@@ -18,7 +18,7 @@ One Jira ticket becomes reviewed, running work in its local repo, then a pushed 
 
 | Resource | Location | Contains |
 |----------|----------|----------|
-| Repos | `targets/repos.md` | Key to root, branch and commit patterns, work tree, test routes |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md`, read as `shared/repo-rows.md` says | Key to root, branch and commit patterns, work tree, base, PR target and link, lint, test routes, logins |
 | Git rules | `shared/git-rules.md` | The stop, what each stage may do, never staged, PR URL |
 | Run records | `shared/run-records.md` | Per-key folders, files per stage, `status` |
 | Tools | `shared/tools.md` | `intake.py`, `dev_server.py`, `review_urls.py`, `write_record.py` commands and exit codes |

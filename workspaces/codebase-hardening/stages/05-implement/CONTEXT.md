@@ -6,8 +6,8 @@ Build the READY rules on a new branch in the target repo, without touching appli
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../04-enforcement-design/output/enforcement-plan.md` | "Run", READY rule blocks, "Tamper Plan", "Tooling Needed" | What to build |
-| Earlier stage | `../01-recon/output/project-profile.md` | "Run" and "Tooling" sections | Base sha, package manager, build and test scripts |
+| Previous stage | `<runs>/<KEY>/04-enforcement-design/enforcement-plan.md` | "Run", READY rule blocks, "Tamper Plan", "Tooling Needed" | What to build |
+| Earlier stage | `<runs>/<KEY>/01-recon/project-profile.md` | "Run" and "Tooling" sections | Base sha, package manager, build and test scripts |
 | Shared | `../../shared/implementation-rules.md` | Full file | Worktree, branch, paths, fixtures, change log |
 | Routing | `../../playbooks/CONTEXT.md` | "What Loads" table, Implementation column | Which implementation file to load |
 | Shared | `../../shared/preferences.md` | "Branch Prefix", "Check Command", "Allowed Dev Tools" | Names and permitted installs |
@@ -39,4 +39,4 @@ Build the READY rules on a new branch in the target repo, without touching appli
 | Artifact | Location | Format |
 |----------|----------|--------|
 | Hardened branch | The target repo, in a separate worktree | Commits as described in `implementation-rules.md` |
-| Change log | `output/change-log.md` | Sections listed under "Change Log Format" in `implementation-rules.md` |
+| Change log | `<runs>/<KEY>/05-implement/change-log.md` | Sections listed under "Change Log Format" in `implementation-rules.md` |

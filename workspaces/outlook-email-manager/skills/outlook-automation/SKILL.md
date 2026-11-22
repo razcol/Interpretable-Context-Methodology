@@ -317,7 +317,7 @@ For detailed information, see:
 
 - Windows with Classic Outlook running
 - uv installed and in PATH
-- outlookctl project at: `\\wsl$\Ubuntu\home\dev\ai-system\workspaces\outlook-email-manager\skills\outlook-automation\outlookctl-src`
+- outlookctl project at: `outlookctl-src/` in this skill folder of the ai-system checkout you use, seen from Windows as `\\wsl$\<distro>\<that folder, with \ separators>`
 
 ## Error Handling
 

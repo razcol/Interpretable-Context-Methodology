@@ -13,6 +13,7 @@ model-workspace-protocol/
 │   ├── CONVENTIONS.md                 (source of truth for all patterns)
 │   ├── placeholder-syntax.md          (how {{VARIABLES}} work)
 │   ├── templates/                     (blank starting points for new workspaces)
+│   ├── data-root/                     (data root helper: resolve, setup seed, maintenance worktree pairing)
 │   └── skills/                        (shared skills used across workspaces, see Pattern 9 in CONVENTIONS.md)
 │       ├── jira-research/             (searching/extracting info from Jira -- experimental)
 │       ├── browser-cdp/               (drive Chrome via CDP scripts: screenshots, diffs, overflow at set widths, DOM, console, interaction -- provisional)
@@ -41,6 +42,7 @@ model-workspace-protocol/
 | Split a task across subagents (when to split, briefs, model and effort per spawn, checking returns) | `_core/skills/subagent-orchestration/SKILL.md` |
 | Generate a planned Excalidraw flowchart of an idea or system | `_core/skills/system-flowcharts/SKILL.md` |
 | Read a project's live WordPress GraphQL schema for ACF sections, check fragments, or compare a field plan with a group | `_core/skills/wp-graphql/SKILL.md` |
+| Find where your data lives (data root), or pair a maintenance worktree with a data worktree | `_core/CONVENTIONS.md`, "Data root" section |
 | Read the full MWP specification | `_core/CONVENTIONS.md` |
 | Understand the placeholder system | `_core/placeholder-syntax.md` |
 | Use a template for a new workspace | `_core/templates/` |
@@ -49,9 +51,11 @@ model-workspace-protocol/
 
 | Keyword | Action |
 |---------|--------|
-| `setup` | Run onboarding in whatever workspace you are in |
+| `setup` | Create the data root if missing, then run onboarding in whatever workspace you are in |
 | `status` | Show pipeline completion for the current workspace |
 
 ## How It Works
 
 Each workspace is self-contained with its own CLAUDE.md. Navigate into a workspace folder and that workspace's CLAUDE.md takes over. You do not need to read this root file once you are inside a workspace.
+
+Your own data (repo tables, login steps, skill logs, session briefs, stage outputs and run records) lives outside this repo, in the data root. Docs write those paths as `<data-root>/...`: `<data-root>` is the folder `python3 _core/data-root/data_root.py resolve` prints (see "Data root" in `_core/CONVENTIONS.md`). Never write a log, brief or table into this repo.

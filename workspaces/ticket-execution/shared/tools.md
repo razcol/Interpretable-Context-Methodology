@@ -1,6 +1,6 @@
 # Tools
 
-Four scripts in `tools/`. Python 3 standard library only. Each prints one JSON object. `<ws>` is `/home/dev/ai-system/workspaces/ticket-execution`. Tests: `python3 <ws>/tools/test_tools.py`.
+Four scripts in `tools/`, plus the shared run claim helper `_core/data-root/run_claim.py` ("run_claim.py" below). Python 3 standard library only. Each prints one JSON object. `<ws>` is this workspace folder in the ai-system checkout the run is in, `<checkout>/workspaces/ticket-execution`. `<checkout>` is the path `python3 ../../_core/data-root/data_root.py checkout` prints from the workspace folder; the brief gives both as real paths (`CLAUDE.md`). Never type another checkout's path. Tests: `python3 <ws>/tools/test_tools.py`.
 
 ## Permissions
 
@@ -15,6 +15,7 @@ The chat is often rooted in the app repo, so the records, the browser and the ot
 | `curl` to `localhost` | `all` |
 | `npm run lint` or `npx eslint` in an app root | `all` |
 | `write_record.py` | `all` (it writes outside the app-repo sandbox) |
+| `run_claim.py` (every command) | `all` (it writes claims and commits in the data root) |
 | wp-graphql `python3 scripts/wp_graphql.py` (every command, run from the skill folder) | `all` |
 
 `git status`, `git diff` and reads need none. `dev_server.py status` needs `all`: a sandboxed status reports "not answering" when the server is up. Never restart on that result.
@@ -25,7 +26,7 @@ A sandboxed wp-graphql call can come back as `AUTH_FAILED` or `HTTP_FAILED` when
 
 Write records with the Write or StrReplace tool. When a write is refused, read the reason. For a security-policy denial, fix what it names and write again with the same tool. For any other refusal, retry once.
 
-When the chat's root is outside this workspace (usually the app repo), the Write tool cannot reach `stages/`. Write the record with `tools/write_record.py` instead:
+When the chat's root is outside this workspace (usually the app repo), the Write tool cannot reach the data root. Write the record with `tools/write_record.py` instead:
 
 ```bash
 python3 <ws>/tools/write_record.py --stage <01..07> --key <KEY> <<'RECORD'
@@ -33,14 +34,14 @@ python3 <ws>/tools/write_record.py --stage <01..07> --key <KEY> <<'RECORD'
 RECORD
 ```
 
-It is the only shell exception in this section: no other heredoc, `python -c`, `tee`, `cat >` or redirect writes a record. The script writes only the stage's own record under `stages/<n>/output/<KEY>/` and refuses every other path. The record name is fixed per stage (`shared/run-records.md`), the whole file is replaced, and the text must carry the `version:` line in its first five lines. For a small edit, read the current file and pass the full new text. Exit 0 written, 2 refused (unknown stage, bad key, a path outside that folder), 3 empty or no `version:` line.
+It is the only shell exception in this section: no other heredoc, `python -c`, `tee`, `cat >` or redirect writes a record. The script writes only the stage's own record under `<runs>/<KEY>/<n>/` (it resolves the data root itself) and refuses every other path. The record name is fixed per stage (`shared/run-records.md`), the whole file is replaced, and the text must carry the `version:` line in its first five lines. For a small edit, read the current file and pass the full new text. Exit 0 written, 2 refused (unknown stage, bad key, no data root, a path outside that folder), 3 empty or no `version:` line.
 
 When the script also refuses, put the record's full content in your return with the path it belongs at; the orchestrator reports it. The orchestrator never runs this script and never writes the record.
 
 ## intake.py (stage 01)
 
 ```bash
-python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <ws>/stages/01-intake/output/<KEY> --env-file ~/.config/jira/jira.env
+python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <runs>/<KEY>/01-intake --env-file ~/.config/jira/jira.env
 ```
 
 - Reads the item with ACLI (`acli jira workitem view <KEY> --fields '*all' --json`). ACLI needs the network: run with full network access.
@@ -50,17 +51,39 @@ python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <ws>/stages/01-intake/o
 - Exit 0 done, 2 no key in the argument, 3 ACLI missing, failed or signed out (`acli jira auth status`), 4 no such item or no access.
 - Read `attachmentsMissing` and `commentsTruncated` in the JSON. Either one non-empty or true is a gap stage 01 reports.
 
+## run_claim.py (orchestrator, stages 04 to 06)
+
+`C` is `python3 <ws>/../../_core/data-root/run_claim.py`. Each command prints one JSON object. Exit 0 ok, 2 bad arguments or no live claim for the key (claim first), 3 a live run holds it (the JSON names that run in `heldBy`; stop and report it, never wait in a loop).
+
+```bash
+C claim   --ws ticket-execution --key <KEY> --note <trigger>          # orchestrator, before the first spawn; prints claimId
+C target  --ws ticket-execution --key <KEY> --path <work tree> --root <root> --branch <branch>   # stage 04, before any switch or worktree add
+C port    --ws ticket-execution --key <KEY> --kind dev                 # stage 05 (and 06): the run's dev-server port
+C port    --ws ticket-execution --key <KEY> --kind cdp                 # stage 05 (and 06): the run's browser (CDP) port
+C commit  --ws ticket-execution --key <KEY> --stage <0N-name>          # orchestrator, after each stage
+C end     --ws ticket-execution --key <KEY> --claim-id <claimId>       # orchestrator, when the run stops
+C list    --ws ticket-execution                                        # status
+```
+
+- `commit` and `end` are always two separate shell calls. Never chain them (`commit ... && end ...`): run `commit`, read its JSON, then run `end`.
+- `release --token` is the deprecated name of `end --claim-id`, and `claim` still prints `token` next to `claimId`. Use `end` and `claimId` in every new call.
+
+- `port` gives the same port to every call of the same run, and a different one to every other live run. Ports are machine-wide, so a run in a maintenance worktree never gets a port a normal run has.
+- `target` on a work tree or branch another live run holds exits 3. On the main tree that means: use a worktree (`stages/04-implement/references/work-tree.md`).
+- The run's browser profile is the key in lowercase (`ond-123`). Start it on the run's cdp port and pass `--profile` to every browser-cdp script; never the default profile or port.
+- A claim whose process is gone, whose ai-system checkout is gone, or that nothing touched for 2 hours is stale; the next `claim` on that key replaces it and reports `staleCleared`.
+
 ## dev_server.py (stages 05 and 06)
 
 ```bash
 python3 <ws>/tools/dev_server.py status --app-root <app root>
-python3 <ws>/tools/dev_server.py up --app-root <app root> --state <ws>/stages/05-verify/output/<KEY>/dev-server.json --path <first review path>
-python3 <ws>/tools/dev_server.py down --state <ws>/stages/05-verify/output/<KEY>/dev-server.json
+python3 <ws>/tools/dev_server.py up --app-root <app root> --state <runs>/<KEY>/05-verify/dev-server.json --port <run's dev port> --path <first review path>
+python3 <ws>/tools/dev_server.py down --state <runs>/<KEY>/05-verify/dev-server.json
 ```
 
 - `status` and `up` must run unsandboxed (`required_permissions: all`). A sandboxed `status` reports "not answering" falsely. Never restart on that result. Confirm with an unsandboxed `status` before `up`.
 - `<app root>` is the work tree's `code/` folder, never the main root when the run uses a worktree.
-- `up` reuses a server whose working directory is the app root. A server on port 3000 from another folder is listed under `others` and left alone; `up` takes the next free port.
+- `--port` is the run's dev port from `run_claim.py port --kind dev`, so two runs never race for one port. `up` reuses a server whose working directory is the app root (on whatever port it has); use the `port` the JSON returns. A server from another folder (another run's worktree or the main tree) is listed under `others` and left alone.
 - On reuse, `up` writes the state file too. When the server is the one this key's earlier `up` started, `startedByUs` stays true. Any other server is recorded with its live pid and `startedByUs: false`, and `down` leaves it running. Do not edit `dev-server.json` by hand. `up` probes `--path` on a reused server until it answers below 500 or `--timeout` runs out, and exits 7 otherwise, like a fresh start. The state file records `listenerPid`, the process on the port, next to `pid`, the npm process group that `down` stops.
 - Run `up` as a background shell command (do not block on it), then wait for its JSON. A foreground call that ends can take the server down with it. `up` needs full network access (AWS for `loadenv`, the database for `prisma db pull`) and no sandbox.
 - First start in a fresh worktree runs `npm ci` and can take several minutes. First page compile takes about 30 seconds.
@@ -72,10 +95,10 @@ python3 <ws>/tools/dev_server.py down --state <ws>/stages/05-verify/output/<KEY>
 ## review_urls.py (stage 06)
 
 ```bash
-python3 <ws>/tools/review_urls.py --app-root <app root> --base origin/dev --port <port> [--test-route <route>]
+python3 <ws>/tools/review_urls.py --app-root <app root> --base origin/<base> --port <port> [--test-route <route>]
 ```
 
-- Changed files are all differences from the merge base with `--base`, committed or not, plus untracked files.
+- Changed files are all differences from the merge base with `--base` (required; `<base>` is the run's base from `intake.md`), committed or not, plus untracked files.
 - Follows imports backwards (relative, jsconfig `paths`, `baseUrl`) to `page.*` and `layout.*` under `app/`.
 - `kind` per file: `static`, `dynamic` (route keeps `[param]`), `wordpress` (only through the catch-all CMS page), `section` (`components/Sections/<Name>/`), `template` (`components/Templates/<Name>/`), `all-pages` (root layout), `unmapped`.
 - `sharedStringsOnly` lists routes reached only through a changed locale file whose changed keys that route does not use. They are not in `urls`. When the script cannot tell, the route stays in `urls`. Each locale file's entry has `changedKeys` (`null` when it cannot tell).

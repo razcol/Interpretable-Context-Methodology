@@ -7,38 +7,39 @@ Read the repo's structure, read the Figma layer, and write the repo-shaped scaff
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
 | Run | The trigger message | Route, Figma URL, repo, folder (`sync`, `resync`, `mobile`), `--mobile <url>`, `--mobile` (`resync`, `element`), target file (`element`) | What this run is |
-| Targets | `../../targets/repos.md` | Full file | Repo root and default repo |
+| Targets | `<data-root>/workspaces/figma-section-fields/repos.md` | Full file | Repo root and default repo |
+| Target rules | `../../targets/CONTEXT.md` | "Rules" | Default repo, worktree roots |
 | Repo skill | `../../skills/next-section-repo/SKILL.md` | `probe_repo.py` section | The repo profile |
 | Setup | `../../shared/figma-cli-setup.md` | Full file | How to call figma-cli and load the token |
 | Contract | `../../shared/export-contract.md` | Full file | Commands, notes and exit codes |
 | Records | `../../shared/run-records.md` | `export-record.md`, pair rules | Record format, `pair:` values |
-| Pair (01m) | `output/<D>/export-record.md`, `../04-conform-bind/output/<D>/class-map.json` | Full files | D's URL, folder, flags, section map, renamed classes |
+| Pair (01m) | `<runs>/<D>/01-export/export-record.md`, `<runs>/<D>/04-conform-bind/class-map.json` | Full files | D's URL, folder, flags, section map, renamed classes |
 | Map (01m) | `references/viewport-map.md` | Full file | Reading and editing the viewport map |
 
 ## Process
 
-D is the desktop node id and M the mobile one. `$FIGMA` paths are from the workspace root, `<workspace>` (`/home/dev/ai-system/workspaces/figma-section-fields`); the skill scripts run from `skills/next-section-repo/`.
+D is the desktop node id and M the mobile one. `$FIGMA` paths are from the workspace root, `<workspace>` (`<checkout>/workspaces/figma-section-fields`, real path from the brief; `CLAUDE.md`); the skill scripts run from `skills/next-section-repo/`.
 
-1. Read the route, the Figma URL and the repo from the trigger, and `--mobile <url>` (Case A). The `mobile` route (Case B) gives M's URL. Record `viewport: mobile` for M, otherwise `viewport: desktop`. Resolve the repo from `targets/repos.md`, or use the path the user gave (a worktree counts). Take the node id from the URL's `node-id`, written with `-`. Stop if a URL has no node id.
+1. Read the route, the Figma URL and the repo from the trigger, and `--mobile <url>` (Case A). The `mobile` route (Case B) gives M's URL. Record `viewport: mobile` for M, otherwise `viewport: desktop`. Resolve the repo from `<data-root>/workspaces/figma-section-fields/repos.md`, or use the path the user gave (a worktree counts). Take the node id from the URL's `node-id`, written with `-`. Stop if a URL has no node id.
    - `resync <Folder> <mobile-url> <repo> --mobile` is a mobile pass on M: step 6m, then 04m in drift mode (the new overlay is diffed against the existing `bps.mobile` rules only), then 05m. It never runs desktop 04 drift on D.
    - `element <mobile-url> <repo> <file> --mobile` records `viewport: mobile` and `pair: none`, and runs as `element`.
-2. Delete this node's folders under every `stages/0*-*/output/` (a rerun replaces them; `shared/run-records.md`), then create `stages/01-export/output/<node-id>/`. A mobile pass keeps M's preflight files and record from Case A. From `skills/next-section-repo/`, run `python3 scripts/probe_repo.py --repo <repo> --out <workspace>/stages/01-export/output/<node-id>/profile.json`. Show its `warnings`. A mobile pass goes on at step 6m.
-3. Run `$FIGMA --version` and `$FIGMA inspect '<url>' > stages/01-export/output/<node-id>/inspect.txt`. On `element`, write the export record now with the target file and go to step 8.
-4. With `--mobile` (Case A), create `stages/01-export/output/<M>/` and preflight M: `$FIGMA inspect '<M url>' > stages/01-export/output/<M>/inspect.txt`, `$FIGMA render '<M url>' --out stages/01-export/output/<M>/figma.png --scale 1`, `$FIGMA export '<M url>' --dump stages/01-export/output/<M>/nodes.json`. No scaffold for M. D's record gets `pair: <M>`, and M gets an `export-record.md` with `route` (D's), `viewport: mobile`, `pair: <D>`, `figma`, `node` and `repo`; the mobile pass completes it.
+2. Delete this node's stage folders under `<runs>/<node-id>/` (a rerun replaces them; `shared/run-records.md`; keep `wp-content/`), then create `<runs>/<node-id>/01-export/`. A mobile pass keeps M's preflight files and record from Case A. From `skills/next-section-repo/`, run `python3 scripts/probe_repo.py --repo <repo> --out <runs>/<node-id>/01-export/profile.json`. Show its `warnings`. A mobile pass goes on at step 6m.
+3. Run `$FIGMA --version` and `$FIGMA inspect '<url>' > <runs>/<node-id>/01-export/inspect.txt`. On `element`, write the export record now with the target file and go to step 8.
+4. With `--mobile` (Case A), create `<runs>/<M>/01-export/` and preflight M: `$FIGMA inspect '<M url>' > <runs>/<M>/01-export/inspect.txt`, `$FIGMA render '<M url>' --out <runs>/<M>/01-export/figma.png --scale 1`, `$FIGMA export '<M url>' --dump <runs>/<M>/01-export/nodes.json`. No scaffold for M. D's record gets `pair: <M>`, and M gets an `export-record.md` with `route` (D's), `viewport: mobile`, `pair: <D>`, `figma`, `node` and `repo`; the mobile pass completes it.
 5. Pick the folder name. `sync` and `resync` use the folder the user named. `new` proposes the PascalCase layer name without a leading number or `NN_` prefix (`01_HIGHLIGHTS` is `Highlights`); stage 02 confirms it with you. The name has no `Server`, is not a global fragment name, and is not in the profile's `existingSections`.
-6. Run `$FIGMA render '<url>' --out stages/01-export/output/<D>/figma.png --scale 1` and `$FIGMA export '<url>' --out stages/01-export/output/<D>/preview.html`. When a pair is known, also `$FIGMA export '<url>' --dump stages/01-export/output/<D>/nodes.json`. Then scaffold: `$FIGMA export '<url>' --dist stages/01-export/output/<D>/scaffold --scaffold next-section --component <Folder> --repo-profile stages/01-export/output/<D>/profile.json --section-map stages/01-export/output/<D>/section-map.json [--font-map 'Family=export']`. The map stays outside the `--dist` folder. On a `font-unmatched` note, ask which `theme.fonts` export the family is (list the profile's fonts) and rerun with `--font-map`.
+6. Run `$FIGMA render '<url>' --out <runs>/<D>/01-export/figma.png --scale 1` and `$FIGMA export '<url>' --out <runs>/<D>/01-export/preview.html`. When a pair is known, also `$FIGMA export '<url>' --dump <runs>/<D>/01-export/nodes.json`. Then scaffold: `$FIGMA export '<url>' --dist <runs>/<D>/01-export/scaffold --scaffold next-section --component <Folder> --repo-profile <runs>/<D>/01-export/profile.json --section-map <runs>/<D>/01-export/section-map.json [--font-map 'Family=export']`. The map stays outside the `--dist` folder. On a `font-unmatched` note, ask which `theme.fonts` export the family is (list the profile's fonts) and rerun with `--font-map`.
 7. On exit 9 or 10, stop at the checkpoint.
-8. Write `stages/01-export/output/<node-id>/export-record.md` with every `note:` line, `viewport`, `pair` and `section-map`, plus `baseline` and `class-map` on a mobile record (`shared/run-records.md`). Then run the audit.
+8. Write `<runs>/<node-id>/01-export/export-record.md` with every `note:` line, `viewport`, `pair` and `section-map`, plus `baseline` and `class-map` on a mobile record (`shared/run-records.md`). Then run the audit.
 9. Continue on the route: `new` and `sync` load `../02-field-plan/CONTEXT.md`; `resync` and `element` load `../04-conform-bind/CONTEXT.md`. On `viewport: mobile`, load `../04-conform-bind/CONTEXT.md` in mobile mode (02 and 03 are skipped): `resync --mobile` in drift mode, `element --mobile` in element mode.
 
 ### Step 6m: mobile pass (`mobile`, `resync --mobile`, Case A)
 
 D's record is the one M's `pair:` names (Case A), or the newest whose folder matches the trigger and whose repo shares the trigger repo's `git rev-parse --git-common-dir`, so a worktree matches its main checkout (`mobile`, `resync --mobile`). A record with no `viewport` line is `viewport: desktop`. With no D record, ask for the desktop URL. Case B appends `pair: <M>` to D's record.
 
-1. Run `$FIGMA --version`, `$FIGMA inspect '<M url>' > stages/01-export/output/<M>/inspect.txt`, `$FIGMA render '<M url>' --out stages/01-export/output/<M>/figma.png --scale 1` and `$FIGMA export '<M url>' --out stages/01-export/output/<M>/preview.html`. 05m Level 1 reads them.
-2. If D's record has no `section-map.json`, rerun D's scaffold with D's record URL and flags (or the URL the user gave) into M's folder, so D's scaffold and profile stay as they were, and never into the repo: `$FIGMA export '<D url>' --dist stages/01-export/output/<M>/desktop-scaffold --scaffold next-section --component <Folder> --repo-profile stages/01-export/output/<M>/profile.json --section-map stages/01-export/output/<D>/section-map.json`, plus D's `--font-map`. Add `section-map:` to D's record.
-3. Run `$FIGMA export '<M url>' --mobile-of stages/01-export/output/<D>/section-map.json --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out stages/01-export/output/<M> --repo-profile stages/01-export/output/<M>/profile.json`. Add `--class-map stages/04-conform-bind/output/<D>/class-map.json` when it exists, and the same `--font-map` as D's record.
-4. Exit 0: go to step 8. Exit 12 (`unmatched` or `target-missing` rows): stop at the checkpoint, then rerun step 3 with `--class-map` and `--map stages/01-export/output/<M>/viewport-map.json` (`references/viewport-map.md`). Rows you did not edit keep the matcher's result, so a new class-map entry resolves them. Exit 11 (`new-content` rows): stop. Say the group needs a field and the route is `sync <Folder> <desktop-url> <repo> --mobile <mobile-url>`. Never add a field in a mobile pass.
+1. Run `$FIGMA --version`, `$FIGMA inspect '<M url>' > <runs>/<M>/01-export/inspect.txt`, `$FIGMA render '<M url>' --out <runs>/<M>/01-export/figma.png --scale 1` and `$FIGMA export '<M url>' --out <runs>/<M>/01-export/preview.html`. 05m Level 1 reads them.
+2. If D's record has no `section-map.json`, rerun D's scaffold with D's record URL and flags (or the URL the user gave) into M's folder, so D's scaffold and profile stay as they were, and never into the repo: `$FIGMA export '<D url>' --dist <runs>/<M>/01-export/desktop-scaffold --scaffold next-section --component <Folder> --repo-profile <runs>/<M>/01-export/profile.json --section-map <runs>/<D>/01-export/section-map.json`, plus D's `--font-map`. Add `section-map:` to D's record.
+3. Run `$FIGMA export '<M url>' --mobile-of <runs>/<D>/01-export/section-map.json --section-dir <app root>/<sectionsDir>/<Folder> --overlay-out <runs>/<M>/01-export --repo-profile <runs>/<M>/01-export/profile.json`. Add `--class-map <runs>/<D>/04-conform-bind/class-map.json` when it exists, and the same `--font-map` as D's record.
+4. Exit 0: go to step 8. Exit 12 (`unmatched` or `target-missing` rows): stop at the checkpoint, then rerun step 3 with `--class-map` and `--map <runs>/<M>/01-export/viewport-map.json` (`references/viewport-map.md`). Rows you did not edit keep the matcher's result, so a new class-map entry resolves them. Exit 11 (`new-content` rows): stop. Say the group needs a field and the route is `sync <Folder> <desktop-url> <repo> --mobile <mobile-url>`. Never add a field in a mobile pass.
 
 ## Checkpoints
 
@@ -66,8 +67,8 @@ D's record is the one M's `pair:` names (Case A), or the newest whose folder mat
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Export record | `output/<node-id>/export-record.md` | See `shared/run-records.md` |
-| Profile, inspect, render, preview | `output/<node-id>/` | `profile.json`, `inspect.txt`, `figma.png`, `preview.html` |
-| Scaffold, section map, dump | `output/<D>/` | `scaffold/<Folder>/`, `section-map.json`, `nodes.json` (pair known) |
-| Mobile preflight (Case A) | `output/<M>/` | `inspect.txt`, `figma.png`, `nodes.json` |
-| Viewport map and overlay (01m) | `output/<M>/` | `viewport-map.md`, `viewport-map.json`, `mobile-overlay.json`, `mobile-overlay.styled.txt` |
+| Export record | `<runs>/<node-id>/01-export/export-record.md` | See `shared/run-records.md` |
+| Profile, inspect, render, preview | `<runs>/<node-id>/01-export/` | `profile.json`, `inspect.txt`, `figma.png`, `preview.html` |
+| Scaffold, section map, dump | `<runs>/<D>/01-export/` | `scaffold/<Folder>/`, `section-map.json`, `nodes.json` (pair known) |
+| Mobile preflight (Case A) | `<runs>/<M>/01-export/` | `inspect.txt`, `figma.png`, `nodes.json` |
+| Viewport map and overlay (01m) | `<runs>/<M>/01-export/` | `viewport-map.md`, `viewport-map.json`, `mobile-overlay.json`, `mobile-overlay.styled.txt` |

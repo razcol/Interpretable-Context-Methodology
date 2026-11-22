@@ -43,6 +43,8 @@ When the user already has a Mermaid `flowchart`, or a spec run left overlapping 
 node scripts/build-flowchart.mjs --mermaid path/to/flow.mmd --out path/to/name.excalidraw
 ```
 
+Where `--out` goes: the folder the user names. Otherwise, a chart of an ai-system workspace goes to `<data-root>/workspaces/<ws>/flowchart/<ws>.excalidraw`, and any other chart to a folder outside the ai-system repo that you name to the user. Never inside the ai-system repo or this skill folder. `<data-root>` is the path `python3 ../../data-root/data_root.py resolve` prints from this skill folder.
+
 The script writes `name.png` beside the `.excalidraw` file and nothing else. Read the PNG. If a label sits off its arrow, a frame covers a node from another group, or two arrows cross in a way that hides the story, change the spec (shorter labels, fewer nodes, drop or split `groups`) and run the script again. Never patch `x`, `y`, or `points` in the output.
 
 Delete the spec after a successful run. Do not leave a planning note, a spec, a Mermaid file, or an SVG in the output folder.

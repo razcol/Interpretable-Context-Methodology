@@ -1,0 +1,3 @@
+# Logs and briefs only grow. Two branches that both append keep both sides.
+LOG.md merge=union
+log/briefs/** merge=union

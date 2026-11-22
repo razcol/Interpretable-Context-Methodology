@@ -6,7 +6,7 @@ Turn a raw skill request into unambiguous, testable requirements. New skills onl
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../01-intake/output/intake-note.md` | Full file | The raw request to clarify |
+| Previous stage | `<runs>/<KEY>/01-intake/intake-note.md` | Full file | The raw request to clarify |
 
 ## Process
 
@@ -25,4 +25,4 @@ Turn a raw skill request into unambiguous, testable requirements. New skills onl
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Clarified requirements | `output/clarified-requirements.md` | Scope, inputs/outputs, constraints, success criteria |
+| Clarified requirements | `<runs>/<KEY>/02-clarify/clarified-requirements.md` | Scope, inputs/outputs, constraints, success criteria |

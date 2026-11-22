@@ -1,0 +1,25 @@
+# Paired data worktrees (ai-system maintenance only, never committed here)
+/.worktrees/
+
+# Env and secret files: never committed
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.secret
+secrets/
+
+# Caches
+__pycache__/
+*.pyc
+.cache/
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Run locks and process files
+.run-lock
+*.lock
+*.pid

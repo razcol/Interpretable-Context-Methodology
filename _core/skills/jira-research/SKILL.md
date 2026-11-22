@@ -18,10 +18,13 @@ attachment *content download*, bulk operations, or writes. Treat it as the
 default to reach for, but keep logging results so it can be confirmed or
 revised as more of Jira's surface gets used.
 
-**Every time this skill is used, update `LOG.md`** (see [Working Log](#working-log)
+**Every time this skill is used, update `<data-root>/log/jira-research/LOG.md`** (see [Working Log](#working-log)
 below) with what was attempted and the outcome, even if it succeeded. If the
 chosen method fails or needs a variant for a new use case (e.g. comments,
-attachments, writes), log it and update this file.
+attachments, writes), log it and update this file. `<data-root>` is the
+folder `python3 ../../data-root/data_root.py resolve` prints when run from
+this skill folder (see "Data root" in `_core/CONVENTIONS.md`). Never create a
+log file in this skill folder.
 
 ## Overview
 
@@ -49,7 +52,7 @@ At the start of a task, check in this order:
 Do not assume credentials are already configured. Confirm auth is set up
 before running a query -- this differs by machine and by project.
 
-### Deprioritized / not adopted (see LOG.md for why)
+### Deprioritized / not adopted (see `<data-root>/log/jira-research/LOG.md` for why)
 
 - **MCP (official Atlassian Rovo MCP server, `https://mcp.atlassian.com/v2/mcp`)**
   -- researched, not tested. Costs Rovo credits per call from a shared org
@@ -216,7 +219,7 @@ over the reported exit code when this happens.
 
 **Do not use `GET /rest/api/3/search`.** Atlassian fully shut it down (as of
 Oct 31 2025); it now returns `HTTP 410 Gone`. Use `/rest/api/3/search/jql`
-instead. See [LOG.md](LOG.md) entry 2026-09-22 for the discovery.
+instead. See `<data-root>/log/jira-research/LOG.md` entry 2026-09-22 for the discovery.
 
 Get a single issue:
 ```bash
@@ -263,7 +266,7 @@ and REST above.
 
 ## What to log while using this skill
 
-For each attempt, record in `LOG.md`:
+For each attempt, record in `<data-root>/log/jira-research/LOG.md`:
 - Date, what you were trying to extract (e.g. "comments on PROJ-123", "all open bugs in project X")
 - Which approach you used (ACLI / REST / other)
 - Exact command/tool call
@@ -285,7 +288,7 @@ area and each new confirmation (or failure) should update the guidance above.
 
 ## Working Log
 
-See [`LOG.md`](LOG.md) in this folder for the running record of attempts,
+See `<data-root>/log/jira-research/LOG.md` for the running record of attempts,
 including the full comparison that led to choosing ACLI + REST fallback
 (entries dated 2026-09-22). If ACLI or REST fails for a new use case, or a
 deprioritized option (MCP, go-jira) gets tested, log it there and update the

@@ -2,17 +2,18 @@
 
 version: 1
 
-After you approve: stage the reviewed files, commit with the key, push the branch, and give you the create-PR link against `dev`. Runs only on `approve <KEY>` (commit and push) or `commit <KEY>` (commit only).
+After you approve: stage the reviewed files, commit with the key, push the branch, and give you the create-PR link against the repo's PR target (from its row; the pushed branch when the row has no PR link). Runs only on `approve <KEY>` (commit and push) or `commit <KEY>` (commit only).
 
 ## Inputs
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 06 | `../06-handoff/output/<KEY>/handoff.md` | "files", "dev artifacts left out", branch, work tree | What you reviewed |
-| Stage 03 | `../03-plan/output/<KEY>/plan.md` | "Change" | Commit subject source |
+| Stage 06 | `<runs>/<KEY>/06-handoff/handoff.md` | "files", "dev artifacts left out", branch, work tree | What you reviewed |
+| Stage 03 | `<runs>/<KEY>/03-plan/plan.md` | "Change" | Commit subject source |
 | Steps | `references/release-steps.md` | Full file | Commands, record |
 | Git | `../../shared/git-rules.md` | "Allowed per stage", "Never staged", "Commit and PR" | Limits, subject, PR URL |
-| Repos | `../../targets/repos.md` | The root's row | Commit subject pattern, slug |
+| Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row | Commit subject pattern, PR target, PR link |
+| Repo rows | `../../shared/repo-rows.md` | "Columns", "Rules" | How to fill the patterns and the PR link |
 
 ## Process
 
@@ -36,10 +37,10 @@ After you approve: stage the reviewed files, commit with the key, push the branc
 | Excluded | No file from "Never staged" in the commit |
 | Subject | Follows the repo pattern and has the key |
 | Push | On `approve`: `git status -sb` shows the branch tracking `origin/<branch>` with nothing ahead |
-| No API | No Bitbucket or Jira API call was made |
+| No API | No PR service or Jira API call was made |
 
 ## Outputs
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Record | `output/<KEY>/release-record.md` | Commit hash and subject, files, push result, PR URL |
+| Record | `<runs>/<KEY>/07-release/release-record.md` | Commit hash and subject, files, push result, PR URL |

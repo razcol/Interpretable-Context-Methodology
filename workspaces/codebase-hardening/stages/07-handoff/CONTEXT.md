@@ -6,10 +6,10 @@ Write the project's agent guide and the follow-up plan, after verification has p
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../06-verify/output/verification-report.md` | "Verdict", "Rule Results", "Gaps" | Only verified rules are listed as enforced |
-| Earlier stage | `../04-enforcement-design/output/enforcement-plan.md` | "Coverage Matrix" and "Rules" | Rationale and messages |
-| Earlier stage | `../04-enforcement-design/output/deferred-rules.md` | Full file | The follow-up plan |
-| Earlier stage | `../05-implement/output/change-log.md` | "Entrypoint" and "Protected Files" | Check command and protected list |
+| Previous stage | `<runs>/<KEY>/06-verify/verification-report.md` | "Verdict", "Rule Results", "Gaps" | Only verified rules are listed as enforced |
+| Earlier stage | `<runs>/<KEY>/04-enforcement-design/enforcement-plan.md` | "Coverage Matrix" and "Rules" | Rationale and messages |
+| Earlier stage | `<runs>/<KEY>/04-enforcement-design/deferred-rules.md` | Full file | The follow-up plan |
+| Earlier stage | `<runs>/<KEY>/05-implement/change-log.md` | "Entrypoint" and "Protected Files" | Check command and protected list |
 | Shared | `../../shared/preferences.md` | "Check Command" | The command to state in the guide |
 | Reference | `references/handoff-formats.md` | Full file | Shape of both documents |
 
@@ -36,5 +36,5 @@ Write the project's agent guide and the follow-up plan, after verification has p
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Agent guide | `output/agent-guide.md` | Sections listed in `references/handoff-formats.md` |
-| Follow-up plan | `output/followup-plan.md` | Sections listed in `references/handoff-formats.md` |
+| Agent guide | `<runs>/<KEY>/07-handoff/agent-guide.md` | Sections listed in `references/handoff-formats.md` |
+| Follow-up plan | `<runs>/<KEY>/07-handoff/followup-plan.md` | Sections listed in `references/handoff-formats.md` |

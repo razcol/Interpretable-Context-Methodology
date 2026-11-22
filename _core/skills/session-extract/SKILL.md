@@ -32,7 +32,7 @@ python3 <skill-folder>/scripts/scan_transcripts.py \
 4. If more than about eight core or partial parents remain, split an explicit path list across read-only subagents. Each brief includes the report headings, the redaction rules, and the instruction not to scan every project again. One subagent may inventory the product path. Transcript subagents only cite sessions.
 5. Deep-read with the excerpts plus a ranged read of the jsonl. Do not load a multi-megabyte line into context. Tool results in these files are often missing. Confirm outcomes from later assistant text and, when a product path was given, from the current files.
 6. Open `subagents/` only when that parent is about building the thing, the parent jsonl is missing (the coverage line lists orphans), or the user asked. The coverage `orphans` array is session folders with no parent file.
-7. Reply with the brief in the chat, using the section titles in [references/report-template.md](references/report-template.md). That reply is the whole deliverable. Do not write a markdown file, and do not save a copy under `/tmp` or the working directory. Write a file only when the user explicitly asks to save this brief.
+7. Reply with the brief in the chat, using the section titles in [references/report-template.md](references/report-template.md). That reply is the whole deliverable. Do not write a markdown file, and do not save a copy under `/tmp` or the working directory. Write a file only when the user explicitly asks to save this brief. Then save it as `<data-root>/log/briefs/session-extract-<YYYY-MM-DD>-<topic-slug>.md` (add `-2`, `-3` if the name exists; never overwrite), where `<data-root>` is the folder `python3 <skill-folder>/../../data-root/data_root.py resolve` prints (see "Data root" in `_core/CONVENTIONS.md`). Never save it in the working directory or in any repo.
 8. Lead that reply with the coverage counts, three to seven findings, and what was not searched.
 
 ## Rules
@@ -42,4 +42,4 @@ python3 <skill-folder>/scripts/scan_transcripts.py \
 - Do not claim sessions from another machine or from the Windows Cursor profile were included.
 - Separate "still open" from "a later session or the current code already fixed it."
 - Recommendations only. Do not edit the skill, tool, or workspace named in Implications.
-- Before a follow-up edits `workspaces/ticket-execution/`, read `workspaces/ticket-execution/stages/.run-lock`. When that file exists, do not edit the workspace. Say the key and the start time, and wait until the file is gone.
+- Before a follow-up edits `workspaces/ticket-execution/`, list its running claims from the ai-system checkout being edited: `python3 _core/data-root/run_claim.py list --ws ticket-execution`. When a run is `live`, do not edit the workspace. Say its key and `startedAt`, and wait until it is released or stale. There is no `.run-lock` file to read.

@@ -6,8 +6,8 @@ Build a working draft and validate it against real usage. This is where new-skil
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../03-research/output/candidate-approaches.md` | Full file | Candidates to draft and test (new mode, or existing mode exploring a new approach) |
-| Previous stage | `../01-intake/output/intake-note.md` | Resolved skill folder path | The current skill to re-test directly (existing mode, standard maintenance) |
+| Previous stage | `<runs>/<KEY>/03-research/candidate-approaches.md` | Full file | Candidates to draft and test (new mode, or existing mode exploring a new approach) |
+| Previous stage | `<runs>/<KEY>/01-intake/intake-note.md` | Resolved skill folder path | The current skill to re-test directly (existing mode, standard maintenance) |
 | Shared | `../../shared/authoring-conventions.md` | Full file | How to write the SKILL.md draft |
 | Shared | `../../shared/test-log-format.md` | Full file | Consistent shape for the test trace |
 | User | (conversation) | Real day-to-day use case | What the skill is tested against |
@@ -40,5 +40,5 @@ Build a working draft and validate it against real usage. This is where new-skil
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Test run log | `output/test-log.md` | Ephemeral trace per attempt: steps, decisions, reasoning, outcome. Not carried downstream. |
-| Selected draft | `output/draft-skill/` | Working SKILL.md + supporting scripts for the selected/updated approach |
+| Test run log | `<runs>/<KEY>/04-draft-and-test/test-log.md` | Ephemeral trace per attempt: steps, decisions, reasoning, outcome. Not carried downstream. |
+| Selected draft | `<runs>/<KEY>/04-draft-and-test/draft-skill/` | Working SKILL.md + supporting scripts for the selected/updated approach |

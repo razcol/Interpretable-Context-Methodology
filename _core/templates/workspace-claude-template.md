@@ -45,4 +45,4 @@
 
 ## Stage Handoffs
 
-Each stage writes its output to its own `output/` folder. The next stage reads from there. If you edit an output file, the next stage picks up your edits.
+`<data-root>` is the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder. `<runs>` is `<data-root>/workspaces/[workspace-name]/runs`. A run's key is [what names one run]. Each stage writes its output to `<runs>/<KEY>/<stage folder>/`, never into this repo (Pattern 2 and Data root in `_core/CONVENTIONS.md`). The next stage reads from there. If you edit an output file, the next stage picks up your edits.

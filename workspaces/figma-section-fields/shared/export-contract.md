@@ -44,7 +44,7 @@ Images are props with no URL written. Background images are CSS variables set fr
 |---|---|---|
 | 0 | Done | Continue |
 | 2 | Usage | Fix the arguments |
-| 3 | Token rejected | Stop. Ask the user to check `/home/dev/cli/figma-cli/.env` |
+| 3 | Token rejected | Stop. Ask the user to check the token file named in `<data-root>/workspaces/figma-section-fields/repos.md` ("Figma token file") |
 | 4 | No such node | Stop. For a layer inside an instance, export the instance id with `--name` |
 | 5 | `rate-limited`: Figma rate limited the request | Retry once after a wait, then stop |
 | 6 | Bad `--index` or bad document | Stop |

@@ -6,8 +6,8 @@ Build the onboarding questionnaire that hydrates the new workspace's placeholder
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Discovery output | `../01-discovery/output/workflow-map.md` | "User-Specific Variables" section | Variables that need onboarding questions |
-| Scaffolding output | `../03-scaffolding/output/` | All files containing `{{PLACEHOLDER}}` patterns | Know where every placeholder lives |
+| Discovery output | `<runs>/<KEY>/01-discovery/workflow-map.md` | "User-Specific Variables" section | Variables that need onboarding questions |
+| Scaffolding output | `<runs>/<KEY>/03-scaffolding/` | All files containing `{{PLACEHOLDER}}` patterns | Know where every placeholder lives |
 | Template | `/_core/templates/questionnaire-template.md` | Full file | Format and design rules to follow |
 | Syntax | `/_core/placeholder-syntax.md` | Full file | Placeholder and conditional section rules |
 
@@ -47,4 +47,4 @@ Build the onboarding questionnaire that hydrates the new workspace's placeholder
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Questionnaire | `output/questionnaire.md` | Flat, all-at-once questionnaire for the new workspace's setup/ folder |
+| Questionnaire | `<runs>/<KEY>/04-questionnaire-design/questionnaire.md` | Flat, all-at-once questionnaire for the new workspace's setup/ folder |

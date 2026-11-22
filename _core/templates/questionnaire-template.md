@@ -3,7 +3,10 @@
 <!-- Agent instructions: Read this file when the user types "setup". Ask ALL questions
      in a single conversational pass. The user should be able to answer everything in one
      message. Collect answers. Replace placeholders across the specified files. After all
-     replacements, verify no {{PLACEHOLDER}} patterns remain in the workspace. -->
+     replacements, verify no {{PLACEHOLDER}} patterns remain in the workspace.
+     Before the questions, run `python3 ../../_core/data-root/data_root.py init` from the
+     workspace folder: it creates the data root when missing (see "Data root" in
+     _core/CONVENTIONS.md) and changes nothing when it is complete. -->
 
 <!-- Questionnaire design rules:
      1. FLAT STRUCTURE: No category groupings. Just a numbered list of questions.

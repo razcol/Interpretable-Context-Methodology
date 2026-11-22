@@ -8,11 +8,11 @@ description: "Read the structure of one of your Next.js section repos (ora, smar
 Two commands. Both read repo files as text. They never import, require or run repo code. The only programs they start are `git diff --cached --name-only` and the profile's `lintCommand` (ESLint), always with an argument list.
 
 ```bash
-python3 scripts/probe_repo.py --repo /home/dev/ora-next [--out /path/profile.json]
-python3 scripts/check_section.py --repo /home/dev/ora-next --folder ImageGrid [--profile /path/profile.json] [--no-lint] [--mobile-pass]
+python3 scripts/probe_repo.py --repo <repo root> [--out /path/profile.json]
+python3 scripts/check_section.py --repo <repo root> --folder ImageGrid [--profile /path/profile.json] [--no-lint] [--mobile-pass]
 ```
 
-Run them from this skill folder. `--repo` is the repo root or its `code/` folder.
+Run them from this skill folder. `--repo` is the repo root or its `code/` folder: the run's row in `<data-root>/workspaces/figma-section-fields/repos.md`.
 
 Scripts: `python3 scripts/harness.py --repo <folder holding components/, code/app in ora> --folder <F> --out-dir <stage output> [--props <json>]` bundles `Client<F>.js` with the repo's real theme (esbuild, and it runs repo code) into `index.html` + `bundle.js` + `harness-record.json` under `--out-dir` only. Media, breadcrumbs, `next/font/local`, `next/image`, `next/link` and `server-only` are stubbed, so it is never Level 2. Without `--props` the component uses its defaults, so cards and lists need a props file. Exits: 0 ok, 1 usage, 3 bundle failed (esbuild errors on stderr), 4 no `node_modules`.
 

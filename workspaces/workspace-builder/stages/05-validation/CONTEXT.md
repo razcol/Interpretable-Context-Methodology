@@ -6,8 +6,8 @@ Verify the generated workspace against MWP conventions and fix any issues before
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Scaffolding output | `../03-scaffolding/output/` | Entire generated workspace | The workspace to validate |
-| Questionnaire output | `../04-questionnaire-design/output/questionnaire.md` | Full file | Verify placeholder coverage |
+| Scaffolding output | `<runs>/<KEY>/03-scaffolding/` | Entire generated workspace | The workspace to validate |
+| Questionnaire output | `<runs>/<KEY>/04-questionnaire-design/questionnaire.md` | Full file | Verify placeholder coverage |
 | Core conventions | `/_core/CONVENTIONS.md` | Full file | The rules to validate against |
 | Placeholder syntax | `/_core/placeholder-syntax.md` | Full file | Conditional section rules |
 
@@ -35,7 +35,7 @@ Run each check below. Record pass/fail and any issues found.
 
 10. **Line count check.** Flag any CONTEXT.md over 80 lines. Flag any reference file over 200 lines.
 
-11. **Naming conventions.** All folder and file names are lowercase-with-hyphens. Stage folders use zero-padded numbers (01-, 02-). Empty output/ folders have .gitkeep files.
+11. **Naming conventions.** All folder and file names are lowercase-with-hyphens. Stage folders use zero-padded numbers (01-, 02-). No stage folder has an output folder, and no CONTEXT.md names a repo-relative output path (run artifacts are `<runs>/<KEY>/<stage>/...`).
 
 12. **Tool prerequisites.** If the workspace has a prerequisites/ folder or tool setup guides: verify prerequisites/CONTEXT.md lists every tool, verify each listed tool has a setup guide, verify setup guides include install steps and verification commands, and verify the questionnaire asks whether optional tools are needed (so conditional stages can be removed).
 
@@ -47,4 +47,4 @@ If issues are found, fix them in the scaffolded workspace files, then re-run the
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Validation report | `output/validation-report.md` | Checklist with pass/fail per check, issues found, fixes applied |
+| Validation report | `<runs>/<KEY>/05-validation/validation-report.md` | Checklist with pass/fail per check, issues found, fixes applied |

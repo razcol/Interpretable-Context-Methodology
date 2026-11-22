@@ -24,7 +24,7 @@ Layer 4: Working artifacts   -> "What am I working with?"  (loaded selectively, 
 
 **Layer 3 -- Reference material** is the persistent context: design systems, voice rules, build conventions, style guides, domain knowledge bundled as skill files. These files are configured once during workspace setup and remain stable across every run of the pipeline. They live in `references/` folders within stages, in workspace-level configuration folders (like `brand-vault/` or `design-system/`), in `shared/`, and in `skills/`. Larger reference collections can include their own CONTEXT.md routing files to help agents navigate within the collection.
 
-**Layer 4 -- Working artifacts** are the per-run context: previous stage outputs, user-provided source material, anything specific to this particular run. These files are produced and consumed during execution and change every time the pipeline runs. They live in `output/` folders.
+**Layer 4 -- Working artifacts** are the per-run context: previous stage outputs, user-provided source material, anything specific to this particular run. These files are produced and consumed during execution and change every time the pipeline runs. They live in the run folders in the data root (Pattern 2), never in the repo.
 
 The distinction between Layers 3 and 4 matters because they require different things from the model. Layer 3 material needs to be internalized as constraints and patterns -- write like this, use these colors, follow these conventions. Layer 4 material needs to be processed as input -- transform this research into a script, convert this script into a specification. Layer 3 is the factory. Layer 4 is the product.
 
@@ -62,17 +62,20 @@ This is the contract. It is simple enough that a non-technical user can read it 
 
 ---
 
-## Pattern 2: Stage Handoffs via Output Folders
+## Pattern 2: Stage Handoffs via Run Folders
 
-Every stage has an `output/` subfolder. The agent writes its artifact there. The next stage reads from the previous stage's `output/` folder.
+Stage outputs are the user's data, so they live in the data root (see Data root), never in the repo. Each run has a key, and each stage writes its artifact into the run's folder for that stage. The next stage reads from there.
 
 The convention:
-- Stage N produces: `stages/0N-name/output/artifact-name.md`
-- Stage N+1's CONTEXT.md says: "Read `../0N-name/output/artifact-name.md` as your input"
+- `<runs>` is `<data-root>/workspaces/<workspace>/runs`. The workspace CLAUDE.md defines it and says what a run's key is (a Jira key, a Figma node id, a skill slug, a date).
+- Stage N produces: `<runs>/<KEY>/0N-name/artifact-name.md` (the subfolder is named after the stage folder)
+- Stage N+1's CONTEXT.md says: "Read `<runs>/<KEY>/0N-name/artifact-name.md` as your input"
+- Stage folders in the repo hold definitions only (`CONTEXT.md`, `references/`). They have no `output/` folder, and no CONTEXT.md names a repo-relative output path.
+- Work that belongs to a run but to no stage (for example WP content for a Figma section) goes into the run folder too, in a named subfolder.
 
 This is the handoff. A human can open the output file, edit it, and the next stage picks up the edited version. No state management. No orchestration layer. Just files in predictable places.
 
-File naming in output folders: `[topic-slug]-[stage-artifact].md`
+File naming in run folders: `[topic-slug]-[stage-artifact].md`
 - Example: `hello-world-script.md`, `hello-world-spec.md`
 
 ---
@@ -141,13 +144,83 @@ Note: When a workspace bundles skills (Pattern 9), many tools that would have ne
 
 ---
 
+## Data root
+
+The repo holds definitions only: rules, workflows, skills, tools and templates. Everything a user produces or keeps while using it (repo tables, login steps, logs, session briefs, stage outputs, run records) is that user's data. It lives in the **data root**, a local git repo of its own, outside the repo tree. A `.gitignore` entry in the repo is a backstop only, never the place where data is kept.
+
+**One definition.** The data root is the first of:
+
+1. the path in `.data-root` at the top of the ai-system checkout (one line, starting with `~` or `/`; git-ignored, never committed)
+2. the `AI_SYSTEM_HOME` environment variable
+3. `~/.config/ai-system`
+
+Tools never type the path. They ask the helper, `_core/data-root/data_root.py` (Python 3 standard library only):
+
+| Command | What it does |
+|---|---|
+| `resolve` | Prints the data checkout this ai-system checkout uses: the main checkout uses the data root, a worktree on branch X uses data worktree X. Stops when there is none. |
+| `checkout` | Prints the top folder of the ai-system checkout the helper is in: a main checkout, another clone, or a maintenance worktree each print their own. |
+| `init` | Creates the data root when it is missing and seeds what is missing. Never overwrites. `setup` runs it. |
+| `commit -m MSG [PATH...]` | Commits in the data checkout. Stages named paths (all changes when none are given), refuses secret-looking files, and holds a short lock so commits into one checkout never overlap. |
+| `add <branch> [--from REF]` | Maintenance only: an ai-system worktree (default `<checkout>.worktrees/<branch>` next to the main checkout, started at `REF` or the main checkout's HEAD) and a data worktree at `<data root>/.worktrees/<branch>`, on the same branch name. |
+| `merge <branch>` | Commits the data worktree, merges data into the main data checkout, then merges code. Stops before the code merge if the data merge conflicts. |
+| `remove <branch>` | Removes both worktrees and both branches after a confirmation. Uncommitted or unmerged work is dropped only with `--discard`. |
+
+From a shell: `"$(python3 _core/data-root/data_root.py resolve)"`.
+
+**In docs** a path inside the data root is written `<data-root>/<path>`, for example `<data-root>/workspaces/ticket-execution/repos.md` or `<data-root>/log/browser-cdp/LOG.md`. `<data-root>` is the folder `resolve` prints for the checkout you are working in. Resolve it once, then use the real path in commands and briefs. Never type `~/.config/ai-system` or a `/home/<user>/` path in its place, and never write a log, brief or table into the repo instead (a skill never keeps its log in its own folder).
+
+**Tool paths in docs** are relative to the ai-system checkout the run is in, never to one machine's folder. A doc that needs an absolute tool path writes `<checkout>/<path>` (for example `<checkout>/_core/skills/browser-cdp`), where `<checkout>` is the folder `data_root.py checkout` prints. Resolve it once per run, with `<data-root>`, and copy the real path into commands and briefs. A run from a main checkout, another clone or a maintenance worktree then uses its own tools and its own data checkout. Never type `/home/<user>/...` for a tool.
+
+**Layout** (version 1, named in the data root's `LAYOUT` file):
+
+| Folder | Holds |
+|---|---|
+| `workspaces/<ws>/` | One workspace's settings (repo tables, login steps) |
+| `workspaces/<ws>/runs/<KEY>/` | Run records and produced artifacts, per run key: one subfolder per stage (`<KEY>/0N-name/`) |
+| `workspaces/<ws>/flowchart/` | A generated diagram of the workspace |
+| `log/<skill>/LOG.md` | One append-only log per skill |
+| `log/briefs/` | Session briefs, handoffs and debriefs |
+| `archive/` | Kept history (`archive/<ws>/` per workspace) |
+| `.worktrees/<branch>/` | Paired data worktrees (ignored) |
+| `workspaces/<ws>/runs/<KEY>/claim.lock`, `claims/` | Run claims (ignored, never committed; see Run claims) |
+
+A layout change raises the `LAYOUT` version and ships with a migration step that runs on merge.
+
+**Data repo rules** (seeded from `_core/data-root/seed/`): `.gitignore` keeps env and secret files, caches and claim files (`*.lock`) out; `.gitattributes` sets `LOG.md` and `log/briefs/` to `merge=union`, so two branches that both append never conflict.
+
+**Seeding.** A tracked `workspaces/<ws>/targets/<path>.example.<ext>` seeds `workspaces/<ws>/<path>.<ext>` in the data root, once. Example files show every column with `<...>` placeholders, never a user's data.
+
+**Project practices are rows.** How a target project works (root, branch and commit patterns, base branch, PR target and PR link, main tree or worktree and where, lint command, test route, test logins, form submits, and any rule that holds for that project only) is that project's row in its workspace's repo table in the data root. The repo keeps only the generic rule for reading a row (for example `workspaces/ticket-execution/shared/repo-rows.md`), so adding or changing a project never needs an edit in the repo. ai-system's own maintenance worktrees and their paired data worktrees ("Two modes" below) are ai-system's own mechanism, not a project row. A ticket on ai-system itself is the one row whose worktree is made with `add` (its row's note says so), so that branch gets its paired data worktree; a run on any other repo never creates an ai-system worktree.
+
+**Run folders** (`workspaces/<ws>/runs/<KEY>/<stage>/`) hold every stage output and run record (Pattern 2). Tools that write a record resolve the data root themselves (for example `workspaces/ticket-execution/tools/write_record.py`). A generated diagram of a workspace goes to `workspaces/<ws>/flowchart/`. Kept history that belongs to no run goes to `archive/<ws>/`. A session's throwaway files go to its own temp folder, never into the repo; anything worth keeping goes to the data root.
+
+**Large outputs** (screenshots, exports) are committed to the data repo like everything else, so discarding a worktree never loses them. Env and secret files are never committed in either repo.
+
+**Run claims.** Runs on different keys run at the same time. Instead of one lock file per workspace, a run claims only what runs really share, with `_core/data-root/run_claim.py` (every command prints one JSON object; exit 3 names the live run that holds what was asked for):
+
+| Command | What it does |
+|---|---|
+| `claim --ws <ws> --key <KEY>` | Before a run's first stage. Writes `workspaces/<ws>/runs/<KEY>/claim.lock` in the data checkout `resolve` prints: start time, the ai-system checkout, the PID of the agent session that runs it, and a claim id (printed as `claimId`). A live claim on the key stops the second run and names the first. A stale claim (its process gone or replaced, its checkout gone, or untouched for 2 hours) is replaced and reported, so the next run continues from the records. `--takeover` replaces a live-looking claim only when the user says that run is not running. |
+| `target --path <work tree> --root <root> --branch <b>` | Claims the target-repo work tree and branch a run edits. Another live run on the same work tree or branch gets exit 3. Whether a run uses a worktree comes from the repo's row. |
+| `port --kind dev\|cdp` | The run's own dev-server or browser (CDP) port: free, not claimed by a live run, and the same on every call of that run. Each run also starts its own browser profile, so sign-ins and screenshots never mix. |
+| `commit [--stage S]` | Commits only `workspaces/<ws>/runs/<KEY>/` through `data_root.py commit` (serialized, named paths only). Workflows run it after each stage's record. |
+| `end --claim-id <id>` | When the run stops: drops its claims, then commits its run folder. Always its own shell call, never chained after `commit` with `&&`. (`release --token` is the deprecated name; it still works.) |
+| `list [--ws <ws>]` | Every claim, `live` or `stale`. `status` shows the live ones. |
+
+Port and work-tree claims are machine-wide, so they live in the main data checkout's `claims/` folder, also for test runs from a maintenance worktree; key claims live in the run's own data checkout. Claim files end in `.lock`, which the data repo ignores. Stages within one run still run in order. Log writes stay single small appends.
+
+**Two modes.** Normal work runs on the main ai-system checkout and writes to the main data checkout; a run never gets its own ai-system worktree. Changing ai-system itself happens in a worktree from `add`, whose test runs write to its paired data worktree; finish with `merge` (data first, then code) or `remove --discard`.
+
+---
+
 ## Trigger Keywords
 
 Every workspace recognizes these triggers:
 
-**`setup`** -- Starts the onboarding questionnaire. The agent reads `setup/questionnaire.md`, asks the questions conversationally, collects answers, replaces placeholders across the workspace, and verifies no placeholders remain.
+**`setup`** -- Starts the onboarding questionnaire. The agent first runs `python3 _core/data-root/data_root.py init` from the ai-system checkout, which creates the data root when it is missing (see Data root) and changes nothing when it is complete. Then it reads `setup/questionnaire.md`, asks the questions conversationally, collects answers, replaces placeholders across the workspace, and verifies no placeholders remain.
 
-**`status`** -- Shows pipeline completion. The agent scans all `stages/*/output/` folders and renders an ASCII pipeline diagram:
+**`status`** -- Shows pipeline completion. The agent lists each run key under `<runs>/` and renders an ASCII pipeline diagram per key:
 
 ```
 Pipeline Status: [workspace-name]
@@ -157,7 +230,9 @@ Pipeline Status: [workspace-name]
   (artifact.md)              (empty)                  (empty)
 ```
 
-For each stage: if the output folder contains files (other than .gitkeep), the stage is COMPLETE and the filenames are listed. If the output folder is empty or contains only .gitkeep, the stage is PENDING.
+For each stage: if `<runs>/<KEY>/<stage>/` contains files, the stage is COMPLETE and the filenames are listed. If it is missing or empty, the stage is PENDING.
+
+Then it lists the runs that hold a claim now (`python3 _core/data-root/run_claim.py list --ws <ws>`): each live run's key, start time and ports, and each stale claim as stopped without `end`.
 
 Workspaces can define additional trigger keywords in their own CLAUDE.md.
 
@@ -292,7 +367,7 @@ The Checkpoints section in a stage CONTEXT.md is a table:
 
 ## Pattern 12: Stage Audits
 
-Creative and build stages should include an Audit section: a checklist the agent runs after completing the process but before writing to output/. Audits catch quality issues before they propagate downstream. Each check should be specific enough that pass/fail is unambiguous.
+Creative and build stages should include an Audit section: a checklist the agent runs after completing the process but before writing its output. Audits catch quality issues before they propagate downstream. Each check should be specific enough that pass/fail is unambiguous.
 
 Not every stage needs an audit. Data extraction or file conversion stages may not benefit. Creative and build stages almost always do.
 
@@ -304,7 +379,7 @@ The Audit section in a stage CONTEXT.md is a table:
 | [Check name] | [What "passing" looks like] |
 ```
 
-If any check fails, the agent revises before saving to output/.
+If any check fails, the agent revises before saving its output.
 
 ---
 
@@ -318,7 +393,7 @@ Value types are workspace-specific. A content workspace might use NOVEL, USABLE,
 
 ## Pattern 14: Docs Over Outputs
 
-Reference docs (design system, build conventions, skill rules) are the authoritative source for how to build. Previous stage outputs in `output/` folders are artifacts, not templates. Agents should not read other outputs to learn patterns.
+Reference docs (design system, build conventions, skill rules) are the authoritative source for how to build. Previous stage outputs in run folders are artifacts, not templates. Agents should not read other outputs to learn patterns.
 
 This prevents copying from older, lower-quality work and ensures docs remain the single source of truth for quality standards. Early outputs are the worst outputs. If future agents learn from them, quality never improves.
 

@@ -32,7 +32,7 @@ codebase-hardening/
 
 ### How `status` works
 
-Scan `stages/*/output/`. A stage with files other than .gitkeep is COMPLETE, otherwise PENDING. Render:
+List each `<KEY>` folder under `<runs>/`. For each key, a stage is COMPLETE when `<runs>/<KEY>/<stage>/` holds files, otherwise PENDING. Render one block per key:
 
 ```
 Pipeline Status: codebase-hardening
@@ -67,7 +67,9 @@ Pipeline Status: codebase-hardening
 
 ## Stage Handoffs
 
-Each stage writes to its own `output/`. The next stage reads from there. If you edit an output file between stages, the next stage picks up your edits. Stage 05 also writes to the target repo, on a new branch, in a separate worktree.
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/codebase-hardening/runs`. A run's key is the target repo's folder name (for example `ora-next`), set at stage 01. Each stage writes into `<runs>/<KEY>/<stage folder>/`, for example `<runs>/<KEY>/01-recon/`, never into this repo. Resolve the data root once per run and use the real path.
+
+Each stage writes to its own run folder, `<runs>/<KEY>/<stage>/`. The next stage reads from there. If you edit an output file between stages, the next stage picks up your edits. Stage 05 also writes to the target repo, on a new branch, in a separate worktree.
 
 ## Ground Rules
 

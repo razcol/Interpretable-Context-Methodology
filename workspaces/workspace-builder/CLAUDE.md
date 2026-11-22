@@ -31,7 +31,7 @@ workspace-builder/
 
 ### How `status` works
 
-Scan `stages/*/output/` folders. For each stage, if the output folder contains files (other than .gitkeep), the stage is COMPLETE. Otherwise PENDING. Render:
+List each `<KEY>` folder under `<runs>/`. For each key, a stage is COMPLETE when `<runs>/<KEY>/<stage>/` holds files, otherwise PENDING. Render one block per key:
 
 ```
 Pipeline Status: workspace-builder
@@ -55,13 +55,15 @@ Pipeline Status: workspace-builder
 | Task | Load These | Do NOT Load |
 |------|-----------|-------------|
 | Discover workflow | `references/conventions-reference.md`, `references/examples/script-to-animation-summary.md` | `stages/02-mapping/` through `stages/05-validation/` |
-| Formalize contracts | `stages/01-discovery/output/`, `references/conventions-reference.md` | `references/examples/`, `stages/03-scaffolding/` through `stages/05-validation/` |
-| Generate scaffold | `stages/02-mapping/output/`, `references/conventions-reference.md`, `/_core/templates/*`, `/_core/placeholder-syntax.md` | `stages/01-discovery/`, `references/examples/` |
-| Design questionnaire | `stages/01-discovery/output/`, scaffolded workspace from stage 03, `/_core/templates/questionnaire-template.md` | `stages/02-mapping/`, `references/examples/` |
-| Validate workspace | Scaffolded workspace from stage 03, `stages/04-questionnaire-design/output/`, `/_core/CONVENTIONS.md` | `stages/01-discovery/`, `stages/02-mapping/`, `references/examples/` |
+| Formalize contracts | `<runs>/<KEY>/01-discovery/`, `references/conventions-reference.md` | `references/examples/`, `stages/03-scaffolding/` through `stages/05-validation/` |
+| Generate scaffold | `<runs>/<KEY>/02-mapping/`, `references/conventions-reference.md`, `/_core/templates/*`, `/_core/placeholder-syntax.md` | `stages/01-discovery/`, `references/examples/` |
+| Design questionnaire | `<runs>/<KEY>/01-discovery/`, scaffolded workspace from stage 03, `/_core/templates/questionnaire-template.md` | `stages/02-mapping/`, `references/examples/` |
+| Validate workspace | Scaffolded workspace from stage 03, `<runs>/<KEY>/04-questionnaire-design/`, `/_core/CONVENTIONS.md` | `stages/01-discovery/`, `stages/02-mapping/`, `references/examples/` |
 
 ## Stage Handoffs
 
-Each stage writes its output to its own `output/` folder. The next stage reads from there. If you edit an output file between stages, the next stage picks up your edits.
+`<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/workspace-builder/runs`. A run's key is the name of the workspace being built (for example `ticket-execution`). Each stage writes into `<runs>/<KEY>/<stage folder>/`, for example `<runs>/<KEY>/01-discovery/`, never into this repo. Resolve the data root once per run and use the real path.
+
+Each stage writes its output to its own run folder, `<runs>/<KEY>/<stage>/`. The next stage reads from there. If you edit an output file between stages, the next stage picks up your edits.
 
 The typical flow is sequential (01 through 05), but stage 05-validation also reads from stages 03 and 04 directly.

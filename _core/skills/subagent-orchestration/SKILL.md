@@ -24,9 +24,11 @@ Once you split, you plan, spawn, check returns and report. You do not:
 - carry one worker's content into another worker's brief (pass the output **path**);
 - write a worker's record for it. A return that pastes the record text instead of writing the file counts as a missing file.
 
-A workspace may let the orchestrator write one file (for example a run lock). Nothing else.
+A workspace may let the orchestrator keep its run claim (claim, commit, end with the workspace's claim helper). Nothing else.
 
 ## 3. Cut the work into units
+
+Output paths: inside a workspace, the run folder its CLAUDE.md names (`<runs>/<KEY>/...`). Work that belongs to a workspace run but to no stage, such as WP content for a Figma section, goes into that run's folder (the workspace's run-records file says where). Other results worth keeping go to `<data-root>/archive/<topic>/`; throwaway files go to the session's temp folder. Never into the ai-system repo. `<data-root>` is the path `python3 ../../data-root/data_root.py resolve` prints from this skill folder.
 
 For each unit write one row: name, inputs (paths), output (path or short value), depends on, tier. Use the format in [references/unit-table.md](references/unit-table.md).
 - A unit is one thing a worker can finish and you can check: one file, one probe, one stage, one module.
@@ -54,7 +56,7 @@ Every spawn sets the model explicitly. There are two tiers. **Mid is the floor. 
 
 Rules:
 - A retry goes one tier above the first attempt (mid -> strong; strong -> the "hardest" row in the harness file). In Cursor, Grok strong escalates to Claude Opus, not to a higher Grok effort.
-- A rejected model falls back sideways (the same tier's alternate, for example Grok in Cursor) or up. Never down, never to a fast variant, never to unset.
+- Every tier slot is a ranked top 3: the primary plus up to 2 ordered `fallbacks`, best fit first (`models.py pick` prints them). When the harness has not enabled the primary or rejects it, walk that list in order: fallback 1, then fallback 2. Never skip ahead, never leave the list, never go below mid, never to a fast variant, never to unset. If none of the 3 is accepted, stop and report the unit with the 3 slugs tried.
 - A workspace may set a base tier per unit and list when to leave it. It fills the rows. This skill owns the format and these rules.
 
 Get the exact call fields for the current harness from `scripts/models.py`. Copy its output. Do not type a slug from memory:
@@ -62,8 +64,11 @@ Get the exact call fields for the current harness from `scripts/models.py`. Copy
 ```bash
 python3 scripts/models.py pick --harness claude-code --tier mid
 python3 scripts/models.py pick --harness cursor --tier strong --family grok --retry
-python3 scripts/models.py check --harness cursor   # mapped slugs still exist and none is fast
+python3 scripts/models.py pick --harness cursor --tier strong --available <enabled,slugs>  # first of the 3 that is enabled
+python3 scripts/models.py check --harness cursor   # every primary and fallback still exists and none is fast
 ```
+
+`pick` prints the call fields and a `fallbacks:` line (add `--json` for one JSON object). With `--available` it starts at the first of the 3 in that set, and exits 2 when none is. `check` prints `SKIP: cursor-agent models unavailable (...)` when it cannot list the models (offline or sandboxed); that is "not verified", not a failure.
 
 If the script cannot run, read the harness file: [Claude Code](references/harness-claude-code.md), [Cursor](references/harness-cursor.md). The mapping lives in [references/tiers.json](references/tiers.json).
 
@@ -92,5 +97,5 @@ One line per finished unit:
 
 ## 8. Optional pieces
 
-- **Run lock** (single-run workflows): before the first spawn, write the lock file with the run key on line 1 and the start time on line 2. If it names a different key, stop and report it. Remove it when the run ends or is stopped.
+- **Run claim** (keyed workflows): before the first spawn, claim the run key (`python3 ../../data-root/run_claim.py claim --ws <ws> --key <KEY>` from this skill folder; "Run claims" in `_core/CONVENTIONS.md`) and keep the `claimId` it prints. A live claim on the same key stops the run: report the claim it names. A stale one (its process or checkout is gone) is replaced and reported, and the run continues from its records. Runs on other keys go on at the same time; never a workspace-wide lock file. After each unit passes its check, commit the run folder (`run_claim.py commit`). When the run ends or is stopped, end the claim in a separate shell call (`run_claim.py end --ws <ws> --key <KEY> --claim-id <claimId>`), never chained after `commit` with `&&`. `release --token` is the deprecated name of `end --claim-id`.
 - **Independent verifier**: a fresh worker that gets only the change summary and the paths to check, never the implementer's brief or return. Tier at least the implementer's.

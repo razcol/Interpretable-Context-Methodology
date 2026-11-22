@@ -6,7 +6,7 @@ Try to break every gate in a fresh context, and report what gets through.
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Previous stage | `../05-implement/output/change-log.md` | Full file | Rules, branch, check command, protected files |
+| Previous stage | `<runs>/<KEY>/05-implement/change-log.md` | Full file | Rules, branch, check command, protected files |
 | Target repo | The branch named in the change log | Read through a disposable worktree | The code under test |
 | Shared | `../../shared/tamper-protection.md` | "Bypass Attempts" | The bypass list |
 | Shared | `../../shared/dispatch.md` | "Independent Verification" | Why the context must be fresh |
@@ -35,4 +35,4 @@ Try to break every gate in a fresh context, and report what gets through.
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Verification report | `output/verification-report.md` | Verdict, Rule Results, Bypass Results, Gaps |
+| Verification report | `<runs>/<KEY>/06-verify/verification-report.md` | Verdict, Rule Results, Bypass Results, Gaps |

@@ -1,6 +1,6 @@
 # Mobile patterns
 
-How a section handles mobile in any of the five section repos (ora, smart, jaecoo, luxury-trade, omoda). App roots: `/home/dev/ora-next/code/app`, `/home/dev/smart-next/code/app`, `/home/dev/jaecoo-next/code/app`, `/home/dev/colmobil-luxury-trade/code/app`, `/home/dev/omoda-next/code/app`. This file holds the rules. Per-repo values (breakpoint queries, theme mixins, layout heights, hover gate) live in the repo profile, defined in [repo-profile.md](repo-profile.md). Bracketed ids like `[657777ae]` are chat transcript ids, not commits.
+How a section handles mobile in any of the five section repos (ora, smart, jaecoo, luxury-trade, omoda). App roots: `<root>/code/app` for each repo's root in `<data-root>/workspaces/figma-section-fields/repos.md`. This file holds the rules. Per-repo values (breakpoint queries, theme mixins, layout heights, hover gate) live in the repo profile, defined in [repo-profile.md](repo-profile.md). Bracketed ids like `[657777ae]` are chat transcript ids, not commits.
 
 ## Breakpoints
 
