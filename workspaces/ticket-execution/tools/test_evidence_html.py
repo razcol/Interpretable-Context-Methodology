@@ -66,7 +66,7 @@ class WslPath(unittest.TestCase):
         with mock.patch.dict("os.environ", {}, clear=False):
             import os
             os.environ.pop("WSL_DISTRO_NAME", None)
-            self.assertEqual(evidence_html.wsl_path("/home/me/a.html"), "\\\\wsl.localhost\\Ubuntu\\home\\me\\a.html")
+            self.assertEqual(evidence_html.wsl_path("/srv/work/a.html"), "\\\\wsl.localhost\\Ubuntu\\srv\\work\\a.html")
 
     def test_env_distro(self):
         with mock.patch.dict("os.environ", {"WSL_DISTRO_NAME": "Debian"}):
