@@ -17,11 +17,14 @@
 //   {"action":"eval","expression":"document.title"}   (read-only DOM inspection; mutating expressions are refused; the result is scrubbed)
 //   {"action":"assert_text","contains":"...","selector":"css(optional, default body)"}
 //   {"action":"assert_url","contains":"..."}
-//   {"action":"screenshot","name":"file-base","fullPage":false,"selector":"css(optional)"}
+//   {"action":"screenshot","name":"file-base","fullPage":false,"selector":"css(optional)","annotations":[...](optional)}
+//     annotations: box/arrow/badge marks drawn in a temporary overlay removed right after capture (schema: scripts/annotate.js);
+//     the result then has annotations: [{index, type, selector?, applied, rect?, reason?}]. A missing selector gives applied:false, not a failure.
 // On a failing step the error carries details.consoleErrors, details.responses and details.steps (steps completed so far), scrubbed like normal output.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, run, withBrowser, freshPage, gotoStable, freezeAnimations, parseViewport, ensureDir, fileInfo, profileOf, timeoutOf, waitForSelector, CliError, EXIT, DEFAULT_OUT } from './lib.js';
+import { validateAnnotations, withAnnotations } from './annotate.js';
 
 const ACTIONS = ['goto', 'click', 'hover', 'type', 'press', 'select', 'wait_for', 'get_text', 'get_attr', 'eval', 'assert_text', 'assert_url', 'screenshot'];
 
@@ -62,6 +65,10 @@ function loadSteps(args) {
   if (steps.length === 0) throw new CliError('USAGE', 'Steps must be a non-empty JSON array', EXIT.USAGE);
   steps.forEach((s, i) => {
     if (!s || !ACTIONS.includes(s.action)) throw new CliError('USAGE', `Step ${i}: unknown action "${s && s.action}". Allowed: ${ACTIONS.join(', ')}`, EXIT.USAGE);
+    if (s.annotations !== undefined) {
+      if (s.action !== 'screenshot') throw new CliError('USAGE', `Step ${i} (${s.action}): "annotations" is only valid on a screenshot step`, EXIT.USAGE);
+      validateAnnotations(s.annotations, `Step ${i} annotations`);
+    }
   });
   return steps;
 }
@@ -292,16 +299,18 @@ async function runSteps(browser, args, steps, secrets, { timeout, outDir, vp, wa
           case 'screenshot': {
             await freezeAnimations(page);
             const file = path.join(outDir, `${String(need(s, i, 'name')).replace(/[^a-zA-Z0-9._-]/g, '-')}.png`);
+            let applied;
             if (s.selector !== undefined) {
               const el = await waitForSelector(page, s.selector, timeout, { visible: true });
               await el.evaluate((e) => e.scrollIntoView({ block: 'center', inline: 'center' }));
-              await el.screenshot({ path: file });
+              ({ annotations: applied } = await withAnnotations(page, s.annotations, { target: el }, () => el.screenshot({ path: file })));
               r.selector = s.selector;
             } else {
-              await page.screenshot({ path: file, fullPage: s.fullPage === true });
+              ({ annotations: applied } = await withAnnotations(page, s.annotations, { fullPage: s.fullPage === true }, () => page.screenshot({ path: file, fullPage: s.fullPage === true })));
               if (s.fullPage === true) r.fullPage = true;
             }
             r.file = fileInfo(file);
+            if (applied) r.annotations = applied;
             break;
           }
           default:

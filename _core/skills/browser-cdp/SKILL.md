@@ -43,7 +43,7 @@ A profile name must match `^[a-z0-9][a-z0-9-]{0,40}$`: lowercase letters, digits
 | Need | Script | Key arguments | You get |
 |------|--------|---------------|---------|
 | Is this page reachable and ready? | `navigate.js` | `--url`, `--fresh-context` for a visitor with no cookies or storage | status, final URL, title, ready time |
-| Screenshot(s) | `screenshot.js` | `--url`, `--viewports 375x812,1280x800`, `--full-page` or `--selector` | PNG paths, sizes, sha256 |
+| Screenshot(s) | `screenshot.js` | `--url`, `--viewports 375x812,1280x800`, `--full-page` or `--selector`, optional `--annotations` / `--annotations-file` | PNG paths, sizes, sha256, per-annotation `applied` results |
 | Console, page errors, failed/4xx requests | `capture.js` | `--url`, `--out details.json` | counts plus the first 50 of each |
 | Page structure for reasoning | `snapshot.js` | `--url`, `--mode a11y\|dom\|html\|text`, `--selector` | file path plus stats |
 | Compare two screenshots | `diff.js` | `--baseline`, `--current`, `--max-diff-ratio`, `--init` | match, diff ratio, diff PNG |
@@ -86,6 +86,30 @@ An HTTP 404 or 500 is not a script failure. Check `status` in the JSON.
 - File names are `<name>__<W>x<H>[__full|__sel-x].png`. Same command, same names.
 - Page text, time, ads and other live content can still change pixels. For diffs on live sites use `--max-diff-ratio` and compare against a baseline from the same machine.
 
+## Annotated screenshots
+
+`screenshot.js` (`--annotations '<json>'` or `--annotations-file FILE`, never both: USAGE) and the `interact.js` `screenshot` action (`annotations: [...]`) can mark up a capture. Marks are a temporary DOM/SVG overlay (`#__bcdp-overlay`, `pointer-events: none`, `z-index: 2147483647`) injected just before the capture and removed in a `finally` right after it, so the page is left untouched and a later clean shot of the same tab has `diffRatio` 0. No image library or new dependency is involved. The code is `scripts/annotate.js`.
+
+Annotations are a JSON array. Bad JSON, a non-array, an unknown `type`, an unknown key or a bad field value is `USAGE` (exit 1).
+
+| `type` | Fields | Draws |
+|--------|--------|-------|
+| `box` | `selector` or `rect {x,y,width,height}` (one required), `badge` (number or string), `label`, `color`, `padding` (default 4) | A stroked rectangle around the target. The badge sits on the top-left outer corner; the label sits above the top edge (below the bottom edge when there is no room above). |
+| `arrow` | `to` (required) and optional `from`, each `{x,y}` or a CSS selector; `label`, `color` | A line with an arrowhead. A selector end stops at the element's edge, not its center. Without `from` the tail starts 90 px away diagonally. The label sits behind the tail. |
+| `badge` | `selector` or both `x` and `y`; `text` (required); `position` `top-left` (default) `\|top-right\|bottom-left\|bottom-right` (selector only); `color` | A small pill centered on the element's outer corner or on the point. |
+
+- Default color is `#ff2d55`. `color` accepts hex, a color name, `rgb()` or `hsl()`. Text is limited to 120 characters. If both `selector` and coordinates are given, the selector wins.
+- Coordinates you pass (`rect`, points, `x`/`y`) are in the capture frame: viewport pixels for a normal shot (overlay `position: fixed`), document pixels for `--full-page` / `fullPage` (overlay `position: absolute`, scroll offset added to selector rects), and pixels relative to the element's top-left for `--selector` (overlay clipped to the element; selectors elsewhere on the page only draw where they overlap it). The `rect` in the results uses the same frame.
+- Badges and labels are clamped inside the frame, so they never leave the image and stay off the target's center.
+- Each screenshot result (every `screenshots[]` entry, or the step result in `interact.js`) gets `annotations: [{index, type, selector?, applied, rect?, reason?}]`. A selector that is missing, invalid, zero-size or entirely outside the capture area gives `applied: false` with a `reason`; the run still exits 0. Check `applied` before trusting a mark. Without annotations the key is absent and output is unchanged. For an arrow, `selector` is the `to` selector (or the `from` selector when `to` is a point).
+
+```bash
+node scripts/screenshot.js --url http://localhost:3000/ --name home --out-dir ./shots \
+  --annotations '[{"type":"box","selector":"#cta","badge":1,"label":"primary action"},{"type":"arrow","to":"#price","label":"wrong"}]'
+```
+
+Annotated PNGs are for humans and reports, not baselines: do not pass them to `diff.js` as the baseline. Take a clean shot for diffs. Re-verify with `bash fixtures/run-annotate.sh [OUT_DIR]` (browser started; it starts the fixture server itself if port 8765 is free).
+
 ## Interaction steps
 
 `interact.js` reuses the current tab, so a login flow can span several calls. It stops at the first failing step and reports `failedStep`.
@@ -98,7 +122,7 @@ Full examples: `references/recipes.md`.
 | `hover` | `selector` | Waits for the element to be visible, then moves the pointer over it (`page.hover`). A fixed overlay on top of the element receives the hover instead. |
 | `get_attr` | `selector`, `attr` | Result `{attr, value}`; `value` is `null` when the attribute is absent. Truncated at 2000 characters. |
 | `eval` | `expression` | Evaluates a read-only DOM inspection expression on the page (for example `document.title` or `[...document.querySelectorAll("a")].length`). The result is scrubbed through the secrets list and returned as `value` (JSON-serializable, over 4000 characters becomes `{truncated, preview}`). |
-| `screenshot` | `name`, optional `fullPage: true`, optional `selector` | `fullPage` captures the whole scrollable page. `selector` scrolls the element into view and captures just that element (it wins over `fullPage`). The result has `file` and echoes `fullPage` or `selector`. |
+| `screenshot` | `name`, optional `fullPage: true`, optional `selector`, optional `annotations: [...]` | `fullPage` captures the whole scrollable page. `selector` scrolls the element into view and captures just that element (it wins over `fullPage`). The result has `file` and echoes `fullPage` or `selector`. With `annotations` the result also has `annotations: [{index, type, selector?, applied, rect?, reason?}]` (see "Annotated screenshots"). Bad annotations exit USAGE before any step runs; `annotations` on any other action is USAGE too. |
 
 `eval` is a safety net, not a sandbox. It refuses with `USAGE` any expression that, after string literals are removed, contains an assignment, `++`/`--`, `new`, `delete`, `fetch`/`XMLHttpRequest`/`WebSocket`/`sendBeacon`, timers, `eval`/`Function`/`import`, storage or `cookie` or `location`/`history` access, or a mutating call (`.click(`, `.submit(`, `.remove(`, `.append*(`, `.setAttribute(`, `.set*(`, `.dispatchEvent(`, `.scroll*(` and similar). Use `click`/`type` steps to change the page, never `eval`.
 
@@ -130,7 +154,7 @@ When a step fails, the error is `{"ok": false, "error": {"code", "message", "det
 - `references/setup.md`: install and verify
 - `references/recipes.md`: the first test case, visual regression loop, login reuse, data gathering
 - `references/troubleshooting.md`: common failures and fixes
-- `fixtures/`: a local test page and server plus `run-all.sh`, `run-extra.sh`, `run-persist.sh` to re-verify the scripts after any change
+- `fixtures/`: a local test page and server plus `run-all.sh`, `run-extra.sh`, `run-persist.sh`, `run-annotate.sh` to re-verify the scripts after any change
 - `<data-root>/log/browser-cdp/LOG.md`: usage log, keep updating
 
 ## Checking a section export

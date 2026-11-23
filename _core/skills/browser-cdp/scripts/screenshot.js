@@ -1,9 +1,14 @@
 // Usage: node scripts/screenshot.js --url URL [--viewports 1280x800,375x812] [--full-page | --selector CSS]
 //        [--out-dir DIR (default: ~/.cache/browser-cdp/out or $BCDP_OUT)] [--name BASE] [--wait-for CSS] [--profile NAME] [--timeout MS]
+//        [--annotations '<json array>' | --annotations-file FILE]
 // Output files: <out-dir>/<name>__<W>x<H>[__full|__sel-<slug>].png  (name defaults to a slug of the URL)
+// --annotations draws box/arrow/badge marks in a temporary DOM/SVG overlay (#__bcdp-overlay) that is removed right after the
+// capture; each screenshots[] entry then carries annotations: [{index, type, selector?, applied, rect?, reason?}].
+// A selector that is not on the page gives applied:false (exit stays 0). Schema: see scripts/annotate.js.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, run, withBrowser, freshPage, gotoStable, freezeAnimations, parseViewport, slugFromUrl, ensureDir, fileInfo, profileOf, timeoutOf, waitForSelector, CliError, EXIT, DEFAULT_OUT } from './lib.js';
+import { loadAnnotations, withAnnotations } from './annotate.js';
 
 function pngSize(file) {
   const b = fs.readFileSync(file);
@@ -12,11 +17,12 @@ function pngSize(file) {
 
 run(async () => {
   const args = parseArgs(process.argv.slice(2), {
-    strings: ['url', 'out-dir', 'viewports', 'name', 'selector', 'wait-for', 'profile', 'timeout'],
+    strings: ['url', 'out-dir', 'viewports', 'name', 'selector', 'wait-for', 'profile', 'timeout', 'annotations', 'annotations-file'],
     booleans: ['full-page'],
     required: ['url'],
   });
   if (args.selector && args.fullPage) throw new CliError('USAGE', 'Use either --selector or --full-page, not both', EXIT.USAGE);
+  const annotations = loadAnnotations(args);
   const viewports = (args.viewports || '1280x800').split(',').map((s) => parseViewport(s.trim()));
   const outDir = ensureDir(args.outDir || DEFAULT_OUT);
   const base = args.name || slugFromUrl(args.url);
@@ -33,13 +39,16 @@ run(async () => {
         nav = await gotoStable(page, args.url, { timeout, waitFor: args.waitFor });
         await freezeAnimations(page);
         const file = path.join(outDir, `${base}__${vp.width}x${vp.height}${suffix}.png`);
+        let applied;
         if (args.selector) {
           const el = await waitForSelector(page, args.selector, timeout);
-          await el.screenshot({ path: file });
+          // With annotations, settle the scroll first so the overlay and the element clip agree.
+          if (annotations.length) await el.evaluate((e) => e.scrollIntoView({ block: 'center', inline: 'center' }));
+          ({ annotations: applied } = await withAnnotations(page, annotations, { target: el }, () => el.screenshot({ path: file })));
         } else {
-          await page.screenshot({ path: file, fullPage: Boolean(args.fullPage) });
+          ({ annotations: applied } = await withAnnotations(page, annotations, { fullPage: Boolean(args.fullPage) }, () => page.screenshot({ path: file, fullPage: Boolean(args.fullPage) })));
         }
-        screenshots.push({ viewport: `${vp.width}x${vp.height}`, ...fileInfo(file), image: pngSize(file), networkSettled: nav.networkSettled });
+        screenshots.push({ viewport: `${vp.width}x${vp.height}`, ...fileInfo(file), image: pngSize(file), networkSettled: nav.networkSettled, ...(applied ? { annotations: applied } : {}) });
       } finally {
         await page.close();
       }

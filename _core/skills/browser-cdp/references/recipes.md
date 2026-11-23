@@ -89,3 +89,31 @@ node scripts/state.js cookies-clear --domain example.com
 ```
 
 `./secret/` must be gitignored.
+
+## 7. Annotated screenshots (evidence for a human)
+
+Mark the elements a report is about. The overlay is removed right after capture, so nothing in the page changes.
+
+```bash
+# Static page: box with a number badge and a label, an arrow to another element, a corner badge
+node scripts/screenshot.js --url http://localhost:3000/ --name home --out-dir ./shots --annotations '[
+  {"type":"box","selector":"#hero h1","badge":1,"label":"heading"},
+  {"type":"arrow","from":{"x":900,"y":120},"to":"#cta","label":"CTA"},
+  {"type":"badge","selector":"#cta","text":"2","position":"bottom-right","color":"#2563eb"}
+]'
+
+# Longer lists in a file; full page uses document coordinates
+node scripts/screenshot.js --url http://localhost:3000/ --full-page --annotations-file ./marks.json
+
+# Inside a flow, after a step changed the page
+node scripts/interact.js --steps '[
+  {"action":"click","selector":"#submit"},
+  {"action":"wait_for","text":"Welcome"},
+  {"action":"screenshot","name":"after-submit","annotations":[{"type":"box","selector":"#result","badge":1,"label":"result"}]}
+]'
+```
+
+- Read `screenshots[].annotations` (or `results[n].annotations`): each entry has `applied`. `applied: false` with a `reason` (selector not found, zero-size, outside the capture area) is not a failure, so check it before attaching the image as evidence.
+- With `--selector`, `rect`/point/`x`,`y` values are relative to the captured element's top-left corner. With `--full-page` they are document pixels. Otherwise they are viewport pixels.
+- Annotated images are never baselines. Run `diff.js` on clean shots only.
+- To test the feature: `bash fixtures/run-annotate.sh`.

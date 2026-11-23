@@ -6,7 +6,8 @@ Usage:
 
 Reads from the run folder:
   01-intake/attachments/*   ticket images (also images directly in 01-intake/)
-  05-verify/shots/**        verification screenshots (png, jpg, jpeg, webp, gif)
+  03b-baseline/shots/**     Before (Baseline) screenshots, when present
+  05-verify/shots/**        verification screenshots, the Annotated After (png, jpg, jpeg, webp, gif)
   05-verify/verify-report.md  checklist rows (PASS, FAIL, NOT VERIFIED), when present
 
 Only real images are embedded: the extension must be an image type, the first bytes
@@ -18,12 +19,18 @@ embedded as base64 data: URIs, so the file needs no server, no network and no
 sibling files. The page carries a Content-Security-Policy that blocks scripts and
 every external request. On WSL, open it from Windows through the wslPath below.
 
-Cards pair the Nth ticket image with the Nth verified screenshot (ticket vs verified);
-leftovers get a card of their own.
+With baseline shots, "Before vs. After" pairs each baseline shot with the verified shot
+of the same filename stem (case-insensitive, so row1__1440x900.png meets
+row1__1440x900.png). Unmatched shots get "Before only" or "After only" cards. Ticket
+images then go in a separate "Ticket Reference" section.
+
+Without baseline shots (older runs), the Nth ticket image pairs with the Nth verified
+screenshot (ticket vs verified); leftovers get a card of their own.
 
 Prints one JSON object:
   {"ok": true, "html": "<linux path>", "wslPath": "\\\\wsl.localhost\\<distro>\\<path>",
-   "beforeCount": N, "afterCount": M, "skipped": K, "checklist": {...}}
+   "beforeCount": N (ticket images), "afterCount": M (verified shots),
+   "baselineCount": B (baseline shots), "skipped": K, "checklist": {...}}
 Exit codes: 0 done, 2 the run folder is missing or the file cannot be written.
 """
 
@@ -94,6 +101,11 @@ def collect_before(run_dir):
     a, sa = list_images(intake / "attachments", run_dir, recursive=True)
     b, sb = list_images(intake, run_dir)
     return a + b, sa + sb
+
+
+def collect_baseline(run_dir):
+    """Before (Baseline) screenshots from 03b-baseline/shots, searched recursively."""
+    return list_images(Path(run_dir, "03b-baseline", "shots"), run_dir, recursive=True)
 
 
 def collect_after(run_dir):
@@ -172,6 +184,45 @@ def build_cards(before, after, run_dir):
     return cards
 
 
+def pair_by_stem(baseline, after):
+    """[(stem, baseline path or None, after path or None)] sorted by lowercase stem.
+
+    Files match on the case-insensitive filename stem. Files that share a stem (in
+    different folders) pair in sorted order, so the result is deterministic.
+    """
+    groups = {}
+    for side, paths in ((0, baseline), (1, after)):
+        for p in paths:
+            groups.setdefault(p.stem.lower(), ([], []))[side].append(p)
+    pairs = []
+    for key in sorted(groups):
+        bs, as_ = groups[key]
+        for i in range(max(len(bs), len(as_))):
+            b = bs[i] if i < len(bs) else None
+            a = as_[i] if i < len(as_) else None
+            pairs.append(((b or a).stem, b, a))
+    return pairs
+
+
+def build_baseline_cards(baseline, after, run_dir):
+    cards = []
+    for stem, b, a in pair_by_stem(baseline, after):
+        parts = []
+        if b:
+            parts.append(figure(b, "Before (Baseline)", run_dir))
+        if a:
+            parts.append(figure(a, "After (Annotated)", run_dir))
+        title = "Before vs. After: " if b and a else ("Before only: " if b else "After only: ")
+        cards.append(f'<section class="card"><h3>{html.escape(title + stem)}</h3>'
+                     f'<div class="pair">{"".join(parts)}</div></section>')
+    return cards
+
+
+def build_ticket_cards(before, run_dir):
+    return [f'<section class="card"><h3>Ticket #{i}</h3><div class="pair">'
+            f'{figure(p, "Ticket", run_dir)}</div></section>' for i, p in enumerate(before, 1)]
+
+
 STYLE = """
 body{font:15px/1.5 system-ui,sans-serif;margin:0;background:#f4f5f7;color:#1d2125}
 header,main{max-width:1280px;margin:0 auto;padding:16px 24px}
@@ -190,19 +241,30 @@ details{margin-top:12px}pre{white-space:pre-wrap;background:#fff;border:1px soli
 """
 
 
-def render(key, before, after, rows, counts, report_text, run_dir):
+def render(key, before, after, rows, counts, report_text, run_dir, baseline=()):
     esc = html.escape
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    if baseline:
+        meta = (f'Generated {stamp}. Baseline screenshots: {len(baseline)}. '
+                f'Verified screenshots: {len(after)}. Ticket images: {len(before)}.')
+    else:
+        meta = f'Generated {stamp}. Ticket images: {len(before)}. Verified screenshots: {len(after)}.'
     out = [f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
            f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
            f'<title>{esc(key)} evidence</title><style>{STYLE}</style></head><body>',
-           f'<header><h1>{esc(key)}: evidence</h1><div class="meta">Generated '
-           f'{datetime.now().strftime("%Y-%m-%d %H:%M")}. Ticket images: {len(before)}. '
-           f'Verified screenshots: {len(after)}.</div></header><main>']
-    out.append("<h2>Screenshots</h2>")
-    if before or after:
-        out += build_cards(before, after, run_dir)
+           f'<header><h1>{esc(key)}: evidence</h1><div class="meta">{meta}</div></header><main>']
+    if baseline:
+        out.append("<h2>Before vs. After</h2>")
+        out += build_baseline_cards(baseline, after, run_dir)
+        if before:
+            out.append("<h2>Ticket Reference</h2>")
+            out += build_ticket_cards(before, run_dir)
     else:
-        out.append('<p class="meta">No ticket images or verification screenshots were found.</p>')
+        out.append("<h2>Screenshots</h2>")
+        if before or after:
+            out += build_cards(before, after, run_dir)
+        else:
+            out.append('<p class="meta">No ticket images or verification screenshots were found.</p>')
     out.append("<h2>Checklist</h2>")
     if rows:
         total = counts["pass"] + counts["fail"] + counts["notVerified"]
@@ -240,12 +302,14 @@ def main(argv=None):
 
     before, skipped_before = collect_before(run_dir)
     after, skipped_after = collect_after(run_dir)
+    baseline, skipped_baseline = collect_baseline(run_dir)
     report = run_dir / "05-verify" / "verify-report.md"
     rows, counts = parse_checklist(report)
     report_text = report.read_text(errors="replace") if report.is_file() else ""
     try:
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(render(key, before, after, rows, counts, report_text, run_dir), encoding="utf-8")
+        out.write_text(render(key, before, after, rows, counts, report_text, run_dir, baseline),
+                       encoding="utf-8")
     except OSError as e:
         fail(f"cannot write {out}: {e}")
 
@@ -255,7 +319,8 @@ def main(argv=None):
         "wslPath": wsl_path(out),
         "beforeCount": len(before),
         "afterCount": len(after),
-        "skipped": skipped_before + skipped_after,
+        "baselineCount": len(baseline),
+        "skipped": skipped_before + skipped_after + skipped_baseline,
         "checklist": counts,
     }))
 

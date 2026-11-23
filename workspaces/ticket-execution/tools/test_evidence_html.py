@@ -33,8 +33,12 @@ Some prose with PASS in it is not a row.
 """
 
 
-def make_run(tmp, before=(), after=(), report=None):
+def make_run(tmp, before=(), after=(), report=None, baseline=()):
     run = Path(tmp, "runs", "ABC-1")
+    for name, data in baseline:
+        p = run / "03b-baseline" / "shots" / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
     for name, data in before:
         p = run / "01-intake" / "attachments" / name
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -169,6 +173,112 @@ class Cli(unittest.TestCase):
             code, out = run_main([str(Path(tmp, "nope"))])
         self.assertEqual(code, 2)
         self.assertFalse(out["ok"])
+
+
+class BaselineCollect(unittest.TestCase):
+    def test_collect_baseline_recursive_and_skips_fake(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = make_run(tmp, baseline=[("a.png", PNG), ("sub/b.jpg", JPG), ("fake.png", b"nope"), ("n.txt", b"x")])
+            run = run.resolve()
+            shots, skipped = evidence_html.collect_baseline(run)
+        self.assertEqual(sorted(p.name for p in shots), ["a.png", "b.jpg"])
+        self.assertEqual(skipped, 1)
+
+    def test_collect_baseline_missing_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = make_run(tmp).resolve()
+            self.assertEqual(evidence_html.collect_baseline(run), ([], 0))
+
+    def test_pair_by_stem_case_insensitive_and_deterministic(self):
+        b = [Path("x/Row1__1440x900.png"), Path("x/only_b.png")]
+        a = [Path("y/row1__1440x900.PNG"), Path("y/only_a.png")]
+        pairs = evidence_html.pair_by_stem(b, a)
+        self.assertEqual([(s, bool(pb), bool(pa)) for s, pb, pa in pairs],
+                         [("only_a", False, True), ("only_b", True, False), ("Row1__1440x900", True, True)])
+        self.assertEqual(pairs, evidence_html.pair_by_stem(list(reversed(b)), list(reversed(a))))
+
+
+class BaselineCli(unittest.TestCase):
+    def render_run(self, **kw):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = make_run(tmp, **kw)
+            code, out = run_main([str(run)])
+            self.assertEqual(code, 0)
+            return out, Path(out["html"]).read_text()
+
+    def test_filename_matched_pairing(self):
+        out, text = self.render_run(baseline=[("row1__1440x900.png", PNG), ("row2__375x812.png", PNG)],
+                                    after=[("row1__1440x900.png", PNG), ("ROW2__375x812.png", PNG)])
+        self.assertIn("<h2>Before vs. After</h2>", text)
+        self.assertNotIn("<h2>Screenshots</h2>", text)
+        self.assertIn("Before vs. After: row1__1440x900", text)
+        self.assertIn("Before vs. After: row2__375x812", text)
+        self.assertEqual(text.count("Before (Baseline)"), 2)
+        self.assertEqual(text.count("After (Annotated)"), 2)
+        self.assertNotIn("Before only", text)
+        self.assertNotIn("After only", text)
+        # Before sits left of After inside each card.
+        card = text.split("Before vs. After: row1__1440x900", 1)[1].split("</section>", 1)[0]
+        self.assertLess(card.index("Before (Baseline)"), card.index("After (Annotated)"))
+        self.assertIn("Baseline screenshots: 2", text)
+        self.assertIn("Verified screenshots: 2", text)
+        self.assertIn("Ticket images: 0", text)
+        self.assertNotIn("Ticket Reference", text)
+
+    def test_unmatched_cards(self):
+        out, text = self.render_run(baseline=[("both.png", PNG), ("gone.png", PNG)],
+                                    after=[("both.png", PNG), ("new.jpg", JPG)])
+        self.assertIn("Before vs. After: both", text)
+        self.assertIn("Before only: gone", text)
+        self.assertIn("After only: new", text)
+        self.assertEqual(text.count("Before (Baseline)"), 2)
+        self.assertEqual(text.count("After (Annotated)"), 2)
+        self.assertNotIn("Ticket vs verified", text)
+
+    def test_ticket_reference_coexists(self):
+        out, text = self.render_run(before=[("ticket.png", PNG)], baseline=[("a.png", PNG)], after=[("a.png", PNG)])
+        self.assertIn("<h2>Before vs. After</h2>", text)
+        self.assertIn("<h2>Ticket Reference</h2>", text)
+        self.assertLess(text.index("<h2>Before vs. After</h2>"), text.index("<h2>Ticket Reference</h2>"))
+        self.assertLess(text.index("<h2>Ticket Reference</h2>"), text.index("<h2>Checklist</h2>"))
+        ref = text.split("<h2>Ticket Reference</h2>", 1)[1].split("<h2>Checklist</h2>", 1)[0]
+        self.assertIn("ticket.png", ref)
+        self.assertNotIn("a.png", ref)
+        self.assertIn("Ticket images: 1", text)
+        self.assertEqual((out["beforeCount"], out["afterCount"], out["baselineCount"]), (1, 1, 1))
+
+    def test_baseline_count_and_skipped(self):
+        out, text = self.render_run(before=[("t.png", PNG), ("tfake.png", b"bad")],
+                                    baseline=[("a.png", PNG), ("fake.png", b"not an image"), ("fake2.jpg", b"")],
+                                    after=[("a.png", PNG), ("afake.png", b"zzz")])
+        self.assertEqual(out["baselineCount"], 1)
+        self.assertEqual(out["beforeCount"], 1)
+        self.assertEqual(out["afterCount"], 1)
+        self.assertEqual(out["skipped"], 4)
+        self.assertEqual(set(out), {"ok", "html", "wslPath", "beforeCount", "afterCount",
+                                    "baselineCount", "skipped", "checklist"})
+
+    def test_titles_escaped(self):
+        out, text = self.render_run(baseline=[("a<b>.png", PNG)], after=[("A<B>.png", PNG)])
+        self.assertIn("Before vs. After: a&lt;b&gt;", text)
+        self.assertNotIn("a<b>", text)
+
+    def test_baseline_only_run(self):
+        out, text = self.render_run(baseline=[("a.png", PNG)])
+        self.assertIn("Before only: a", text)
+        self.assertEqual((out["beforeCount"], out["afterCount"], out["baselineCount"]), (0, 0, 1))
+        self.assertIn("Content-Security-Policy", text)
+        self.assertNotIn("<script", text)
+
+    def test_legacy_run_unchanged(self):
+        out, text = self.render_run(before=[("t.png", PNG)], after=[("a.png", PNG), ("b.png", PNG)])
+        self.assertEqual(out["baselineCount"], 0)
+        self.assertIn("<h2>Screenshots</h2>", text)
+        self.assertIn("Ticket vs verified #1", text)
+        self.assertIn("Verified only #2", text)
+        self.assertNotIn("Before vs. After", text)
+        self.assertNotIn("Ticket Reference", text)
+        self.assertNotIn("Baseline screenshots", text)
 
 
 if __name__ == "__main__":

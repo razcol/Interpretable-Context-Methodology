@@ -605,6 +605,22 @@ class WriteRecordTests(unittest.TestCase):
         self.assertFalse(data["replaced"])
         self.assertFalse(Path(self.ws, "stages", "05-verify", "output").exists())
 
+    def test_writes_baseline_record_for_stage_03b(self):
+        Path(self.ws, "stages", "03b-baseline").mkdir(parents=True)
+        record = "version: 1\n\n# ABC-1 baseline\n\n- status: skipped (no UI-checkable rows)\n"
+        code, data = self.write("03b", "ABC-1", record)
+        target = Path(self.runs, "ABC-1", "03b-baseline", "baseline-record.md")
+        self.assertEqual(code, 0)
+        self.assertEqual(Path(data["path"]), target)
+        self.assertEqual(target.read_text(), record)
+        self.assertFalse(data["replaced"])
+        self.assertEqual(sorted(p.name for p in target.parent.iterdir()), ["baseline-record.md"])
+        self.assertFalse(Path(self.runs, "ABC-1", "03-plan").exists())
+        code, _ = self.write("03b", "ABC-1", "# no version\n")
+        self.assertEqual(code, 3)
+        code, _ = self.write("3b", "ABC-1", record)
+        self.assertEqual(code, 2)
+
     def test_data_root_flag_overrides_resolve(self):
         other = Path(self.tmp.name, "other")
         other.mkdir()

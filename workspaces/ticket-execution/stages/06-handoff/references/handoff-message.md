@@ -59,7 +59,7 @@ Branch `<branch>` in `<work tree>`, nothing staged or committed. Diff in Source 
 <Only when the plan or intake flagged a conflict between Jira text or comments and a ticket screenshot: **Ticket conflict (a note):** <Jira text or comment says X; the screenshot shows Y>. The change follows <X | Y>. Confirm which is right.>
 
 Checklist: <N> of <M> passed. Report: `<runs>/<KEY>/05-verify/verify-report.md`.
-Screenshots, one click: [`evidence.html`](<wslPath>) (Windows: `<wslPath>`; Linux: `<html path>`). Raw files: `<runs>/<KEY>/05-verify/shots/`.
+Before (Baseline) vs. Annotated After, one click: [`evidence.html`](<wslPath>) (Windows: `<wslPath>`; Linux: `<html path>`). Raw files: `<runs>/<KEY>/05-verify/shots/` (after) and `<runs>/<KEY>/03b-baseline/shots/` (before, when present).
 
 Next:
 - `approve <KEY>`: commit, push, and give you the PR link against `<PR target>`
@@ -86,7 +86,7 @@ On a `sessionStorage` root, add to the Not verified line that the session does n
 
 ## Evidence page
 
-Run `python3 <ws>/tools/evidence_html.py <runs>/<KEY> --key <KEY>` once, after the screenshots exist. It writes `<runs>/<KEY>/06-handoff/evidence.html` with the ticket images and the verify screenshots embedded, so one file opens anywhere with no server and no copied paths, and prints JSON with `html` (Linux path) and `wslPath` (`\\wsl.localhost\<distro>\...`, distro from `WSL_DISTRO_NAME`, default `Ubuntu`). Put both paths in the message next to the raw `shots/` path, as in the Checklist line above. The `wslPath` pastes into the Windows Explorer or browser address bar; the Linux path is for a WSL shell or editor. Copy the paths from the tool's output. Do not type them. When the tool fails, give the raw `shots/` path alone and say in one clause that the page was not built.
+Run `python3 <ws>/tools/evidence_html.py <runs>/<KEY> --key <KEY>` once, after the screenshots exist. It writes `<runs>/<KEY>/06-handoff/evidence.html`, which bundles the Before (Baseline) shots from `03b-baseline/shots/` and the Annotated After shots from `05-verify/shots/` side by side, paired by filename, as the proof of the change. The ticket attachments sit in a "Ticket Reference" section when present. A run without baseline shots gets the older Ticket vs verified layout. Every image is embedded, so one file opens anywhere with no server and no copied paths, and prints JSON with `html` (Linux path) and `wslPath` (`\\wsl.localhost\<distro>\...`, distro from `WSL_DISTRO_NAME`, default `Ubuntu`). Put both paths in the message next to the raw `shots/` path, as in the Checklist line above. The `wslPath` pastes into the Windows Explorer or browser address bar; the Linux path is for a WSL shell or editor. Copy the paths from the tool's output. Do not type them. When the tool fails, give the raw `shots/` path alone and say in one clause that the page was not built.
 
 ## Ticket conflicts
 

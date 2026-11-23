@@ -2,11 +2,12 @@
 """Write one stage's record when the Write tool cannot reach the data root (a chat rooted in the app repo).
 
 Usage:
-  write_record.py --stage <01..07> --key <KEY> [--data-root DIR] < record
+  write_record.py --stage <01..07 or 03b> --key <KEY> [--data-root DIR] < record
 
 The record text comes from stdin. There is no record path argument: the target is
 <data root>/workspaces/ticket-execution/runs/<KEY>/<NN-name>/<record>, with the record
-name fixed per stage (the table in shared/run-records.md). The data root is what
+name fixed per stage (the table in shared/run-records.md; stage 03b writes
+<KEY>/03b-baseline/baseline-record.md). The data root is what
 _core/data-root/data_root.py resolve prints for this ai-system checkout (--data-root
 overrides it, for tests). The folder is created when missing, and the whole file is
 replaced atomically.
@@ -31,6 +32,7 @@ RECORDS = {
     "01": ("01-intake", "intake.md"),
     "02": ("02-research", "research.md"),
     "03": ("03-plan", "plan.md"),
+    "03b": ("03b-baseline", "baseline-record.md"),
     "04": ("04-implement", "implement-record.md"),
     "05": ("05-verify", "verify-report.md"),
     "06": ("06-handoff", "handoff.md"),
@@ -67,7 +69,7 @@ def contained(folder, target):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stage", required=True, help="two-digit stage number, 01 to 07")
+    ap.add_argument("--stage", required=True, help="stage id: two digits, 01 to 07, or 03b (baseline)")
     ap.add_argument("--key", required=True, help="Jira key, for example NSS-8")
     ap.add_argument("--data-root", help="data checkout to write into (default: data_root.py resolve)")
     args = ap.parse_args()

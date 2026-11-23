@@ -17,6 +17,7 @@ ticket-execution/
     ├── 01-intake/       (ticket, images, comments into files; resolve the repo)
     ├── 02-research/     (where it lives, siblings, earlier decisions; read only)
     ├── 03-plan/         (plan.md with checklist, review URLs, and defaults; no stop)
+    ├── 03b-baseline/    (clean pre-edit screenshots from origin/<base>; skipped when nothing is UI-checkable; no stop)
     ├── 04-implement/    (branch or worktree, the change, lint; nothing staged)
     ├── 05-verify/       (browser checks per checklist row; server stays up)
     ├── 06-handoff/      (running app, URLs, diff summary; stops for you)
@@ -29,13 +30,13 @@ ticket-execution/
 |---------|--------|
 | `setup` | Run the onboarding questionnaire |
 | `status` | List keys and where each one waits, and the runs that hold a claim now (`shared/run-records.md`) |
-| `start <url or KEY>` | Orchestrate 01 through 06, then stop for your review. On a key with an earlier run, continue on the same branch |
-| `plan <KEY>` | Redo 03, then 04, 05, 06, then stop for your review |
+| `start <url or KEY>` | Orchestrate 01 through 06 (03b between 03 and 04), then stop for your review. On a key with an earlier run, continue on the same branch |
+| `plan <KEY>` | Redo 03, then 03b, 04, 05, 06, then stop for your review. 03b is skipped when its `baseline-record.md` already exists |
 | `implement <KEY>` | Resume when `plan.md` exists and `implement-record.md` does not: 04, 05, 06. `start` does not need this word |
 | `change <KEY>: <what>` | 04 (change pass), 05, 06, then stop again |
 | `approve <KEY>` | Re-claim the key, then 07: commit, push, PR link (Orchestrator step 4) |
 | `commit <KEY>` | Re-claim the key, then 07: commit only (Orchestrator step 4) |
-| `stop <KEY>` | `dev_server.py down` with the key's state file, then end the key's claim (`C end`) |
+| `stop <KEY>` | `dev_server.py down` with the key's state file (`03b-baseline/dev-server.json` when it exists, then `05-verify/dev-server.json`), then end the key's claim (`C end`) |
 
 A run is keyed by the Jira key. Its records live in `<runs>/<KEY>/0N-*/` in the data root (`shared/run-records.md`).
 
@@ -54,9 +55,9 @@ Runs on different keys run at the same time; only what they really share is clai
 
 Claim status: right after stage 06 and right after stage 07, the orchestrator's message has one line for the claim, so a stale lock is never silent. `claim: ended` when `end` printed `"ok": true`. Otherwise `claim: still held — <reason>` (the exit code and error `end` printed, or why `end` did not run yet, for example a checkpoint is waiting). Never leave the line out.
 
-Stages claim the rest themselves under the run's key: stage 04 its work tree and branch (`C target`), stages 05 and 06 the run's dev-server and browser ports (`C port`). No `.run-lock` file is written anywhere.
+Stages claim the rest themselves under the run's key: stage 03b (when it is not skipped) or else stage 04 its work tree and branch (`C target`), stages 03b, 05 and 06 the run's dev-server and browser ports (`C port`). Stage 04 reuses the work tree and branch 03b claimed. No `.run-lock` file is written anywhere.
 
-Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `<runs>/<KEY>/0N-*/`. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
+Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `<runs>/<KEY>/0N-*/` (`<runs>/<KEY>/03b-baseline/` for 03b). Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
 
 `<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/ticket-execution/runs`, the run folders (never `stages/*/output/` in this repo). `<checkout>` is the ai-system checkout this run is in: the path `python3 ../../_core/data-root/data_root.py checkout` prints from this workspace folder. `<ws>` is `<checkout>/workspaces/ticket-execution`. Tool paths in the stage files start at `<ws>` or `<checkout>`, so a run uses the tools of the checkout it runs in (a main checkout, another clone or a maintenance worktree), never another checkout's. Resolve all of them once per run and copy the real paths into every brief.
 
@@ -80,6 +81,7 @@ This table is the user's instruction for every stage spawn, in the skill's unit-
 | 01 intake | mid | Never; a failed audit retries as strong |
 | 02 research | mid | `intake.md` names more than one root, or has more than five acceptance lines |
 | 03 plan | strong | Always strong |
+| 03b baseline | mid | A row sends a form and "Form submits" is `yes`; the same as 05 verify. The scripted sign-in alone stays mid, and it never drops to light |
 | 04 implement | mid | The plan changes a shared service's exported signature or types, or touches auth, payments, `prisma/` or a root layout. A file that merely lives under `shared/` stays mid |
 | 04 change pass | mid | The change text adds behavior, or the pass comes after a FAIL. A simplify, reduce or remove pass stays mid |
 | 05 verify | mid | A row sends a form and "Form submits" is `yes`. The scripted sign-in alone stays mid |
@@ -88,18 +90,18 @@ This table is the user's instruction for every stage spawn, in the skill's unit-
 
 Today `models.py` gives mid `claude-sonnet-5-5-high` (fallbacks `gpt-5.6-sol-medium`, `gemini-4-neon-medium`), strong `claude-opus-5-5-medium` (fallbacks `claude-opus-5-5-high`, `grok-4.7-high`) and, for a strong retry, `claude-opus-5-5-high` (fallbacks `grok-4.7-high`, `gpt-5.6-sol-medium`). When the IDE has not enabled the primary, use the fallbacks in that order (`pick ... --available <enabled slugs>` chooses for you); if none of the 3 is enabled, stop and report the stage. No fast tier.
 
-### Before stage 05 on a login root
+### Before stage 03b and stage 05 on a login root
 
-This check runs before stage 05 on every trigger that reaches it (`start`, `plan`, `implement`, `change`). When the run's root is in `<data-root>/workspaces/ticket-execution/repos.md` "Test logins":
+This check runs before stage 05 on every trigger that reaches it (`start`, `plan`, `implement`, `change`), and before stage 03b on the triggers that run it (`start`, `plan`), when 03b needs a browser: `plan.md` has a UI-checkable row, `baseline-record.md` does not exist yet, and the branch is not already modified. When the run's root is in `<data-root>/workspaces/ticket-execution/repos.md` "Test logins":
 
 1. The secret keys exist: the `grep -c` command in `shared/repo-rows.md` "Test logins". It prints a count, never the values.
 2. "Form submits" is `yes` or `no`, or the plan has no checklist row that sends a form.
 
 When either fails, ask once in one message (the missing identity, and whether this dev backend may receive form submits), then stop. When the answer comes, write the values into the secrets file (mode 600) and the submit answer into the "Test logins" row, without repeating the values in chat.
 
-When "Form submits" is `no` and every checklist row sends a form, do not spawn 05. Spawn 06 and tell it the checklist cannot be verified on this backend (submit not allowed), so it posts that and does not open a browser. When some rows do not send a form, spawn 05.
+When "Form submits" is `no` and every checklist row sends a form, do not spawn 05. Spawn 06 and tell it the checklist cannot be verified on this backend (submit not allowed), so it posts that and does not open a browser. When some rows do not send a form, spawn 05. Stage 03b follows the same rule in its step 0: it skips itself and writes `status: skipped (form submits: no)`.
 
-Order for `start` and for `plan <KEY>`: the stages in the trigger, in number order. After 03, do not wait. Questions in `plan.md` already name a default, and stage 04 follows that file as written.
+Order for `start` and for `plan <KEY>`: the stages in the trigger, in number order, with 03b between 03 and 04. Spawn 03b only when `<runs>/<KEY>/03b-baseline/baseline-record.md` does not exist; `change <KEY>`, `implement <KEY>` and every later retry never spawn it, so baselines persist across passes. After 03, do not wait. Questions in `plan.md` already name a default, and stage 04 follows that file as written.
 
 When stage 05 returns FAIL rows caused by the change, spawn 04 once with those rows, then 05 again, then 06 even if a FAIL remains. A checkpoint that asks you to choose (an unknown repo root) stops the run. Report it and wait.
 
@@ -113,6 +115,7 @@ A background-command notice is not a server check (the skill's rule, applied her
 |------|-------|
 | Any new ticket | `stages/01-intake/CONTEXT.md` |
 | Plan or replan | `stages/03-plan/CONTEXT.md` |
+| Baseline screenshots before the edit | `stages/03b-baseline/CONTEXT.md` |
 | Implement or change | `stages/04-implement/CONTEXT.md` |
 | Release | `stages/07-release/CONTEXT.md` |
 | Which repo, branch name, base, PR link, test route | `<data-root>/workspaces/ticket-execution/repos.md`, read as `shared/repo-rows.md` says |
@@ -127,6 +130,7 @@ This table is for the subagent of that stage. The orchestrator loads this file a
 | 01 | Its CONTEXT and reference, `shared/tools.md` "intake.py", `<data-root>/workspaces/ticket-execution/repos.md`, `shared/repo-rows.md`, the jira-research SKILL sections named | The repo's code, later stages |
 | 02 | Its CONTEXT and reference, the key's `intake.md` and images, `shared/git-rules.md`, `shared/tools.md` "Permissions" and "Writing records", the wp-graphql SKILL sections named | Other keys' records, later stages, the wp-graphql script, store and cache |
 | 03 | Its CONTEXT and reference, the key's `intake.md` and `research.md`, `<data-root>/workspaces/ticket-execution/repos.md`, `shared/repo-rows.md`, `shared/git-rules.md`, `shared/tools.md` "Writing records" | Tool internals, later stages |
+| 03b | Its CONTEXT and reference, the key's `plan.md` and `intake.md`, `shared/git-rules.md`, `shared/tools.md`, `stages/04-implement/references/work-tree.md`, `stages/05-verify/references/verify-steps.md` "Run ports and browser" and "Pages behind a login", `<data-root>/workspaces/ticket-execution/repos.md` "Test logins", `shared/repo-rows.md` "Test logins", the browser-cdp SKILL sections named | Stage 01 and 02 references, stage 05 to 07 records, the secrets file |
 | 04 | Its CONTEXT and reference, the key's `plan.md`, `intake.md` "Acceptance", `research.md`, `shared/git-rules.md`, `<data-root>/workspaces/ticket-execution/repos.md` "Lint" and "Notes", `shared/repo-rows.md`, `shared/tools.md` "Writing records" | Stage 05 to 07 files |
 | 05 | Its CONTEXT and reference, the key's `plan.md` and `implement-record.md`, `shared/tools.md`, `<data-root>/workspaces/ticket-execution/repos.md` "Test logins", `shared/repo-rows.md` "Test logins", the browser-cdp SKILL sections named | Stage 01 and 02 references, the secrets file |
 | 06 | Its CONTEXT and reference, the key's 03 to 05 records, `shared/tools.md`, `<data-root>/workspaces/ticket-execution/repos.md`, `shared/repo-rows.md`, the browser-cdp SKILL sections named | Stage 01 and 02 files, the secrets file |
@@ -134,7 +138,7 @@ This table is for the subagent of that stage. The orchestrator loads this file a
 
 ## Stage Handoffs
 
-Each stage writes into `<runs>/<KEY>/0N-*/`. The record's first line is the `version:` line from that stage's CONTEXT.md. The next stage's subagent reads those files. The orchestrator does not carry the work across in its prompt. The run stops after 06, when a checkpoint says the human must choose, or when ACLI fails. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
+Each stage writes into `<runs>/<KEY>/0N-*/` (`03b-baseline/` for stage 03b). The record's first line is the `version:` line from that stage's CONTEXT.md. The next stage's subagent reads those files. The orchestrator does not carry the work across in its prompt. The run stops after 06, when a checkpoint says the human must choose, or when ACLI fails. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
 
 ## Ground Rules
 
