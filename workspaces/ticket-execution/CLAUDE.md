@@ -78,21 +78,21 @@ A stage fails its check when the output file is missing, or when no checkpoint i
 
 ### Subagent model
 
-This table is the user's instruction for every stage spawn, in the skill's unit-table format. Get the slug for a tier from `python3 ../../_core/skills/subagent-orchestration/scripts/models.py pick --harness cursor --tier <tier>` (add `--retry` for a retry). `subagent_type` stays `generalPurpose`, because every stage writes a record.
+This table is the user's instruction for every stage spawn, in the skill's unit-table format. Resolve all four slots once at run start with `python3 ../../_core/skills/subagent-orchestration/scripts/models.py table --harness cursor --available <enabled,slugs>` (or per stage with `pick --harness cursor --tier <tier>`, adding `--retry` for a retry). `subagent_type` stays `generalPurpose`, because every stage writes a record.
 
 | Stage | Base tier | Leave the base only when |
 |-------|-----------|--------------------------|
-| 01 intake | mid | Never; a failed audit retries as strong |
+| 01 intake | light | Never; a failed audit retries as `mid` |
 | 02 research | mid | `intake.md` names more than one root, or has more than five acceptance lines |
-| 03 plan | strong | Always strong |
+| 03 plan | strong | Always `strong` |
 | 03b baseline | mid | A row sends a form and "Form submits" is `yes`; the same as 05 verify. The scripted sign-in alone stays mid, and it never drops to light |
-| 04 implement | mid | The plan changes a shared service's exported signature or types, or touches auth, payments, `prisma/` or a root layout. A file that merely lives under `shared/` stays mid |
-| 04 change pass | mid | The change text adds behavior, or the pass comes after a FAIL. A simplify, reduce or remove pass stays mid |
-| 05 verify | mid | A row sends a form and "Form submits" is `yes`. The scripted sign-in alone stays mid |
-| 06 handoff | mid | Verify had a FAIL row. Sign-in alone stays mid |
-| 07 release | mid | The tree has files the handoff did not list |
+| 04 implement | mid | The plan changes a shared service's exported signature or types, or touches auth, payments, `prisma/` or a root layout. A file that merely lives under `shared/` stays `mid` |
+| 04 change pass | mid | The change text adds behavior, or the pass comes after a FAIL. A simplify, reduce or remove pass stays `mid` |
+| 05 verify | mid | A row sends a form and "Form submits" is `yes`. The scripted sign-in alone stays `mid` (verifiers never drop to `light`) |
+| 06 handoff | light | Verify had a FAIL row (step up to `mid`). Sign-in alone stays `light` |
+| 07 release | light | The tree has files the handoff did not list (step up to `mid`) |
 
-Today `models.py` gives mid `claude-sonnet-5-5-high` (fallbacks `gpt-5.6-sol-medium`, `gemini-4-neon-medium`), strong `claude-opus-5-5-medium` (fallbacks `claude-opus-5-5-high`, `grok-4.7-high`) and, for a strong retry, `claude-opus-5-5-high` (fallbacks `grok-4.7-high`, `gpt-5.6-sol-medium`). When the IDE has not enabled the primary, use the fallbacks in that order (`pick ... --available <enabled slugs>` chooses for you); if none of the 3 is enabled, stop and report the stage. No fast tier.
+`tiers.json` is the single source of truth for the slugs in each slot. When the IDE has not enabled a slot's primary, walk its fallbacks in order (`table`/`pick --available` chooses for you); if none of the 3 is enabled, stop and report the stage. Never use `*-fast`, `auto`, or `inherit`.
 
 ### Before stage 03b and stage 05 on a login root
 

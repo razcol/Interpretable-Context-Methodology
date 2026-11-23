@@ -5,35 +5,34 @@ Tool: `Agent`. Continue a running worker with `SendMessage`; a new `Agent` call 
 ## Call shape
 
 ```text
-subagent_type: general-purpose
-model: sonnet            # mid
-effort: high
+subagent_type: general-purpose   # or Explore with --readonly
+model: <from models.py>
+effort: <from models.py>
 description: <unit> (3-5 words)
 prompt: <filled brief>
 ```
 
-Each slot is a ranked list of three `model` / `effort` pairs, best fit first: the primary, then fallback 1 and fallback 2.
+## Tiers and fallbacks
 
-| Slot | Primary | Fallback 1 | Fallback 2 |
-|------|---------|------------|------------|
-| mid | `sonnet` / `high` | `opus` / `medium` | `opus` / `high` |
-| strong | `opus` / `high` | `opus` / `xhigh` | `sonnet` / `high` |
-| strong hardest units and strong retries | `opus` / `xhigh` | `opus` / `high` | `opus` / `max` |
+[tiers.json](tiers.json) is the single source of truth for the ranked top 3 `model` / `effort` pairs per slot (`light`, `mid`, `strong`, `strong/hardest`). Resolve all four slots once at run start:
 
-Use the primary. When the call rejects it, use fallback 1, then fallback 2, in that order. If none of the three is accepted, stop and report the unit. `models.py pick --harness claude-code ...` prints the primary and the ordered `fallbacks`.
+```bash
+python3 scripts/models.py table --harness claude-code
+```
 
-This skill prescribes `effort`, which is what the harness requires before `effort` may be set.
+Walk a slot's ranked list in order only for **availability fallback** (call rejected). Use `--retry` for **quality escalation** (`light -> mid -> strong -> strong/hardest`). If none of the 3 in a slot is accepted, stop and report the unit.
+
+This skill prescribes `effort`, which is what the harness requires before `effort` may be set. Keep `light` subagent prompts under 100K tokens (Haiku 5.5 jumps 5x in price above 100K).
 
 ## Never
 
-- `haiku` (below mid), effort `low`, leaving `model` unset, turning on the session `/fast` mode.
+- Turning on session `/fast` mode, leaving `model` unset, or using `low` effort in `mid` or `strong`.
 - `fork` for a unit that needs a tier: a fork runs on the parent's model and ignores `model` and `effort`. Use it only when the parent's model is acceptable.
-- No Grok: the `Agent` tool takes Claude models only. A rejected `sonnet` goes up to `opus` (the mid row's fallbacks).
 
 ## Other agent types
 
-- `Explore` is read-only and reads excerpts. Fine for locating code at mid. Set `model` on it as well.
-- A custom `.claude/agents/*.md` may fix `model` in its frontmatter. Use one only if that model is in the table.
+- `Explore` (`models.py ... --readonly`) is read-only and reads excerpts. Fine for locating code at `light` or `mid`. Set `model` and `effort` on it as well.
+- A custom `.claude/agents/*.md` may fix `model` in its frontmatter. Use one only if that model is in `tiers.json`.
 
 ## Parallel and background
 

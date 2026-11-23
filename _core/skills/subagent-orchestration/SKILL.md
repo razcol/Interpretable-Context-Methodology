@@ -1,6 +1,6 @@
 ---
 name: subagent-orchestration
-description: "How to run work as an orchestrator with subagents in Cursor or Claude Code: when to split, how to cut units, how to brief and spawn workers (one or many similar), which model and effort to set (mid or strong tier, never fast), how to check returns, retry and report. Use for ad-hoc tasks and for workspaces that delegate units or stages."
+description: "How to run work as an orchestrator with subagents in Cursor or Claude Code: when to split, how to cut units, how to brief and spawn workers (one or many similar), which model and effort to set (light, mid, or strong tier), how to check returns, retry and report. Use for ad-hoc tasks and for workspaces that delegate units or stages."
 ---
 
 # Subagent Orchestration
@@ -47,30 +47,33 @@ Several workers on similar units: write one brief template with `{placeholders}`
 
 ## 5. Model and effort
 
-Every spawn sets the model explicitly. There are two tiers. **Mid is the floor. No fast models, no fast modes, no `auto`, no `inherit`, nothing below mid, in any harness.**
+Every spawn sets the model explicitly. There are three tiers. **No `*-fast` speed modes, no `auto`, no `inherit`, no unset model, in any harness.**
 
-| Tier | Use when |
-|------|----------|
-| mid | Default: scoped implementation, reading and summarizing, lookups, extraction, running known commands, screenshots, routine checks |
-| strong | Planning and design decisions, unclear-root-cause debugging, changes to shared interfaces, auth, payments, security review, synthesis across many sources, a unit whose mid attempt failed |
+| Tier | Use when | Never use for |
+|------|----------|---------------|
+| `light` | Bounded, checkable, low-ambiguity work (est. 1–3 steps): read-only codebase/doc lookups, structured extraction, summarizing existing records, deterministic wrapper commands (intake, handoff formatting, git release) | Editing application code, code review, verification/auditing, multi-step debugging, ambiguous synthesis |
+| `mid` | Default for real work: scoped code implementation, multi-file research, browser/test verification, screenshots, routine change passes | Architectural planning, unclear-root-cause debugging, security/auth/payment changes |
+| `strong` | Planning and design decisions, unclear-root-cause debugging, changes to shared interfaces, auth, payments, security review, cross-cutting synthesis, or a `mid` retry | — |
 
 Rules:
-- A retry goes one tier above the first attempt (mid -> strong; strong -> the "hardest" row in the harness file). In Cursor, Grok strong escalates to Claude Opus, not to a higher Grok effort.
-- Every tier slot is a ranked top 3: the primary plus up to 2 ordered `fallbacks`, best fit first (`models.py pick` prints them). When the harness has not enabled the primary or rejects it, walk that list in order: fallback 1, then fallback 2. Never skip ahead, never leave the list, never go below mid, never to a fast variant, never to unset. If none of the 3 is accepted, stop and report the unit with the 3 slugs tried.
-- A workspace may set a base tier per unit and list when to leave it. It fills the rows. This skill owns the format and these rules.
+- **Availability fallback vs. quality escalation:**
+  - *Availability fallback* (harness has not enabled the primary or rejects it): walk the slot's ranked top 3 in order (`primary -> fallback 1 -> fallback 2`). Never skip ahead, never leave the slot, never use a banned slug. If none of the 3 is accepted, stop and report the unit with the 3 slugs tried.
+  - *Quality escalation* (the unit ran and failed its check): retry once, one tier up (`light -> mid -> strong -> strong/hardest`). Never retry past `strong/hardest` (`models.py pick --tier strong --hardest --retry` exits 2).
+- **Verifier integrity:** Verification, audit, and code-review units are at least `mid` (and at least the implementer's tier). Never downgrade a verifier to `light`.
+- A workspace may set a base tier per unit and list file-checkable conditions to step up. It fills the rows; this skill owns the format and rules.
 
-Get the exact call fields for the current harness from `scripts/models.py`. Copy its output. Do not type a slug from memory:
+Get the exact call fields from `scripts/models.py` (backed by [references/tiers.json](references/tiers.json), the single source of truth). Resolve all tiers once at run start with `table`, or query one slot with `pick`. Do not type a slug from memory:
 
 ```bash
-python3 scripts/models.py pick --harness claude-code --tier mid
-python3 scripts/models.py pick --harness cursor --tier strong --family grok --retry
-python3 scripts/models.py pick --harness cursor --tier strong --available <enabled,slugs>  # first of the 3 that is enabled
-python3 scripts/models.py check --harness cursor   # every primary and fallback still exists and none is fast
+python3 scripts/models.py table --harness cursor --available <enabled,slugs>
+python3 scripts/models.py pick --harness claude-code --tier light --readonly
+python3 scripts/models.py pick --harness cursor --tier mid --retry --available <enabled,slugs>
+python3 scripts/models.py check --harness cursor   # every primary and fallback still exists and none is banned
 ```
 
-`pick` prints the call fields and a `fallbacks:` line (add `--json` for one JSON object). With `--available` it starts at the first of the 3 in that set, and exits 2 when none is. `check` prints `SKIP: cursor-agent models unavailable (...)` when it cannot list the models (offline or sandboxed); that is "not verified", not a failure.
+`pick` prints the call fields and a `fallbacks:` line (add `--json` for one JSON object, `--readonly` for `explore`/`Explore`). `table` resolves all four slots (`light`, `mid`, `strong`, `strong/hardest`) in one call. With `--available`, both pick the first enabled entry in each slot and exit 2 when none is. `check` prints `SKIP: cursor-agent models unavailable (...)` when offline or sandboxed; that is "not verified", not a failure.
 
-If the script cannot run, read the harness file: [Claude Code](references/harness-claude-code.md), [Cursor](references/harness-cursor.md). The mapping lives in [references/tiers.json](references/tiers.json).
+If the script cannot run, read [references/tiers.json](references/tiers.json) and the harness notes: [Claude Code](references/harness-claude-code.md), [Cursor](references/harness-cursor.md).
 
 ## 6. Check each return
 
@@ -79,7 +82,7 @@ A unit passes only when all hold:
 2. The return has the agreed shape. Extra prose after the agreed lines is not a failure; ignore it and read the file.
 3. Its audit or acceptance rows pass.
 
-On a failure, spawn the same unit once more, one tier up, with the failed rows in the brief. A second failure: stop and report the unit, the rows and both models. Do not do the unit yourself.
+On a failure, spawn the same unit once more, one tier up (`--retry`), with the failed rows in the brief. A second failure (or hitting the `strong/hardest` ceiling): stop and report the unit, the failed rows and both models. Do not do the unit yourself.
 
 Blocked is not failed. When the output says a rule, permission or missing access stopped the unit (not a weak result), do not retry: a stronger model meets the same wall. Log it as blocked, keep the other units going, and ask the user for the one decision that would unblock it, unless later returns make the unit unnecessary (section 3). Never brief a worker to get around the rule.
 
@@ -100,4 +103,4 @@ One line per finished unit:
 - **Run claim** (keyed workflows): before the first spawn, claim the run key (`python3 ../../data-root/run_claim.py claim --ws <ws> --key <KEY>` from this skill folder; "Run claims" in `_core/CONVENTIONS.md`) and keep the `claimId` it prints. A live claim on the same key stops the run: report the claim it names. A stale one (its process or checkout is gone) is replaced and reported, and the run continues from its records. Runs on other keys go on at the same time; never a workspace-wide lock file. After each unit passes its check, commit the run folder (`run_claim.py commit`). When the run ends or is stopped, end the claim in a separate shell call (`run_claim.py end --ws <ws> --key <KEY> --claim-id <claimId>`), never chained after `commit` with `&&`. `release --token` is the deprecated name of `end --claim-id`.
 
   When a workflow supports multiple runs per ticket (`ticket-execution`), `claim` passes `--base <base>` and, when the user named an approach, `--label <label>`. Every later `port`, `target`, `commit`, and `end` uses the `runId` that `claim` printed as `--key <runId>`. The slug and slot rules live in `_core/CONVENTIONS.md`.
-- **Independent verifier**: a fresh worker that gets only the change summary and the paths to check, never the implementer's brief or return. Tier at least the implementer's.
+- **Independent verifier**: a fresh worker that gets only the change summary and the paths to check, never the implementer's brief or return. Tier at least `mid` and at least the implementer's tier.

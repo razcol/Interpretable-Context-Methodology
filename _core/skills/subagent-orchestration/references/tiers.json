@@ -1,49 +1,96 @@
 {
   "checked": "2026-11-22",
-  "ranking": "Each slot is [primary, *fallbacks], best fit first, at most 3. Use the first one the harness accepts. Never below mid, never a value in never.",
+  "ranking": "Each slot is [primary, *fallbacks], best fit first, at most 3. Walk in order for availability fallback; use --retry for quality escalation (light -> mid -> strong -> strong/hardest). Never a value in never.",
   "harnesses": {
     "claude-code": {
       "tool": "Agent",
+      "readonly_subagent_type": "Explore",
+      "light": {
+        "default": {
+          "subagent_type": "general-purpose",
+          "model": "haiku",
+          "effort": "medium",
+          "fallbacks": [
+            {"subagent_type": "general-purpose", "model": "sonnet", "effort": "low"},
+            {"subagent_type": "general-purpose", "model": "sonnet", "effort": "medium"}
+          ]
+        }
+      },
       "mid": {
-        "default": {"subagent_type": "general-purpose", "model": "sonnet", "effort": "high",
-                    "fallbacks": [{"subagent_type": "general-purpose", "model": "opus", "effort": "medium"},
-                                  {"subagent_type": "general-purpose", "model": "opus", "effort": "high"}]}
+        "default": {
+          "subagent_type": "general-purpose",
+          "model": "sonnet",
+          "effort": "medium",
+          "fallbacks": [
+            {"subagent_type": "general-purpose", "model": "sonnet", "effort": "high"},
+            {"subagent_type": "general-purpose", "model": "opus", "effort": "medium"}
+          ]
+        }
       },
       "strong": {
-        "default": {"subagent_type": "general-purpose", "model": "opus", "effort": "high",
-                    "fallbacks": [{"subagent_type": "general-purpose", "model": "opus", "effort": "xhigh"},
-                                  {"subagent_type": "general-purpose", "model": "sonnet", "effort": "high"}]},
-        "hardest": {"subagent_type": "general-purpose", "model": "opus", "effort": "xhigh",
-                    "fallbacks": [{"subagent_type": "general-purpose", "model": "opus", "effort": "high"},
-                                  {"subagent_type": "general-purpose", "model": "opus", "effort": "max"}]}
+        "default": {
+          "subagent_type": "general-purpose",
+          "model": "opus",
+          "effort": "medium",
+          "fallbacks": [
+            {"subagent_type": "general-purpose", "model": "opus", "effort": "high"},
+            {"subagent_type": "general-purpose", "model": "sonnet", "effort": "high"}
+          ]
+        },
+        "hardest": {
+          "subagent_type": "general-purpose",
+          "model": "opus",
+          "effort": "high",
+          "fallbacks": [
+            {"subagent_type": "general-purpose", "model": "opus", "effort": "xhigh"},
+            {"subagent_type": "general-purpose", "model": "opus", "effort": "max"}
+          ]
+        }
       },
-      "never": ["haiku", "/fast", "unset model", "fork when a tier is required (ignores model and effort)"]
+      "never": ["/fast", "*-fast", "auto", "inherit", "unset model", "fork when a tier is required (ignores model and effort)"]
     },
     "cursor": {
       "tool": "Task",
+      "readonly_subagent_type": "explore",
+      "light": {
+        "default": {
+          "subagent_type": "generalPurpose",
+          "model": "composer-2.5",
+          "fallbacks": [
+            {"subagent_type": "generalPurpose", "model": "claude-sonnet-5-5-high"},
+            {"subagent_type": "generalPurpose", "model": "gpt-5.6-sol-medium"}
+          ]
+        }
+      },
       "mid": {
-        "default": {"subagent_type": "generalPurpose", "model": "claude-sonnet-5-5-high",
-                    "fallbacks": [{"subagent_type": "generalPurpose", "model": "gpt-5.6-sol-medium"},
-                                  {"subagent_type": "generalPurpose", "model": "gemini-4-neon-medium"}]},
-        "grok":    {"subagent_type": "generalPurpose", "model": "grok-4.7-medium",
-                    "fallbacks": [{"subagent_type": "generalPurpose", "model": "grok-4.7-high"},
-                                  {"subagent_type": "generalPurpose", "model": "claude-sonnet-5-5-high"}]}
+        "default": {
+          "subagent_type": "generalPurpose",
+          "model": "claude-sonnet-5-5-high",
+          "fallbacks": [
+            {"subagent_type": "generalPurpose", "model": "gpt-5.6-sol-medium"},
+            {"subagent_type": "generalPurpose", "model": "grok-4.7-high"}
+          ]
+        }
       },
       "strong": {
-        "default": {"subagent_type": "generalPurpose", "model": "claude-opus-5-5-medium",
-                    "fallbacks": [{"subagent_type": "generalPurpose", "model": "claude-opus-5-5-high"},
-                                  {"subagent_type": "generalPurpose", "model": "grok-4.7-high"}]},
-        "hardest": {"subagent_type": "generalPurpose", "model": "claude-opus-5-5-high",
-                    "fallbacks": [{"subagent_type": "generalPurpose", "model": "grok-4.7-high"},
-                                  {"subagent_type": "generalPurpose", "model": "gpt-5.6-sol-medium"}]},
-        "grok":    {"subagent_type": "generalPurpose", "model": "grok-4.7-high",
-                    "fallbacks": [{"subagent_type": "generalPurpose", "model": "claude-opus-5-5-high"},
-                                  {"subagent_type": "generalPurpose", "model": "gpt-5.6-sol-medium"}]},
-        "grok-hardest": {"subagent_type": "generalPurpose", "model": "claude-opus-5-5-high",
-                         "fallbacks": [{"subagent_type": "generalPurpose", "model": "grok-4.7-high"},
-                                       {"subagent_type": "generalPurpose", "model": "gpt-5.6-sol-medium"}]}
+        "default": {
+          "subagent_type": "generalPurpose",
+          "model": "gemini-4-neon-medium",
+          "fallbacks": [
+            {"subagent_type": "generalPurpose", "model": "claude-opus-5-5-high"},
+            {"subagent_type": "generalPurpose", "model": "gemini-4-carbon-medium"}
+          ]
+        },
+        "hardest": {
+          "subagent_type": "generalPurpose",
+          "model": "claude-opus-5-5-high",
+          "fallbacks": [
+            {"subagent_type": "generalPurpose", "model": "gemini-4-carbon-medium"},
+            {"subagent_type": "generalPurpose", "model": "grok-4.7-high"}
+          ]
+        }
       },
-      "never": ["fast", "auto", "inherit", "*-fast", "composer-*", "cursor-grok-*", "grok-4.7-low", "grok-4.7-xhigh"]
+      "never": ["fast", "auto", "inherit", "*-fast", "cursor-grok-*", "*-none", "*-minimal", "grok-4.7-low", "grok-4.7-xhigh"]
     }
   }
 }

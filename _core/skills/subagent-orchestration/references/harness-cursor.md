@@ -5,37 +5,32 @@ Tool: `Task`. Arguments: `subagent_type`, `model`, `description`, `prompt`, plus
 ## Call shape
 
 ```text
-subagent_type: generalPurpose
-model: claude-sonnet-5-5-high
+subagent_type: generalPurpose   # or explore with --readonly
+model: <from models.py>
 description: <unit>
 prompt: <filled brief>
 ```
 
 Effort is part of the slug. There is no separate effort field.
 
-Each slot is a ranked list of three slugs, best fit first: the primary, then fallback 1 and fallback 2.
+## Tiers and fallbacks
 
-| Slot | Primary | Fallback 1 | Fallback 2 |
-|------|---------|------------|------------|
-| mid (Claude, default) | `claude-sonnet-5-5-high` | `gpt-5.6-sol-medium` | `gemini-4-neon-medium` |
-| mid (Grok) | `grok-4.7-medium` | `grok-4.7-high` | `claude-sonnet-5-5-high` |
-| strong (Claude, default) | `claude-opus-5-5-medium` | `claude-opus-5-5-high` | `grok-4.7-high` |
-| strong hardest units and strong retries (Claude) | `claude-opus-5-5-high` | `grok-4.7-high` | `gpt-5.6-sol-medium` |
-| strong (Grok) | `grok-4.7-high` | `claude-opus-5-5-high` | `gpt-5.6-sol-medium` |
-| strong hardest and strong retries (Grok) | `claude-opus-5-5-high` (Grok has no step above `grok-4.7-high`) | `grok-4.7-high` | `gpt-5.6-sol-medium` |
+[tiers.json](tiers.json) is the single source of truth for the ranked top 3 per slot (`light`, `mid`, `strong`, `strong/hardest`). Resolve all four slots once at run start against the IDE's enabled models:
 
-Pick the family the user or the workspace's unit table names; Claude when none is named. Use the primary. When the IDE has not enabled it or the call rejects it, use fallback 1, then fallback 2, in that order. When the IDE's enabled models are known, `models.py pick ... --available <slug,slug,...>` makes that choice for you. If none of the three is accepted, stop and report the unit; do not pick a slug outside its row.
+```bash
+python3 scripts/models.py table --harness cursor --available <enabled,slugs>
+```
 
-All of these slugs were listed by `cursor-agent models` on 2026-11-22. The IDE enabled `claude-sonnet-5-5-high`, `claude-opus-5-5-high`, `grok-4.7-high`, `gpt-5.6-sol-medium`, `gemini-4-neon-medium` and `gemini-4-carbon-medium` that day, so strong (Claude) resolved to fallback 1, `claude-opus-5-5-high`.
+Walk a slot's ranked list in order only for **availability fallback** (primary not enabled or rejected). Use `--retry` for **quality escalation** (`light -> mid -> strong -> strong/hardest`). If none of the 3 in a slot is accepted, stop and report the unit; do not pick a slug outside its slot.
 
 ## Never
 
-`fast`, `auto`, `inherit`, any slug ending in `-fast` (Claude, Grok, GPT and Composer all have them), any `-low`, `-none` or `-minimal` slug, `composer-*`, `grok-4.7-low`, `grok-4.7-xhigh`, every `cursor-grok-*` (4.5 and 4.6), and any slug not in the table above. A `Task` call without `model` is a failed check: respawn the unit with `model` before going on.
+`fast`, `auto`, `inherit`, any slug ending in `-fast` (2x–6x cost/pool burn for the same intelligence), any `-none` or `-minimal` slug, `grok-4.7-low`, `grok-4.7-xhigh`, every `cursor-grok-*`, and any slug not in the slot's ranked list. A `Task` call without `model` is a failed check: respawn the unit with `model` before going on.
 
 ## Subagent types
 
-`generalPurpose` for any unit that writes files. `explore` is read-only. Set `model` on both.
+`generalPurpose` for any unit that writes files. `explore` (`models.py ... --readonly`) for read-only lookups. Set `model` on both.
 
 ## Checking the slugs
 
-`cursor-agent models` lists what is current. `scripts/models.py check --harness cursor` compares every primary and fallback in `tiers.json` with that list and with the never list. When `cursor-agent models` fails or lists nothing (offline or sandboxed, for example `getaddrinfo EAI_AGAIN`), the check prints `SKIP: cursor-agent models unavailable (<reason>)` and exits 0. That means the slugs were not verified, not that they failed. Run it with network access to verify them.
+`cursor-agent models` lists what is current. `scripts/models.py check --harness cursor` validates every primary and fallback in `tiers.json` against the ban rules, verifies that every escalation step strictly changes the primary, and checks each slug against `cursor-agent models`. When `cursor-agent models` fails or lists nothing (offline or sandboxed, for example `getaddrinfo EAI_AGAIN`), the check prints `SKIP: cursor-agent models unavailable (<reason>)` and exits 0 (not verified, not failed).
