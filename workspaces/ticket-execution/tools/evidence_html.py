@@ -2,7 +2,7 @@
 """Bundle a run's ticket images and verification screenshots into one self-contained HTML file.
 
 Usage:
-  evidence_html.py <runs>/<KEY> [--out <path>] [--key <KEY>]
+  evidence_html.py <runs>/<RUN> [--out <path>] [--key <KEY>]
 
 Reads from the run folder:
   01-intake/attachments/*   ticket images (also images directly in 01-intake/)
@@ -14,7 +14,7 @@ Only real images are embedded: the extension must be an image type, the first by
 must match that type, the file must resolve inside the run folder, and it must be
 under 15 MB. Anything else is counted under "skipped".
 
-Writes one HTML file (default <runs>/<KEY>/06-handoff/evidence.html). Images are
+Writes one HTML file (default <runs>/<RUN>/06-handoff/evidence.html). Images are
 embedded as base64 data: URIs, so the file needs no server, no network and no
 sibling files. The page carries a Content-Security-Policy that blocks scripts and
 every external request. On WSL, open it from Windows through the wslPath below.
@@ -289,15 +289,15 @@ def fail(message):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("run_dir", help="the run folder, <runs>/<KEY>")
+    ap.add_argument("run_dir", help="the run folder, <runs>/<RUN>")
     ap.add_argument("--out", help="HTML path (default <run dir>/06-handoff/evidence.html)")
-    ap.add_argument("--key", help="ticket key shown in the title (default: the run folder name)")
+    ap.add_argument("--key", help="ticket key shown in the title (default: folder name before first '--')")
     args = ap.parse_args(argv)
 
     run_dir = Path(args.run_dir).expanduser().resolve()
     if not run_dir.is_dir():
         fail(f"run folder not found: {run_dir}")
-    key = args.key or run_dir.name
+    key = args.key or (run_dir.name.split("--", 1)[0] or run_dir.name)
     out = Path(args.out).expanduser().resolve() if args.out else run_dir / "06-handoff" / "evidence.html"
 
     before, skipped_before = collect_before(run_dir)

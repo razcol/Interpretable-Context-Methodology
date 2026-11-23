@@ -7,7 +7,7 @@
 Other runs may edit the same repo at the same time. Before any `switch` or `worktree add`, claim the work tree and the branch for this run (`../../../shared/tools.md` "run_claim.py"):
 
 ```bash
-python3 <ws>/../../_core/data-root/run_claim.py target --ws ticket-execution --key <KEY> --path <work tree> --root <root> --branch <branch>
+python3 <ws>/../../_core/data-root/run_claim.py target --ws ticket-execution --key <RUN> --path <work tree> --root <root> --branch <branch>
 ```
 
 `<work tree>` is `<root>` for the main tree, or the worktree `<path>`. Exit 3 on the main tree means another run is editing it: use a worktree as the row or "main tree" in `../../../shared/repo-rows.md` says, claim that path, and say so in the record. Exit 3 on a worktree path or on the branch: stop and return the run it names. Never edit a work tree this run has not claimed.
@@ -36,7 +36,7 @@ When `git worktree list` already shows `<path>` on `<branch>`, reuse it.
 
 When the row's "Notes" line names the command that makes this repo's worktree, use that command instead of `git worktree add` (with the same path, branch and base).
 
-Only when `<path>` is inside the root (`<root>/.worktrees/<KEY>`), make sure git ignores that folder, once:
+Only when `<path>` is inside the root (`<root>/.worktrees/<RUN>`), make sure git ignores that folder, once:
 
 ```bash
 git -C <root> check-ignore -q .worktrees/x || printf '.worktrees/\n' >> <root>/.git/info/exclude
@@ -54,7 +54,7 @@ When `node_modules` is missing in a fresh worktree, lint runs in stage 05 after 
 
 ## Record
 
-`<runs>/<KEY>/04-implement/implement-record.md`:
+`<runs>/<RUN>/04-implement/implement-record.md`:
 
 ```markdown
 # <KEY> implement

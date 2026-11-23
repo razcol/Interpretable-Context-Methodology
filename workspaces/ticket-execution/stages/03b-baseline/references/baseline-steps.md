@@ -1,6 +1,6 @@
 # Baseline steps
 
-`<ws>` is the workspace folder `../../../shared/tools.md` names (the brief gives its real path). `B` is `<checkout>/_core/skills/browser-cdp`, the browser-cdp folder of the same checkout (`<ws>/../../_core/skills/browser-cdp`). `R` is `<runs>/<KEY>/03b-baseline`. `<root>`, `<branch>`, `<path>`, `<base>` and `<app>` (the app root, `<work tree>/code`) come from `plan.md`. `<p>` is the key in lowercase (`ond-123`).
+`<ws>` is the workspace folder `../../../shared/tools.md` names (the brief gives its real path). `B` is `<checkout>/_core/skills/browser-cdp`, the browser-cdp folder of the same checkout (`<ws>/../../_core/skills/browser-cdp`). `R` is `<runs>/<RUN>/03b-baseline`. `<root>`, `<branch>`, `<path>`, `<base>` and `<app>` (the app root, `<work tree>/code`) come from `plan.md`. `<p>` is the run id in lowercase (`ond-123` or `ond-123--dev--try-a`).
 
 ## Write scope
 
@@ -36,8 +36,8 @@ When either differs, do not capture: this is not a baseline. Do not stash, reset
 ## Run ports and browser
 
 ```bash
-python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <KEY> --kind dev   # DEV
-python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <KEY> --kind cdp   # CDP
+python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <RUN> --kind dev   # DEV
+python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <RUN> --kind cdp   # CDP
 node $B/scripts/browser.js start --profile <p> --port <CDP>
 ```
 
@@ -131,4 +131,4 @@ version: 1
 - started: nothing (no claim, no server, no browser)
 ```
 
-Write it with the Write or StrReplace tool, or with `tools/write_record.py --stage 03b --key <KEY>` when the chat is rooted outside this workspace (`../../shared/tools.md` "Writing records"). Return the record path and each audit row.
+Write it with the Write or StrReplace tool, or with `tools/write_record.py --stage 03b --key <KEY> --run <RUN>` when the chat is rooted outside this workspace (`../../shared/tools.md` "Writing records"). Return the record path and each audit row.

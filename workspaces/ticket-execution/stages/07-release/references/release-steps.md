@@ -27,19 +27,19 @@ Rejected because the remote moved: stop and show the message. No force push, no 
 
 ## PR link
 
-The row's PR link, with `<branch>` replaced as `../../../shared/repo-rows.md` "Rules" says (URL-encoded; a `/` in the branch stays as `/`). When the row's PR link is `none`, there is no link.
+When the run's `<base>` (from `plan.md`) equals the row's Base, use the row's PR target and PR link with `<branch>` replaced as `../../../shared/repo-rows.md` "Rules" says (URL-encoded; a `/` in the branch stays as `/`). When the run's `<base>` is some other branch, the PR target is `<base>`, and replace the link's `dest=` value or compare base with `<base>`. When the row's PR link is `none`, or when `<base>` differs from the row's Base and the link contains neither `dest=` nor a compare base, there is no link: report the pushed branch and the PR target instead.
 
 ## Reply
 
 ```markdown
 **<KEY> committed and pushed.** `<hash> <subject>`
 Create the PR: [<root folder name>: <branch> into <PR target>](<PR link>)
-The server is still running on http://localhost:<port>. `stop <KEY>` stops it.
+The server is still running on http://localhost:<port>. `stop <KEY>[ on <base>][ as <label>]` stops it.
 ```
 
-When the row has no PR link, the PR line is "Pushed `<branch>` to origin. Open the PR into `<PR target>` there."
+When there is no PR link, the PR line is "Pushed `<branch>` to origin. Open the PR into `<PR target>` there."
 
-On `commit <KEY>`, the first line says "committed, not pushed" and the PR line is replaced with "`approve <KEY>` pushes it."
+On `commit`, the first line says "committed, not pushed" and the PR line is replaced with "`approve <KEY>[ on <base>][ as <label>]` pushes it."
 
 ## release-record.md
 

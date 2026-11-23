@@ -280,6 +280,16 @@ class BaselineCli(unittest.TestCase):
         self.assertNotIn("Ticket Reference", text)
         self.assertNotIn("Baseline screenshots", text)
 
+    def test_suffixed_folder_title_uses_jira_prefix_when_key_omitted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp, "runs", "ABC-1--dev--try-a")
+            run.mkdir(parents=True)
+            code, out = run_main([str(run)])
+            self.assertEqual(code, 0, out)
+            text = Path(out["html"]).read_text(encoding="utf-8")
+            self.assertIn("<title>ABC-1 evidence</title>", text)
+            self.assertIn("<h1>ABC-1: evidence</h1>", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -98,4 +98,6 @@ One line per finished unit:
 ## 8. Optional pieces
 
 - **Run claim** (keyed workflows): before the first spawn, claim the run key (`python3 ../../data-root/run_claim.py claim --ws <ws> --key <KEY>` from this skill folder; "Run claims" in `_core/CONVENTIONS.md`) and keep the `claimId` it prints. A live claim on the same key stops the run: report the claim it names. A stale one (its process or checkout is gone) is replaced and reported, and the run continues from its records. Runs on other keys go on at the same time; never a workspace-wide lock file. After each unit passes its check, commit the run folder (`run_claim.py commit`). When the run ends or is stopped, end the claim in a separate shell call (`run_claim.py end --ws <ws> --key <KEY> --claim-id <claimId>`), never chained after `commit` with `&&`. `release --token` is the deprecated name of `end --claim-id`.
+
+  When a workflow supports multiple runs per ticket (`ticket-execution`), `claim` passes `--base <base>` and, when the user named an approach, `--label <label>`. Every later `port`, `target`, `commit`, and `end` uses the `runId` that `claim` printed as `--key <runId>`. The slug and slot rules live in `_core/CONVENTIONS.md`.
 - **Independent verifier**: a fresh worker that gets only the change summary and the paths to check, never the implementer's brief or return. Tier at least the implementer's.

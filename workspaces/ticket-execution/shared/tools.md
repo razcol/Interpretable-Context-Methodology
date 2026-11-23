@@ -29,19 +29,19 @@ Write records with the Write or StrReplace tool. When a write is refused, read t
 When the chat's root is outside this workspace (usually the app repo), the Write tool cannot reach the data root. Write the record with `tools/write_record.py` instead:
 
 ```bash
-python3 <ws>/tools/write_record.py --stage <01..07> --key <KEY> <<'RECORD'
+python3 <ws>/tools/write_record.py --stage <01..07> --key <KEY> [--run <RUN>] <<'RECORD'
 <full record text>
 RECORD
 ```
 
-It is the only shell exception in this section: no other heredoc, `python -c`, `tee`, `cat >` or redirect writes a record. The script writes only the stage's own record under `<runs>/<KEY>/<n>/` (it resolves the data root itself) and refuses every other path. The record name is fixed per stage (`shared/run-records.md`), the whole file is replaced, and the text must carry the `version:` line in its first five lines. For a small edit, read the current file and pass the full new text. Exit 0 written, 2 refused (unknown stage, bad key, no data root, a path outside that folder), 3 empty or no `version:` line.
+It is the only shell exception in this section: no other heredoc, `python -c`, `tee`, `cat >` or redirect writes a record. The script writes only the stage's own record under `<runs>/<RUN>/<n>/` (it resolves the data root itself; `--run` defaults to `--key` and when suffixed with `--` its prefix must equal `--key`) and refuses every other path. The record name is fixed per stage (`shared/run-records.md`), the whole file is replaced, and the text must carry the `version:` line in its first five lines. For a small edit, read the current file and pass the full new text. Exit 0 written, 2 refused (unknown stage, bad key or run, no data root, a path outside that folder), 3 empty or no `version:` line.
 
 When the script also refuses, put the record's full content in your return with the path it belongs at; the orchestrator reports it. The orchestrator never runs this script and never writes the record.
 
 ## intake.py (stage 01)
 
 ```bash
-python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <runs>/<KEY>/01-intake --env-file ~/.config/jira/jira.env
+python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <runs>/<RUN>/01-intake --env-file ~/.config/jira/jira.env
 ```
 
 - Reads the item with ACLI (`acli jira workitem view <KEY> --fields '*all' --json`). ACLI needs the network: run with full network access.
@@ -51,18 +51,18 @@ python3 <ws>/tools/intake.py '<KEY or browse URL>' --out <runs>/<KEY>/01-intake 
 - Exit 0 done, 2 no key in the argument, 3 ACLI missing, failed or signed out (`acli jira auth status`), 4 no such item or no access.
 - Read `attachmentsMissing` and `commentsTruncated` in the JSON. Either one non-empty or true is a gap stage 01 reports.
 
-## run_claim.py (orchestrator, stages 04 to 06)
+## run_claim.py (orchestrator, stages 03b to 06)
 
-`C` is `python3 <ws>/../../_core/data-root/run_claim.py`. Each command prints one JSON object. Exit 0 ok, 2 bad arguments or no live claim for the key (claim first), 3 a live run holds it (the JSON names that run in `heldBy`; stop and report it, never wait in a loop).
+`C` is `python3 <ws>/../../_core/data-root/run_claim.py`. Each command prints one JSON object. Exit 0 ok, 2 bad arguments, mixed primary folder, or no live claim for the run id (claim first), 3 a live run holds it (the JSON names that run in `heldBy`; stop and report it, never wait in a loop).
 
 ```bash
-C claim   --ws ticket-execution --key <KEY> --note <trigger>          # orchestrator, before the first spawn; prints claimId
-C target  --ws ticket-execution --key <KEY> --path <work tree> --root <root> --branch <branch>   # stage 04, before any switch or worktree add
-C port    --ws ticket-execution --key <KEY> --kind dev                 # stage 05 (and 06): the run's dev-server port
-C port    --ws ticket-execution --key <KEY> --kind cdp                 # stage 05 (and 06): the run's browser (CDP) port
-C commit  --ws ticket-execution --key <KEY> --stage <0N-name>          # orchestrator, after each stage
-C end     --ws ticket-execution --key <KEY> --claim-id <claimId>       # orchestrator, when the run stops
-C list    --ws ticket-execution                                        # status
+C claim   --ws ticket-execution --key <KEY> --base <base> [--label <label>] --note <trigger>   # orchestrator, before the first spawn; prints claimId and runId (<RUN>)
+C target  --ws ticket-execution --key <RUN> --path <work tree> --root <root> --branch <branch> # stage 03b / 04, before any switch or worktree add
+C port    --ws ticket-execution --key <RUN> --kind dev                                         # stage 03b / 05 (and 06): the run's dev-server port
+C port    --ws ticket-execution --key <RUN> --kind cdp                                         # stage 03b / 05 (and 06): the run's browser (CDP) port
+C commit  --ws ticket-execution --key <RUN> --stage <0N-name>                                  # orchestrator, after each stage
+C end     --ws ticket-execution --key <RUN> --claim-id <claimId>                               # orchestrator, when the run stops
+C list    --ws ticket-execution                                                                # status
 ```
 
 - `commit` and `end` are always two separate shell calls. Never chain them (`commit ... && end ...`): run `commit`, read its JSON, then run `end`.
@@ -70,15 +70,15 @@ C list    --ws ticket-execution                                        # status
 
 - `port` gives the same port to every call of the same run, and a different one to every other live run. Ports are machine-wide, so a run in a maintenance worktree never gets a port a normal run has.
 - `target` on a work tree or branch another live run holds exits 3. On the main tree that means: use a worktree (`stages/04-implement/references/work-tree.md`).
-- The run's browser profile is the key in lowercase (`ond-123`). Start it on the run's cdp port and pass `--profile` to every browser-cdp script; never the default profile or port.
-- A claim whose process is gone, whose ai-system checkout is gone, or that nothing touched for 2 hours is stale; the next `claim` on that key replaces it and reports `staleCleared`.
+- The run's browser profile is the run id in lowercase (`ond-123` or `ond-123--dev--try-a`). Start it on the run's cdp port and pass `--profile` to every browser-cdp script; never the default profile or port.
+- A claim whose process is gone, whose ai-system checkout is gone, or that nothing touched for 2 hours is stale; the next `claim` on that run replaces it and reports `staleCleared`.
 
-## dev_server.py (stages 05 and 06)
+## dev_server.py (stages 03b, 05 and 06)
 
 ```bash
 python3 <ws>/tools/dev_server.py status --app-root <app root>
-python3 <ws>/tools/dev_server.py up --app-root <app root> --state <runs>/<KEY>/05-verify/dev-server.json --port <run's dev port> --path <first review path>
-python3 <ws>/tools/dev_server.py down --state <runs>/<KEY>/05-verify/dev-server.json
+python3 <ws>/tools/dev_server.py up --app-root <app root> --state <runs>/<RUN>/05-verify/dev-server.json --port <run's dev port> --path <first review path>
+python3 <ws>/tools/dev_server.py down --state <runs>/<RUN>/05-verify/dev-server.json
 ```
 
 - `status` and `up` must run unsandboxed (`required_permissions: all`). A sandboxed `status` reports "not answering" falsely. Never restart on that result. Confirm with an unsandboxed `status` before `up`.

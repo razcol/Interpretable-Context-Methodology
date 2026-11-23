@@ -8,8 +8,8 @@ Find where the asked behavior lives in the repo, what live WordPress has for it,
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 01 | `<runs>/<KEY>/01-intake/intake.md` | Full file | What is asked, root, acceptance |
-| Stage 01 | `<runs>/<KEY>/01-intake/attachments/` | Images named in "Images" | What it should look like |
+| Stage 01 | `<runs>/<RUN>/01-intake/intake.md` | Full file | What is asked, root, acceptance |
+| Stage 01 | `<runs>/<RUN>/01-intake/attachments/` | Images named in "Images" | What it should look like |
 | Rules | `references/research-rules.md` | Full file | Where to look, when and how to check live WordPress, what to leave out, `research.md` shape |
 | Repos | `<data-root>/workspaces/ticket-execution/repos.md` | "Notes" | Siblings |
 | Git | `../../shared/git-rules.md` | "Allowed per stage" | Read-only git, plus the wp-graphql commands the rules name |
@@ -40,4 +40,4 @@ Find where the asked behavior lives in the repo, what live WordPress has for it,
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Research | `<runs>/<KEY>/02-research/research.md` | See `references/research-rules.md` "research.md" |
+| Research | `<runs>/<RUN>/02-research/research.md` | See `references/research-rules.md` "research.md" |

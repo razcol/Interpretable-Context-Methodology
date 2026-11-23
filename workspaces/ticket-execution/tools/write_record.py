@@ -2,18 +2,19 @@
 """Write one stage's record when the Write tool cannot reach the data root (a chat rooted in the app repo).
 
 Usage:
-  write_record.py --stage <01..07 or 03b> --key <KEY> [--data-root DIR] < record
+  write_record.py --stage <01..07 or 03b> --key <KEY> [--run <RUN>] [--data-root DIR] < record
 
 The record text comes from stdin. There is no record path argument: the target is
-<data root>/workspaces/ticket-execution/runs/<KEY>/<NN-name>/<record>, with the record
+<data root>/workspaces/ticket-execution/runs/<RUN>/<NN-name>/<record>, with the record
 name fixed per stage (the table in shared/run-records.md; stage 03b writes
-<KEY>/03b-baseline/baseline-record.md). The data root is what
+<RUN>/03b-baseline/baseline-record.md). `--run` defaults to `--key`. When `--run`
+contains `--`, the part before the first `--` must equal `--key`. The data root is what
 _core/data-root/data_root.py resolve prints for this ai-system checkout (--data-root
 overrides it, for tests). The folder is created when missing, and the whole file is
 replaced atomically.
 
-Prints one JSON object. Exit codes: 0 written, 2 refused (unknown stage, bad key, no
-data root, or a target that resolves outside the run's <KEY>/<NN-name>/ folder, a
+Prints one JSON object. Exit codes: 0 written, 2 refused (unknown stage, bad key or run, no
+data root, or a target that resolves outside the run's <RUN>/<NN-name>/ folder, a
 symlink included), 3 empty content or no `version: N` line in the first five lines.
 """
 
@@ -39,6 +40,8 @@ RECORDS = {
     "07": ("07-release", "release-record.md"),
 }
 KEY_RE = re.compile(r"[A-Z][A-Z0-9]+-\d+")
+RUN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 VERSION_RE = re.compile(r"^version: \d+")
 
 
@@ -71,6 +74,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stage", required=True, help="stage id: two digits, 01 to 07, or 03b (baseline)")
     ap.add_argument("--key", required=True, help="Jira key, for example NSS-8")
+    ap.add_argument("--run", help="run id folder (default: --key; when suffixed with '--', prefix must match --key)")
     ap.add_argument("--data-root", help="data checkout to write into (default: data_root.py resolve)")
     args = ap.parse_args()
 
@@ -78,14 +82,23 @@ def main():
         out(2, error=f"unknown stage {args.stage!r}; expected one of {', '.join(RECORDS)}")
     if not KEY_RE.fullmatch(args.key):
         out(2, error="key must look like ABC-123")
+    run_id = args.run if args.run is not None else args.key
+    if not RUN_RE.fullmatch(run_id) or ".." in run_id:
+        out(2, error=f"bad run id {run_id!r}")
+    if "--" in run_id:
+        parts = run_id.split("--")
+        if parts[0] != args.key or len(parts) not in (2, 3) or not all(SLUG_RE.fullmatch(p) for p in parts[1:]):
+            out(2, error=f"run id {run_id!r} must match {args.key}--<base>[--<label>]")
+    elif run_id != args.key:
+        out(2, error=f"run id {run_id!r} does not match key {args.key!r}")
     stage_dir, record = RECORDS[args.stage]
     if not (WS / "stages" / stage_dir).is_dir():
         out(2, error=f"no stage folder stages/{stage_dir}")
     runs = data_root(args.data_root) / "workspaces" / WS.name / "runs"
-    folder = runs / args.key / stage_dir
+    folder = runs / run_id / stage_dir
     target = folder / record
     if not contained(folder, target):
-        out(2, error=f"target resolves outside runs/{args.key}/{stage_dir}/")
+        out(2, error=f"target resolves outside runs/{run_id}/{stage_dir}/")
 
     text = sys.stdin.read()
     if not text.strip():
@@ -95,7 +108,7 @@ def main():
 
     folder.mkdir(parents=True, exist_ok=True)
     if not contained(folder, target):
-        out(2, error=f"target resolves outside runs/{args.key}/{stage_dir}/")
+        out(2, error=f"target resolves outside runs/{run_id}/{stage_dir}/")
     replaced = target.exists()
     fd, tmp = tempfile.mkstemp(dir=folder, prefix=f".{record}.", suffix=".tmp")
     try:

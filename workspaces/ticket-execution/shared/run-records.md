@@ -1,8 +1,8 @@
 # Run records
 
-A run is keyed by the Jira key. Each stage writes into `<runs>/<KEY>/0N-*/` (`<runs>` is `<data-root>/workspaces/ticket-execution/runs`; CLAUDE.md). Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates (do not copy another key's records). Run folders are in the data root, never in this repo. Records written before run folders moved to the data root name paths as `stages/0N-*/output/<KEY>/...`. Read such a path as `<runs>/<KEY>/0N-*/...`; never recreate it in the repo.
+A run is keyed by its run id `<RUN>` (`<KEY>` for the first unlabeled base, `<KEY>--<baseSlug>` for each further unlabeled base, `<KEY>--<baseSlug>--<labelSlug>` for a named approach; `CLAUDE.md`). Each stage writes into `<runs>/<RUN>/0N-*/` (`<runs>` is `<data-root>/workspaces/ticket-execution/runs`). `run.json` in `<runs>/<RUN>/` records `jira`, `base`, optional `label`, and `runId`, and is committed with the run folder. Later stages read earlier records of the same `<RUN>` only. Earlier stages never read later ones. Records are run history, not templates (do not copy another run's records). Run folders are in the data root, never in this repo. Records written before run folders moved to the data root name paths as `stages/0N-*/output/<KEY>/...`. Read such a path as `<runs>/<RUN>/0N-*/...`; never recreate it in the repo.
 
-| Stage | Folder `<runs>/<KEY>/.../` | Files | Holds |
+| Stage | Folder `<runs>/<RUN>/.../` | Files | Holds |
 |-------|-----------------------------------|-------|-------|
 | 01 | `01-intake/` | `issue.json`, `ticket.md`, `attachments/`, `intake.md` | Raw item, the readable ticket, the files, the working summary |
 | 02 | `02-research/` | `research.md` | Where the behavior lives, siblings, prior decisions, with paths |
@@ -13,16 +13,16 @@ A run is keyed by the Jira key. Each stage writes into `<runs>/<KEY>/0N-*/` (`<r
 | 06 | `06-handoff/` | `handoff.md` | What you review, where, and on which server |
 | 07 | `07-release/` | `release-record.md` | Commit, push, PR URL |
 
-A change pass (`change <KEY>: ...`) rewrites 04, 05 and 06 for the key. The old files are replaced, and `implement-record.md` keeps a "Changes" list with one line per pass. A change pass never touches `03b-baseline/`: baselines persist across retries and change passes, and stage 03b does not run again while `baseline-record.md` exists.
+A change pass (`change <KEY> [on <base>] [as <label>]: ...`) rewrites 04, 05 and 06 for that run. The old files are replaced, and `implement-record.md` keeps a "Changes" list with one line per pass. A change pass never touches `03b-baseline/`: baselines persist across retries and change passes, and stage 03b does not run again while `baseline-record.md` exists.
 
 ## How `status` works
 
-List each `<KEY>` folder under `<runs>/` that has `01-intake/`. For each key, a stage is COMPLETE when its main file exists (`intake.md`, `research.md`, `plan.md`, `baseline-record.md`, `implement-record.md`, `verify-report.md`, `handoff.md`, `release-record.md`), otherwise PENDING. Show the waiting state in words:
+List each `<RUN>` folder under `<runs>/` that has `01-intake/`. Read `run.json` when present to show the label: Jira key, base, and approach label when present (for example `MAIN-4451 (dev, shared-checkbox)`). For each run, a stage is COMPLETE when its main file exists (`intake.md`, `research.md`, `plan.md`, `baseline-record.md`, `implement-record.md`, `verify-report.md`, `handoff.md`, `release-record.md`), otherwise PENDING. Show the waiting state in words:
 
-- `plan.md` and no `implement-record.md`: "04 not started" (an interrupted run, not waiting on you). `baseline-record.md` is optional for this line: a `skipped` baseline counts as COMPLETE, and a missing one on a key whose run came before stage 03b is not an error.
+- `plan.md` and no `implement-record.md`: "04 not started" (an interrupted run, not waiting on you). `baseline-record.md` is optional for this line: a `skipped` baseline counts as COMPLETE, and a missing one on a run that came before stage 03b is not an error.
 - `handoff.md` newer than any `release-record.md`: "06 waiting for your review", followed by the URLs from `handoff.md` and whether the server still answers (`tools/dev_server.py status --app-root <app root>`).
 
-Then the runs that hold a claim now: `python3 ../../_core/data-root/run_claim.py list --ws ticket-execution` from this workspace folder. Each `live` run is "running since <startedAt> (pid <pid>, checkout <checkout>)" with its ports and work tree; a `stale` one is "stopped without release; the next `start` continues it". A run folder may hold `claim.lock`: it is the claim, not a record, and the data repo never commits it.
+Then the runs that hold a claim now: `python3 ../../_core/data-root/run_claim.py list --ws ticket-execution` from this workspace folder. Each `live` run is "running since <startedAt> (pid <pid>, checkout <checkout>)" with its base/label (when present), ports and work tree; a `stale` one is "stopped without release; the next `start` continues it". A run folder may hold `claim.lock`: it is the claim, not a record, and the data repo never commits it.
 
 ```
 Pipeline Status: ticket-execution

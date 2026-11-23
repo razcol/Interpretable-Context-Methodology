@@ -1,10 +1,10 @@
 # Verify steps
 
-`<ws>` is the workspace folder `../../../shared/tools.md` names (the brief gives its real path). `B` is `<checkout>/_core/skills/browser-cdp`, the browser-cdp folder of the same checkout (`<ws>/../../_core/skills/browser-cdp`). `R` is `<runs>/<KEY>/05-verify`. `<app>` is the app root from `implement-record.md`.
+`<ws>` is the workspace folder `../../../shared/tools.md` names (the brief gives its real path). `B` is `<checkout>/_core/skills/browser-cdp`, the browser-cdp folder of the same checkout (`<ws>/../../_core/skills/browser-cdp`). `R` is `<runs>/<RUN>/05-verify`. `<app>` is the app root from `implement-record.md`.
 
 ## Write scope
 
-Everything this stage writes goes under `R` (`<runs>/<KEY>/05-verify/`). Do not write `/tmp/*.json` scratch files: pass JSON inline (`--steps '[...]'`) or keep a temporary file inside `R`. Stage 05 workers do not append to `log/browser-cdp/LOG.md` or any other skill log; the orchestrator owns logs.
+Everything this stage writes goes under `R` (`<runs>/<RUN>/05-verify/`). Do not write `/tmp/*.json` scratch files: pass JSON inline (`--steps '[...]'`) or keep a temporary file inside `R`. Stage 05 workers do not append to `log/browser-cdp/LOG.md` or any other skill log; the orchestrator owns logs.
 
 ## Lint
 
@@ -12,15 +12,15 @@ When lint was deferred to this stage, run the command from `<data-root>/workspac
 
 ## Run ports and browser
 
-Runs on other keys may be verifying at the same time, so this run uses only its own ports and browser profile. Get them once (each call returns the same port again):
+Runs on other keys or approaches may be verifying at the same time, so this run uses only its own ports and browser profile. Get them once (each call returns the same port again):
 
 ```bash
-python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <KEY> --kind dev   # DEV
-python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <KEY> --kind cdp   # CDP
+python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <RUN> --kind dev   # DEV
+python3 <ws>/../../_core/data-root/run_claim.py port --ws ticket-execution --key <RUN> --kind cdp   # CDP
 node $B/scripts/browser.js start --profile <p> --port <CDP>
 ```
 
-`<p>` is the key in lowercase (`ond-123`); its port and `<p>` are the same in stage 06. Every browser call below carries `--profile <p>`, and `browser.js stop --profile <p>` stops it. Never use the default profile or port: another run's sign-in and tabs live there.
+`<p>` is the run id in lowercase (`ond-123` or `ond-123--dev--try-a`); its port and `<p>` are the same in stage 06. Every browser call below carries `--profile <p>`, and `browser.js stop --profile <p>` stops it. Never use the default profile or port: another run's sign-in and tabs live there.
 
 ## Server
 

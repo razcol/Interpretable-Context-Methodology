@@ -11,7 +11,7 @@ JIRA_API_TOKEN=<token from https://id.atlassian.com/manage-profile/security/api-
 
 The file is `~/.config/jira/jira.env`. You create it in your own terminal (`chmod 600`). Never paste the token into chat. The agent never prints, opens or copies this file; only `intake.py` reads it.
 
-Without the file, `ticket.md` shows `[image: <name>, not downloaded]` where each image sits, and the attachment table says `no credentials`. The run goes on. Say which images are missing and that you can drop them into `<runs>/<KEY>/01-intake/attachments/` under their Jira file names and type `start <KEY>` again; the re-run marks them `provided` and links them.
+Without the file, `ticket.md` shows `[image: <name>, not downloaded]` where each image sits, and the attachment table says `no credentials`. The run goes on. Say which images are missing and that you can drop them into `<runs>/<RUN>/01-intake/attachments/` under their Jira file names and run `start` for this run again; the re-run marks them `provided` and links them.
 
 ## intake.md
 
@@ -25,7 +25,7 @@ Written by the agent after reading `ticket.md` and the images. English. Hebrew t
 - type / status: <type> / <status>
 - repo: <repo name from <data-root>/workspaces/ticket-execution/repos.md>
 - root: <root>
-- base: <the row's Base>
+- base: <Base from brief, or the row's Base when none was passed>
 - app root: <root>/code
 - linked: <keys and one line each, or none>
 
@@ -47,4 +47,4 @@ Written by the agent after reading `ticket.md` and the images. English. Hebrew t
 
 ## Re-runs
 
-A second `start` on the same key (QA returned it, new comments, a new image) reruns intake into the same folder. Before overwriting, read the old `intake.md` "Acceptance" list. In the new one, mark each line `new`, `changed` or `same`. Stage 03 plans only the `new` and `changed` lines, on the existing branch.
+A second `start` on the same run id (QA returned it, new comments, a new image) reruns intake into that run's folder. Before overwriting, read the old `intake.md` "Acceptance" list from `<runs>/<RUN>/01-intake/`. In the new one, mark each line `new`, `changed` or `same`. Stage 03 plans only the `new` and `changed` lines, on this run's existing branch. A new label or base is a new run and does not read another run's records.

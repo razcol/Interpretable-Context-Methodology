@@ -695,6 +695,29 @@ class WriteRecordTests(unittest.TestCase):
             self.assertFalse(data["ok"])
         self.assertFalse(self.runs.exists())
 
+    def test_run_flag_writes_suffixed_folder_and_validates_prefix(self):
+        code, data = self.write("05", "ABC-1", self.RECORD, "--run", "ABC-1--dev--try-a")
+        self.assertEqual(code, 0, data)
+        target = Path(self.runs, "ABC-1--dev--try-a", "05-verify", "verify-report.md")
+        self.assertEqual(Path(data["path"]), target.resolve())
+        self.assertEqual(target.read_text(), self.RECORD)
+
+        code, data = self.write("05", "ABC-1", self.RECORD, "--run", "ABC-1--dev")
+        self.assertEqual(code, 0, data)
+        self.assertTrue(Path(self.runs, "ABC-1--dev", "05-verify", "verify-report.md").is_file())
+
+        for key, bad_run in (
+            ("XYZ-2", "ABC-1--dev--try-a"),
+            ("ABC-1", "XYZ-2"),
+            ("ABC-1", "ABC-1--a--b--c"),
+            ("ABC-1", "ABC-1--"),
+            ("ABC-1", "ABC-1--../x"),
+            ("ABC-1", "ABC-1--DEV"),
+        ):
+            code, data = self.write("05", key, self.RECORD, "--run", bad_run)
+            self.assertEqual(code, 2, (key, bad_run))
+            self.assertFalse(data["ok"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)

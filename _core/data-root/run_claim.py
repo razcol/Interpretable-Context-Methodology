@@ -4,7 +4,8 @@
 The rules live in "Run claims" under "Data root" in _core/CONVENTIONS.md. Python 3
 standard library only. Every command prints one JSON object.
 
-  claim   --ws WS --key KEY             claim a run key before the run's first stage (prints claimId)
+  claim   --ws WS --key KEY [--base B [--label L]]
+                                        claim a run key before the run's first stage (prints claimId, runId)
   port    --ws WS --key KEY --kind K    the run's own port (dev or cdp), the same one on every call
   target  --ws WS --key KEY --path P --root R --branch B
                                         claim the target-repo work tree (and branch) the run edits
@@ -49,12 +50,18 @@ import data_root as dr  # noqa: E402
 
 VERSION = 1
 CLAIM = "claim.lock"
+RUN_META = "run.json"
 SHARED = "claims"
 OPS_LOCK = ".ops.lock"
 STALE_AFTER = 2 * 3600
 RANGES = {"dev": (3000, 3049), "cdp": (9340, 9399)}
 WS_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+JIRA_RE = re.compile(r"^[A-Z][A-Z0-9]+-\d+$")
+PROFILE_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,40}$")
+BASE_LINE_RE = re.compile(r"^\s*-\s*base:\s*`?([^\s`]+)`?")
+BRANCH_ORIGIN_RE = re.compile(r"^\s*-\s*branch:.*\b(?:from|at)\s+`?origin/([^\s`),;:]+)`?")
+HANDOFF_DIFF_RE = re.compile(r"\bDiff\s+(?:against|vs\.?)\s+`?origin/([^\s`),;:]+)`?")
 # Processes between the agent and this script that do not outlive one command.
 TRANSIENT = {"bash", "sh", "dash", "zsh", "fish", "env", "timeout", "nice", "nohup", "sudo",
              "script", "stdbuf", "xargs", "flock", "time"}
@@ -194,7 +201,7 @@ def shared_state(record):
 
 
 def summary(record):
-    keep = ("ws", "key", "pid", "startedAt", "touchedAt", "checkout", "ports", "targets")
+    keep = ("ws", "key", "jira", "base", "label", "pid", "startedAt", "touchedAt", "checkout", "ports", "targets")
     return {k: record.get(k) for k in keep if k in record}
 
 
@@ -217,39 +224,204 @@ def touch(path, record):
     write(path, record)
 
 
+# ---------- multi-base / labeled slots ----------
+
+def strip_origin(branch):
+    s = (branch or "").strip()
+    if s.startswith("origin/"):
+        s = s[len("origin/"):]
+    return s.rstrip("`),;:")
+
+
+def slugify(value):
+    return re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
+
+
+def validate_run_id(run_id):
+    if not KEY_RE.match(run_id or "") or ".." in run_id:
+        raise Bad(f"run id {run_id!r} exceeds run-key rules (^[A-Za-z0-9][A-Za-z0-9._-]{{0,63}}$)")
+    if not PROFILE_RE.match(run_id.lower()):
+        raise Bad(f"run id {run_id!r} fails browser profile limit (^[a-z0-9][a-z0-9-]{{0,40}}$, max 41 chars)")
+
+
+def read_run_meta(folder):
+    path = Path(folder) / RUN_META
+    if not path.exists():
+        return None, False
+    data = read(path)
+    if not isinstance(data, dict):
+        raise Bad(f"unreadable {RUN_META} in {folder}")
+    return data, True
+
+
+def read_base_line(path):
+    try:
+        text = Path(path).read_text(errors="replace")
+    except OSError:
+        return None
+    for line in text.splitlines():
+        m = BASE_LINE_RE.match(line)
+        if m:
+            b = strip_origin(m.group(1))
+            if b:
+                return b
+    return None
+
+
+def mixed_bases(folder):
+    """Collect distinct base slugs across the five authoritative run record files."""
+    folder = Path(folder)
+    seen = {}
+
+    def add(raw):
+        b = strip_origin(raw)
+        s = slugify(b)
+        if s and s not in seen:
+            seen[s] = b
+
+    for rel in ("01-intake/intake.md", "03-plan/plan.md"):
+        b = read_base_line(folder / rel)
+        if b:
+            add(b)
+
+    for rel in ("04-implement/implement-record.md", "03b-baseline/baseline-record.md"):
+        p = folder / rel
+        if p.is_file():
+            for line in p.read_text(errors="replace").splitlines():
+                m = BRANCH_ORIGIN_RE.match(line)
+                if m:
+                    add(m.group(1))
+
+    handoff = folder / "06-handoff" / "handoff.md"
+    if handoff.is_file():
+        for line in handoff.read_text(errors="replace").splitlines():
+            m = HANDOFF_DIFF_RE.search(line)
+            if m:
+                add(m.group(1))
+
+    return list(seen.values())
+
+
+def resolve_slot(data, ws, key, base, label):
+    """Resolve (run_id, jira, stored_base, label_slug) inside ops_lock."""
+    if base is None:
+        if label is not None:
+            raise Bad("--label requires --base")
+        return key, None, None, None
+
+    if "--" in key or not JIRA_RE.match(key):
+        raise Bad(f"--base requires a Jira key ([A-Z][A-Z0-9]+-\\d+, no '--'), got {key!r}")
+
+    base_clean = strip_origin(base)
+    base_slug = slugify(base_clean)
+    if not base_slug:
+        raise Bad(f"empty base slug for {base!r}")
+
+    if label is not None:
+        label_slug = slugify(label)
+        if not label_slug:
+            raise Bad(f"empty label slug for {label!r}")
+        run_id = f"{key}--{base_slug}--{label_slug}"
+        validate_run_id(run_id)
+        folder = run_dir(data, ws, run_id)
+        if folder.exists():
+            meta, exists = read_run_meta(folder)
+            if (not exists or meta.get("jira") != key
+                    or slugify(strip_origin(meta.get("base", ""))) != base_slug
+                    or meta.get("label") != label_slug
+                    or (meta.get("runId") and meta.get("runId") != run_id)):
+                raise Bad(f"existing folder runs/{run_id} has missing or mismatched {RUN_META}")
+            base_clean = meta["base"]
+        return run_id, key, base_clean, label_slug
+
+    suf = f"{key}--{base_slug}"
+    suf_dir = run_dir(data, ws, suf)
+    if suf_dir.exists():
+        meta, exists = read_run_meta(suf_dir)
+        if (not exists or meta.get("jira") != key
+                or slugify(strip_origin(meta.get("base", ""))) != base_slug
+                or meta.get("label") is not None
+                or (meta.get("runId") and meta.get("runId") != suf)):
+            raise Bad(f"existing folder runs/{suf} has missing or mismatched {RUN_META}")
+        validate_run_id(suf)
+        return suf, key, meta["base"], None
+
+    pri_dir = run_dir(data, ws, key)
+    pri_meta, _ = read_run_meta(pri_dir)
+    if pri_meta:
+        if pri_meta.get("label") is not None:
+            raise Bad(f"runs/{key} has a label ({pri_meta.get('label')}) and is not an unlabeled slot")
+        if pri_meta.get("jira") and pri_meta.get("jira") != key:
+            raise Bad(f"runs/{key}/{RUN_META} belongs to {pri_meta.get('jira')}, not {key}")
+
+    intake_base = read_base_line(pri_dir / "01-intake" / "intake.md")
+    meta_base = strip_origin(pri_meta.get("base", "")) if pri_meta and pri_meta.get("base") else None
+    if meta_base and intake_base and slugify(meta_base) != slugify(intake_base):
+        raise Bad(f"runs/{key}/{RUN_META} base ({meta_base}) differs from intake.md base ({intake_base})")
+
+    found = mixed_bases(pri_dir) if pri_dir.is_dir() else []
+    if len(found) > 1:
+        raise Bad(f"mixed bases in runs/{key} ({', '.join(found)}); split the folder before claim")
+
+    recorded_base = meta_base or intake_base
+    if recorded_base is None or slugify(recorded_base) == base_slug:
+        stored_base = pri_meta["base"] if (pri_meta and pri_meta.get("base")) else (recorded_base or base_clean)
+        validate_run_id(key)
+        return key, key, stored_base, None
+
+    validate_run_id(suf)
+    return suf, key, base_clean, None
+
+
 # ---------- commands ----------
 
-def claim(ws, key, data=None, pid=None, checkout=None, note=None, takeover=False):
+def claim(ws, key, data=None, pid=None, checkout=None, note=None, takeover=False, base=None, label=None):
     check_names(ws, key)
     data, shared, top = places(data)
-    path = key_file(data, ws, key)
     pid = pid or owner_pid()
     st = proc_stat(pid)
     if st is None:
         raise Bad(f"process {pid} does not exist")
     cleared = None
     with ops_lock(shared):
+        run_id, jira, stored_base, label_slug = resolve_slot(data, ws, key, base, label)
+        path = key_file(data, ws, run_id)
         old = read(path) if path.exists() else None
         if path.exists():
             state, reason = key_state(old)
             if state == "live" and not takeover:
-                raise Held(f"{ws} {key} is already running (pid {old.get('pid')}, "
+                raise Held(f"{ws} {run_id} is already running (pid {old.get('pid')}, "
                            f"started {old.get('startedAt')}, checkout {old.get('checkout')})", summary(old))
             if state == "live":
                 reason = "taken over: the user said that run is not running"
             cleared = {**summary(old or {}), "reason": reason}
-            drop_shared(shared, ws, key)
-        record = {"version": VERSION, "ws": ws, "key": key, "pid": pid, "pidStart": st[2],
+            drop_shared(shared, ws, run_id)
+        if base is not None:
+            meta = {"jira": jira, "base": stored_base, "runId": run_id}
+            if label_slug is not None:
+                meta["label"] = label_slug
+            write(run_dir(data, ws, run_id) / RUN_META, meta)
+        record = {"version": VERSION, "ws": ws, "key": run_id, "pid": pid, "pidStart": st[2],
                   "token": secrets.token_hex(8), "host": socket.gethostname(),
                   "checkout": str(checkout or top), "dataRoot": str(data),
                   "startedAt": now(), "ports": {}, "targets": []}
+        if base is not None:
+            record["jira"] = jira
+            record["base"] = stored_base
+            if label_slug is not None:
+                record["label"] = label_slug
         if note:
             record["note"] = note
         if cleared and old:
             record["continues"] = old.get("startedAt")
         touch(path, record)
     result = {"claimed": True, "claimId": record["token"], "token": record["token"],
-              "claim": summary(record), "file": str(path)}
+              "runId": run_id, "claim": summary(record), "file": str(path)}
+    if base is not None:
+        result["jira"] = jira
+        result["base"] = stored_base
+        if label_slug is not None:
+            result["label"] = label_slug
     if cleared:
         result["staleCleared"] = cleared
     return result
@@ -427,6 +599,8 @@ def main(argv=None):
 
     c = sub.add_parser("claim", help="claim a run key")
     common(c)
+    c.add_argument("--base", help="base git branch for this run (optional)")
+    c.add_argument("--label", help="approach label for parallel runs on the same base (requires --base)")
     c.add_argument("--pid", type=int, help="owner process (default: the agent session that runs this)")
     c.add_argument("--checkout", help="ai-system checkout the run uses (default: this one)")
     c.add_argument("--note", help="what started the run, e.g. 'start'")
@@ -458,7 +632,8 @@ def main(argv=None):
     args = p.parse_args(argv)
     try:
         if args.cmd == "claim":
-            res = claim(args.ws, args.key, args.data_root, args.pid, args.checkout, args.note, args.takeover)
+            res = claim(args.ws, args.key, args.data_root, args.pid, args.checkout, args.note, args.takeover,
+                        args.base, args.label)
         elif args.cmd == "port":
             lo_hi = None
             if args.range:

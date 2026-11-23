@@ -2,14 +2,14 @@
 
 version: 1
 
-After you approve: stage the reviewed files, commit with the key, push the branch, and give you the create-PR link against the repo's PR target (from its row; the pushed branch when the row has no PR link). Runs only on `approve <KEY>` (commit and push) or `commit <KEY>` (commit only).
+After you approve: stage the reviewed files, commit with the key, push the branch, and give you the create-PR link against the PR target (the row's PR target when the run's base equals the row's Base, or the run's base when it is another branch; the pushed branch when there is no PR link). Runs only on `approve <KEY> [on <base>] [as <label>]` (commit and push) or `commit <KEY> [on <base>] [as <label>]` (commit only).
 
 ## Inputs
 
 | Source | File/Location | Section/Scope | Why |
 |--------|--------------|---------------|-----|
-| Stage 06 | `<runs>/<KEY>/06-handoff/handoff.md` | "files", "dev artifacts left out", branch, work tree | What you reviewed |
-| Stage 03 | `<runs>/<KEY>/03-plan/plan.md` | "Change" | Commit subject source |
+| Stage 06 | `<runs>/<RUN>/06-handoff/handoff.md` | "files", "dev artifacts left out", branch, work tree | What you reviewed |
+| Stage 03 | `<runs>/<RUN>/03-plan/plan.md` | "base", "Change" | Diff/PR base and commit subject source |
 | Steps | `references/release-steps.md` | Full file | Commands, record |
 | Git | `../../shared/git-rules.md` | "Allowed per stage", "Never staged", "Commit and PR" | Limits, subject, PR URL |
 | Repos | `<data-root>/workspaces/ticket-execution/repos.md` | The root's row | Commit subject pattern, PR target, PR link |
@@ -43,4 +43,4 @@ After you approve: stage the reviewed files, commit with the key, push the branc
 
 | Artifact | Location | Format |
 |----------|----------|--------|
-| Record | `<runs>/<KEY>/07-release/release-record.md` | Commit hash and subject, files, push result, PR URL |
+| Record | `<runs>/<RUN>/07-release/release-record.md` | Commit hash and subject, files, push result, PR URL |

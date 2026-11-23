@@ -17,17 +17,17 @@ How every stage reads `<data-root>/workspaces/ticket-execution/repos.md`. That t
 | PR link | The create-PR link, with `<branch>` where the branch name goes, or `none` | 07 |
 | Test route | A page on the dev server where CMS sections under work are placed, or `none yet` | 03, 06 |
 
-Patterns fill in `<id>` (the ticket number), `<kebab>`, `<Sentence>` (from plan "Change", one line), `<root>`, `<branch>` and `<KEY>` (the full ticket key).
+Patterns fill in `<id>` (the ticket number), `<kebab>`, `<Sentence>` (from plan "Change", one line), `<root>`, `<branch>`, `<KEY>` (the full ticket key), and `<RUN>` (the run id).
 
 ## Rules
 
 - Stage 01 resolves the key to one row. When more than one row has the key, pick one only as that key's line under "Notes" says. Otherwise stop and ask which root.
 - A key not in the table: stop and ask for the root and the other columns, then add the row.
-- `<kebab>` is three to six English words from the summary, lowercase, hyphens. A bare ticket key (`<KEY>`) is not a branch name.
-- "main tree" means the branch is checked out in the root folder. Use a worktree instead when the root has uncommitted work, is on a branch with unpushed commits, or is claimed by another run (`stages/04-implement/references/work-tree.md` "Claim"). Worktrees go where the row says, or `<root>/.worktrees/<KEY>` when it says main tree.
-- `<base>` is the row's Base. Stage 01 writes it into `intake.md`, stage 03 copies it into `plan.md`, and stages 04 to 06 take it from `plan.md`. A record without a `base:` line (an older run) means the row's Base.
+- `<kebab>` is three to six English words from the summary, lowercase, hyphens. A bare ticket key (`<KEY>`) is not a branch name. When the run id is `<KEY>--<tail>`, append `--<tail>` to the branch name built from the row pattern.
+- "main tree" means the branch is checked out in the root folder. A labeled run (`as <label>`) always uses a worktree. An unlabeled run uses a worktree instead when the root has uncommitted work, is on a branch with unpushed commits, or is claimed by another run (`stages/04-implement/references/work-tree.md` "Claim"). Worktrees go where the row says, or `<root>/.worktrees/<RUN>` when it says main tree. When the run id is `<KEY>--<tail>`, append `--<tail>` to the last path component unless it already ends with `--<tail>` (for example when formed from `<branch>` or `<RUN>`).
+- `<base>` is the run's `Base` from the brief, or the row's Base when none was passed. Stage 01 writes it into `intake.md`, stage 03 copies it into `plan.md`, and stages 04 to 07 take it from `plan.md`. A record without a `base:` line (an older run) means the row's Base.
 - Stage 06 adds a test route to the row the first time you give one.
-- PR link: replace `<branch>` with the branch name, URL-encoded, except that a `/` stays as `/` (it works in the query as is). A row whose PR link is `none` has no link: stage 07 reports the pushed branch and its PR target instead.
+- PR target and PR link: when the run's `<base>` equals the row's Base, the PR target and PR link stay the row's (replacing `<branch>` with the branch name, URL-encoded, except that `/` stays as `/`). When the run's `<base>` is another branch, the PR target is the run's `<base>`, and the link's `dest=` value or compare base is replaced with that branch; a link containing neither form has no URL and stage 07 reports the pushed branch and the run's `<base>` instead. A row whose PR link is `none` has no link: stage 07 reports the pushed branch and its PR target instead.
 - A line under "Notes" for the run's key or repo applies to every stage that reads the row.
 
 ## Lint

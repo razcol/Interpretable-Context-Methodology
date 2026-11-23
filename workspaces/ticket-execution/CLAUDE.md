@@ -29,35 +29,39 @@ ticket-execution/
 | Keyword | Action |
 |---------|--------|
 | `setup` | Run the onboarding questionnaire |
-| `status` | List keys and where each one waits, and the runs that hold a claim now (`shared/run-records.md`) |
-| `start <url or KEY>` | Orchestrate 01 through 06 (03b between 03 and 04), then stop for your review. On a key with an earlier run, continue on the same branch |
-| `plan <KEY>` | Redo 03, then 03b, 04, 05, 06, then stop for your review. 03b is skipped when its `baseline-record.md` already exists |
-| `implement <KEY>` | Resume when `plan.md` exists and `implement-record.md` does not: 04, 05, 06. `start` does not need this word |
-| `change <KEY>: <what>` | 04 (change pass), 05, 06, then stop again |
-| `approve <KEY>` | Re-claim the key, then 07: commit, push, PR link (Orchestrator step 4) |
-| `commit <KEY>` | Re-claim the key, then 07: commit only (Orchestrator step 4) |
-| `stop <KEY>` | `dev_server.py down` with the key's state file (`03b-baseline/dev-server.json` when it exists, then `05-verify/dev-server.json`), then end the key's claim (`C end`) |
+| `status` | List run folders and where each one waits, and the runs that hold a claim now (`shared/run-records.md`) |
+| `start <url or KEY> [on <base>] [as <label>]` | Orchestrate 01 through 06 (03b between 03 and 04), then stop for your review. On a run with an earlier pass, continue on the same branch |
+| `plan <KEY> [on <base>] [as <label>]` | Redo 03, then 03b, 04, 05, 06, then stop for your review. 03b is skipped when its `baseline-record.md` already exists |
+| `implement <KEY> [on <base>] [as <label>]` | Resume when `plan.md` exists and `implement-record.md` does not: 04, 05, 06. `start` does not need this word |
+| `change <KEY> [on <base>] [as <label>]: <what>` | 04 (change pass), 05, 06, then stop again |
+| `approve <KEY> [on <base>] [as <label>]` | Re-claim the run, then 07: commit, push, PR link (Orchestrator step 4) |
+| `commit <KEY> [on <base>] [as <label>]` | Re-claim the run, then 07: commit only (Orchestrator step 4) |
+| `stop <KEY> [on <base>] [as <label>]` | `dev_server.py down` with the run's state file (`03b-baseline/dev-server.json` when it exists, then `05-verify/dev-server.json`), then end the run's claim (`C end`) |
 
-A run is keyed by the Jira key. Its records live in `<runs>/<KEY>/0N-*/` in the data root (`shared/run-records.md`).
+`<KEY>` is the Jira key (headings, commit subjects, and `intake.py`'s ticket argument). `<RUN>` is the run id (`<KEY>`, `<KEY>--<baseSlug>`, or `<KEY>--<baseSlug>--<labelSlug>`); paths, claims, ports, browser profiles, worktrees, and commit keys use `<RUN>`. Its records live in `<runs>/<RUN>/0N-*/` in the data root (`shared/run-records.md`).
+
+`on <base>` picks the base branch; `as <label>` names a parallel approach (one token of letters, digits, and hyphens; on `change`, both come before the colon):
+- `start <KEY>` uses the repo row's Base and no label; `start <KEY> on <base>` is the unlabeled slot for that base; `start <KEY> as <label>` uses the row's Base and that label; `start <KEY> on <base> as <label>` is that approach. (If `<KEY>` has no row yet or two rows with different Bases and no existing run folder, claim without `--base` until stage 01 resolves the row, or ask.)
+- On `plan`, `implement`, `change`, `approve`, `commit`, and `stop`: with one folder for the key, omitting both uses it; `on <base>` alone uses the unlabeled folder for that base; `as <label>` alone uses the one folder with that label (two bases with the same label: ask for the base); any other mix of folders: stop and ask.
 
 ## Orchestrator
 
 The session that read this file only orchestrates, following `../../_core/skills/subagent-orchestration/SKILL.md` (role, briefs, model and effort, checking returns, retry, blocked, progress lines). This section keeps only what is specific to this workflow. Each stage is one unit, run in number order, never in parallel. The orchestrator does not intake, research, plan, edit the repo, or verify. It writes no files, and that includes skill logs. Its only writes are the run claim commands below, which keep the claim and commit the run folder.
 
-Runs on different keys run at the same time; only what they really share is claimed (the skill's run claim, "Run claims" in `../../_core/CONVENTIONS.md`). `C` is `python3 ../../_core/data-root/run_claim.py` from this workspace folder (`required_permissions: all`):
+Runs on different keys — and runs of the same key on different bases or approach labels — run at the same time; only what they really share is claimed (the skill's run claim, "Run claims" in `../../_core/CONVENTIONS.md`). `C` is `python3 ../../_core/data-root/run_claim.py` from this workspace folder (`required_permissions: all`):
 
-1. On `start`, `plan`, `implement` or `change`, before the first spawn: `C claim --ws ticket-execution --key <KEY> --note <trigger>`. Keep the `claimId` it prints for this run. Exit 3 means a live run holds the key: stop and report the claim it names (pid, start time, checkout). A `staleCleared` line means an earlier run on this key was killed: say so in one line and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
-2. After each stage passes its check: `C commit --ws ticket-execution --key <KEY> --stage <0N-name>`. It commits only `<runs>/<KEY>/` into the data repo, one commit at a time.
-3. When the run stops (stage 06 has posted, a checkpoint asks you to choose, a stage is blocked, or `stop <KEY>`): `C end --ws ticket-execution --key <KEY> --claim-id <claimId>`. It drops the key, port and work-tree claims and commits the run folder. The dev server stays up for your review; its port stays taken because it listens.
-4. On `approve <KEY>` or `commit <KEY>`, the key is claimed again, every time, even when the same session ran 01 to 06: `C claim --ws ticket-execution --key <KEY> --note approve` before spawning stage 07 (exit 3 and `staleCleared` as in step 1), and keep its new `claimId`. After stage 07 passes its check: `C commit --ws ticket-execution --key <KEY> --stage 07-release`. When 07 is done (passed, blocked or failed twice): `C end --ws ticket-execution --key <KEY> --claim-id <claimId>`.
+1. On `start`, `plan`, `implement` or `change`, before the first spawn: `C claim --ws ticket-execution --key <KEY> --base <base> [--label <label>] --note <trigger>` (omit `--label` when the user named none; for an older run folder without `run.json` or an unknown project with no Base yet, omit `--base`). Keep the `claimId` and `runId` (`<RUN>`) it prints for this run; every later command uses `--key <RUN>`. Exit 3 means a live run holds that `<RUN>`: stop and report the claim it names (pid, start time, checkout). Exit 2 on a mixed primary folder stops and reports it. A `staleCleared` line means an earlier run on this `<RUN>` was killed: say so in one line and continue from its records. Only when you say that run is not running, claim again with `--takeover`.
+2. After each stage passes its check: `C commit --ws ticket-execution --key <RUN> --stage <0N-name>`. It commits only `<runs>/<RUN>/` (including `run.json`) into the data repo, one commit at a time.
+3. When the run stops (stage 06 has posted, a checkpoint asks you to choose, a stage is blocked, or `stop`): `C end --ws ticket-execution --key <RUN> --claim-id <claimId>`. It drops that run's key, port and work-tree claims and commits the run folder. The dev server stays up for your review; its port stays taken because it listens.
+4. On `approve` or `commit`, the run is claimed again, every time, even when the same session ran 01 to 06: `C claim --ws ticket-execution --key <KEY> --base <base> [--label <label>] --note approve` (or `C claim --ws ticket-execution --key <RUN> --note approve` when re-claiming a resolved folder without `run.json`) before spawning stage 07 (exit 3 and `staleCleared` as in step 1), and keep its new `claimId` and `<RUN>`. After stage 07 passes its check: `C commit --ws ticket-execution --key <RUN> --stage 07-release`. When 07 is done (passed, blocked or failed twice): `C end --ws ticket-execution --key <RUN> --claim-id <claimId>`.
 
 `commit` and `end` are always separate shell calls. Never chain them (`C commit ... && C end ...`): run `commit`, read its JSON, then run `end`. `release --token` is the deprecated name of `end --claim-id`; do not use it.
 
 Claim status: right after stage 06 and right after stage 07, the orchestrator's message has one line for the claim, so a stale lock is never silent. `claim: ended` when `end` printed `"ok": true`. Otherwise `claim: still held — <reason>` (the exit code and error `end` printed, or why `end` did not run yet, for example a checkpoint is waiting). Never leave the line out.
 
-Stages claim the rest themselves under the run's key: stage 03b (when it is not skipped) or else stage 04 its work tree and branch (`C target`), stages 03b, 05 and 06 the run's dev-server and browser ports (`C port`). Stage 04 reuses the work tree and branch 03b claimed. No `.run-lock` file is written anywhere.
+Stages claim the rest themselves under `<RUN>`: stage 03b (when it is not skipped) or else stage 04 its work tree and branch (`C target --key <RUN>`), stages 03b, 05 and 06 the run's dev-server and browser ports (`C port --key <RUN>`). Stage 04 reuses the work tree and branch 03b claimed. No `.run-lock` file is written anywhere.
 
-Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and the key. Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `<runs>/<KEY>/0N-*/` (`<runs>/<KEY>/03b-baseline/` for 03b). Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
+Spawn one fresh subagent per stage and wait for it. Before each spawn, re-read the "Subagent model" section of this file. The brief names the stage `CONTEXT.md`, the reference that file names, every path copied from that file's Inputs table, and `Key`, `Run`, `Base`, and `Label` (or `none`). Copy those paths; do not type a skill or repo path from memory. Write scope: that stage's `<runs>/<RUN>/0N-*/` (`<runs>/<RUN>/03b-baseline/` for 03b). Every stage reads and writes that run only. Return: the output path, each audit row, and whether a checkpoint is waiting. Secrets: the file and key names from `<data-root>/workspaces/ticket-execution/repos.md` "Test logins".
 
 `<data-root>` in this workspace's files is your data folder, outside the repo: the path `python3 ../../_core/data-root/data_root.py resolve` prints from this workspace folder (see "Data root" in `../../_core/CONVENTIONS.md`). `<runs>` is `<data-root>/workspaces/ticket-execution/runs`, the run folders (never `stages/*/output/` in this repo). `<checkout>` is the ai-system checkout this run is in: the path `python3 ../../_core/data-root/data_root.py checkout` prints from this workspace folder. `<ws>` is `<checkout>/workspaces/ticket-execution`. Tool paths in the stage files start at `<ws>` or `<checkout>`, so a run uses the tools of the checkout it runs in (a main checkout, another clone or a maintenance worktree), never another checkout's. Resolve all of them once per run and copy the real paths into every brief.
 
@@ -66,8 +70,8 @@ Shape of a call, with the model filled in:
 ```text
 subagent_type: generalPurpose
 model: claude-sonnet-5-5-high
-description: stage 04 <KEY>
-prompt: Read stages/04-implement/CONTEXT.md (version line included) and every path in its Inputs table. Key: <KEY>. <checkout> is <real path>, <ws> is <real path>, <runs> is <real path>. Write only <runs>/<KEY>/04-implement/. Return the output path, each audit row, and whether a checkpoint is waiting.
+description: stage 04 <RUN>
+prompt: Read stages/04-implement/CONTEXT.md (version line included) and every path in its Inputs table. Key: <KEY>. Run: <RUN>. Base: <base>. Label: <label or none>. <checkout> is <real path>, <ws> is <real path>, <runs> is <real path>. Write only <runs>/<RUN>/04-implement/. Return the output path, each audit row, and whether a checkpoint is waiting.
 ```
 
 A stage fails its check when the output file is missing, or when no checkpoint is waiting and the audit still fails. Retry and stop follow the skill. The orchestrator does not run `tools/write_record.py`.
@@ -101,7 +105,7 @@ When either fails, ask once in one message (the missing identity, and whether th
 
 When "Form submits" is `no` and every checklist row sends a form, do not spawn 05. Spawn 06 and tell it the checklist cannot be verified on this backend (submit not allowed), so it posts that and does not open a browser. When some rows do not send a form, spawn 05. Stage 03b follows the same rule in its step 0: it skips itself and writes `status: skipped (form submits: no)`.
 
-Order for `start` and for `plan <KEY>`: the stages in the trigger, in number order, with 03b between 03 and 04. Spawn 03b only when `<runs>/<KEY>/03b-baseline/baseline-record.md` does not exist; `change <KEY>`, `implement <KEY>` and every later retry never spawn it, so baselines persist across passes. After 03, do not wait. Questions in `plan.md` already name a default, and stage 04 follows that file as written.
+Order for `start` and for `plan`: the stages in the trigger, in number order, with 03b between 03 and 04. Spawn 03b only when `<runs>/<RUN>/03b-baseline/baseline-record.md` does not exist; `change`, `implement` and every later retry never spawn it, so baselines persist across passes. After 03, do not wait. Questions in `plan.md` already name a default, and stage 04 follows that file as written.
 
 When stage 05 returns FAIL rows caused by the change, spawn 04 once with those rows, then 05 again, then 06 even if a FAIL remains. A checkpoint that asks you to choose (an unknown repo root) stops the run. Report it and wait.
 
@@ -138,7 +142,7 @@ This table is for the subagent of that stage. The orchestrator loads this file a
 
 ## Stage Handoffs
 
-Each stage writes into `<runs>/<KEY>/0N-*/` (`03b-baseline/` for stage 03b). The record's first line is the `version:` line from that stage's CONTEXT.md. The next stage's subagent reads those files. The orchestrator does not carry the work across in its prompt. The run stops after 06, when a checkpoint says the human must choose, or when ACLI fails. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
+Each stage writes into `<runs>/<RUN>/0N-*/` (`03b-baseline/` for stage 03b). The record's first line is the `version:` line from that stage's CONTEXT.md. The next stage's subagent reads those files. The orchestrator does not carry the work across in its prompt. The run stops after 06, when a checkpoint says the human must choose, or when ACLI fails. Later stages read earlier records. Earlier stages never read later ones. Records are run history, not templates.
 
 ## Ground Rules
 

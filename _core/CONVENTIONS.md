@@ -177,13 +177,13 @@ From a shell: `"$(python3 _core/data-root/data_root.py resolve)"`.
 | Folder | Holds |
 |---|---|
 | `workspaces/<ws>/` | One workspace's settings (repo tables, login steps) |
-| `workspaces/<ws>/runs/<KEY>/` | Run records and produced artifacts, per run key: one subfolder per stage (`<KEY>/0N-name/`) |
+| `workspaces/<ws>/runs/<RUN>/` | Run records and produced artifacts, per run id (`<KEY>`, `<KEY>--<baseSlug>`, or `<KEY>--<baseSlug>--<labelSlug>`): one subfolder per stage (`<RUN>/0N-name/`) and optional `run.json` |
 | `workspaces/<ws>/flowchart/` | A generated diagram of the workspace |
 | `log/<skill>/LOG.md` | One append-only log per skill |
 | `log/briefs/` | Session briefs, handoffs and debriefs |
 | `archive/` | Kept history (`archive/<ws>/` per workspace) |
 | `.worktrees/<branch>/` | Paired data worktrees (ignored) |
-| `workspaces/<ws>/runs/<KEY>/claim.lock`, `claims/` | Run claims (ignored, never committed; see Run claims) |
+| `workspaces/<ws>/runs/<RUN>/claim.lock`, `claims/` | Run claims (ignored, never committed; see Run claims) |
 
 A layout change raises the `LAYOUT` version and ships with a migration step that runs on merge.
 
@@ -193,20 +193,20 @@ A layout change raises the `LAYOUT` version and ships with a migration step that
 
 **Project practices are rows.** How a target project works (root, branch and commit patterns, base branch, PR target and PR link, main tree or worktree and where, lint command, test route, test logins, form submits, and any rule that holds for that project only) is that project's row in its workspace's repo table in the data root. The repo keeps only the generic rule for reading a row (for example `workspaces/ticket-execution/shared/repo-rows.md`), so adding or changing a project never needs an edit in the repo. ai-system's own maintenance worktrees and their paired data worktrees ("Two modes" below) are ai-system's own mechanism, not a project row. A ticket on ai-system itself is the one row whose worktree is made with `add` (its row's note says so), so that branch gets its paired data worktree; a run on any other repo never creates an ai-system worktree.
 
-**Run folders** (`workspaces/<ws>/runs/<KEY>/<stage>/`) hold every stage output and run record (Pattern 2). Tools that write a record resolve the data root themselves (for example `workspaces/ticket-execution/tools/write_record.py`). A generated diagram of a workspace goes to `workspaces/<ws>/flowchart/`. Kept history that belongs to no run goes to `archive/<ws>/`. A session's throwaway files go to its own temp folder, never into the repo; anything worth keeping goes to the data root.
+**Run folders** (`workspaces/<ws>/runs/<RUN>/<stage>/`) hold every stage output and run record (Pattern 2). Tools that write a record resolve the data root themselves (for example `workspaces/ticket-execution/tools/write_record.py`). A generated diagram of a workspace goes to `workspaces/<ws>/flowchart/`. Kept history that belongs to no run goes to `archive/<ws>/`. A session's throwaway files go to its own temp folder, never into the repo; anything worth keeping goes to the data root.
 
 **Large outputs** (screenshots, exports) are committed to the data repo like everything else, so discarding a worktree never loses them. Env and secret files are never committed in either repo.
 
-**Run claims.** Runs on different keys run at the same time. Instead of one lock file per workspace, a run claims only what runs really share, with `_core/data-root/run_claim.py` (every command prints one JSON object; exit 3 names the live run that holds what was asked for):
+**Run claims.** Runs on different keys — and runs of the same Jira key on different bases or approach labels — run at the same time. Instead of one lock file per workspace, a run claims only what runs really share, with `_core/data-root/run_claim.py` (every command prints one JSON object; exit 3 names the live run that holds what was asked for):
 
 | Command | What it does |
 |---|---|
-| `claim --ws <ws> --key <KEY>` | Before a run's first stage. Writes `workspaces/<ws>/runs/<KEY>/claim.lock` in the data checkout `resolve` prints: start time, the ai-system checkout, the PID of the agent session that runs it, and a claim id (printed as `claimId`). A live claim on the key stops the second run and names the first. A stale claim (its process gone or replaced, its checkout gone, or untouched for 2 hours) is replaced and reported, so the next run continues from the records. `--takeover` replaces a live-looking claim only when the user says that run is not running. |
-| `target --path <work tree> --root <root> --branch <b>` | Claims the target-repo work tree and branch a run edits. Another live run on the same work tree or branch gets exit 3. Whether a run uses a worktree comes from the repo's row. |
-| `port --kind dev\|cdp` | The run's own dev-server or browser (CDP) port: free, not claimed by a live run, and the same on every call of that run. Each run also starts its own browser profile, so sign-ins and screenshots never mix. |
-| `commit [--stage S]` | Commits only `workspaces/<ws>/runs/<KEY>/` through `data_root.py commit` (serialized, named paths only). Workflows run it after each stage's record. |
-| `end --claim-id <id>` | When the run stops: drops its claims, then commits its run folder. Always its own shell call, never chained after `commit` with `&&`. (`release --token` is the deprecated name; it still works.) |
-| `list [--ws <ws>]` | Every claim, `live` or `stale`. `status` shows the live ones. |
+| `claim --ws <ws> --key <KEY> [--base <branch> [--label <name>]]` | Before a run's first stage. Writes `workspaces/<ws>/runs/<RUN>/claim.lock` in the data checkout `resolve` prints: start time, the ai-system checkout, the PID of the agent session that runs it, and a claim id (printed as `claimId`, alongside `runId`). Without `--base`, `<RUN>` is `<KEY>` (single slot). With `--base`, `<KEY>` must be a Jira key (`[A-Z][A-Z0-9]+-\d+`, no `--`): strip one leading `origin/`, slugify (`[^a-z0-9]+` → `-`, ends stripped), and compare bases by slug. The first unlabeled base occupies `<KEY>`; each further unlabeled base uses `<KEY>--<baseSlug>`; a `--label` always uses `<KEY>--<baseSlug>--<labelSlug>` (never reads or writes `<KEY>`). `run.json` (`jira`, `base`, optional `label`, `runId`) is written before `claim.lock` and committed with the run folder. Rejects an empty slug, `--label` without `--base`, a run id outside `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`, a lowercase run id outside the 41-char browser profile rule `^[a-z0-9][a-z0-9-]{0,40}$`, or a mixed primary folder (exit 2). A live claim on that `<RUN>` stops the second run (exit 3) and names the first. A stale claim is replaced and reported. `--takeover` replaces a live-looking claim only when the user says that run is not running. |
+| `target --key <RUN> --path <work tree> --root <root> --branch <b>` | Claims the target-repo work tree and branch a run edits. Another live run on the same work tree or branch gets exit 3. Whether a run uses a worktree comes from the repo's row. |
+| `port --key <RUN> --kind dev\|cdp` | The run's own dev-server or browser (CDP) port: free, not claimed by a live run, and the same on every call of that run. Each run also starts its own browser profile (`<RUN>` in lowercase), so sign-ins and screenshots never mix. |
+| `commit --key <RUN> [--stage S]` | Commits only `workspaces/<ws>/runs/<RUN>/` (including `run.json`) through `data_root.py commit` (serialized, named paths only). Workflows run it after each stage's record. |
+| `end --key <RUN> --claim-id <id>` | When the run stops: drops its claims, then commits its run folder. Always its own shell call, never chained after `commit` with `&&`. (`release --token` is the deprecated name; it still works.) |
+| `list [--ws <ws>]` | Every claim, `live` or `stale`. `status` shows the live ones (including `jira`, `base`, and `label` when present). |
 
 Port and work-tree claims are machine-wide, so they live in the main data checkout's `claims/` folder, also for test runs from a maintenance worktree; key claims live in the run's own data checkout. Claim files end in `.lock`, which the data repo ignores. Stages within one run still run in order. Log writes stay single small appends.
 
@@ -232,7 +232,7 @@ Pipeline Status: [workspace-name]
 
 For each stage: if `<runs>/<KEY>/<stage>/` contains files, the stage is COMPLETE and the filenames are listed. If it is missing or empty, the stage is PENDING.
 
-Then it lists the runs that hold a claim now (`python3 _core/data-root/run_claim.py list --ws <ws>`): each live run's key, start time and ports, and each stale claim as stopped without `end`.
+Then it lists the runs that hold a claim now (`python3 _core/data-root/run_claim.py list --ws <ws>`): each live run's id (with Jira key, base, and approach label when present), start time and ports, and each stale claim as stopped without `end`.
 
 Workspaces can define additional trigger keywords in their own CLAUDE.md.
 

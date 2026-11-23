@@ -53,22 +53,22 @@ Open:
 
 Running from `<app root>` on port <port> (<started for this run | your server, reused>). Log: `<log path>`.
 
-Branch `<branch>` in `<work tree>`, nothing staged or committed. Diff in Source Control, or:
+Branch `<branch>` in `<work tree>`, nothing staged or committed. Diff against `origin/<base>` in Source Control, or:
 <git diff --stat lines, at most 15; then "and N more">
 
 <Only when the plan or intake flagged a conflict between Jira text or comments and a ticket screenshot: **Ticket conflict (a note):** <Jira text or comment says X; the screenshot shows Y>. The change follows <X | Y>. Confirm which is right.>
 
-Checklist: <N> of <M> passed. Report: `<runs>/<KEY>/05-verify/verify-report.md`.
-Before (Baseline) vs. Annotated After, one click: [`evidence.html`](<wslPath>) (Windows: `<wslPath>`; Linux: `<html path>`). Raw files: `<runs>/<KEY>/05-verify/shots/` (after) and `<runs>/<KEY>/03b-baseline/shots/` (before, when present).
+Checklist: <N> of <M> passed. Report: `<runs>/<RUN>/05-verify/verify-report.md`.
+Before (Baseline) vs. Annotated After, one click: [`evidence.html`](<wslPath>) (Windows: `<wslPath>`; Linux: `<html path>`). Raw files: `<runs>/<RUN>/05-verify/shots/` (after) and `<runs>/<RUN>/03b-baseline/shots/` (before, when present).
 
 Next:
-- `approve <KEY>`: commit, push, and give you the PR link against `<PR target>`
-- `change <KEY>: <what>`: I change it, recheck, and hand it back on the same server
-- `commit <KEY>`: commit only, no push
-- `stop <KEY>`: stop the server I started
+- `approve <KEY>[ on <base>][ as <label>]`: commit, push, and give you the PR link against `<PR target>`
+- `change <KEY>[ on <base>][ as <label>]: <what>`: I change it, recheck, and hand it back on the same server
+- `commit <KEY>[ on <base>][ as <label>]`: commit only, no push
+- `stop <KEY>[ on <base>][ as <label>]`: stop the server I started
 ```
 
-`<PR target>` is the root's PR target in `<data-root>/workspaces/ticket-execution/repos.md`. When the row's PR link is `none`, the `approve` line reads "commit and push; open the PR into `<PR target>` yourself".
+Include `on <base>` when the run's base differs from the row's Base (or when multiple bases exist for the key), and `as <label>` when the run has a label. `<PR target>` is the root's PR target in `<data-root>/workspaces/ticket-execution/repos.md` when the run's base equals the row's Base, or the run's `<base>` when it is another branch. When the row's PR link is `none` (or cannot be rewritten for the run's `<base>`), the `approve` line reads "commit and push; open the PR into `<PR target>` yourself".
 
 Image differences: copy the differences from `verify-report.md`. Do not open the image again to settle them. Match by number, never by model name. When verify did not record which number was on screen, write "verify did not record which number was shown". Never print the test identity values.
 
@@ -86,7 +86,7 @@ On a `sessionStorage` root, add to the Not verified line that the session does n
 
 ## Evidence page
 
-Run `python3 <ws>/tools/evidence_html.py <runs>/<KEY> --key <KEY>` once, after the screenshots exist. It writes `<runs>/<KEY>/06-handoff/evidence.html`, which bundles the Before (Baseline) shots from `03b-baseline/shots/` and the Annotated After shots from `05-verify/shots/` side by side, paired by filename, as the proof of the change. The ticket attachments sit in a "Ticket Reference" section when present. A run without baseline shots gets the older Ticket vs verified layout. Every image is embedded, so one file opens anywhere with no server and no copied paths, and prints JSON with `html` (Linux path) and `wslPath` (`\\wsl.localhost\<distro>\...`, distro from `WSL_DISTRO_NAME`, default `Ubuntu`). Put both paths in the message next to the raw `shots/` path, as in the Checklist line above. The `wslPath` pastes into the Windows Explorer or browser address bar; the Linux path is for a WSL shell or editor. Copy the paths from the tool's output. Do not type them. When the tool fails, give the raw `shots/` path alone and say in one clause that the page was not built.
+Run `python3 <ws>/tools/evidence_html.py <runs>/<RUN> --key <KEY>` once, after the screenshots exist. It writes `<runs>/<RUN>/06-handoff/evidence.html`, which bundles the Before (Baseline) shots from `03b-baseline/shots/` and the Annotated After shots from `05-verify/shots/` side by side, paired by filename, as the proof of the change. The ticket attachments sit in a "Ticket Reference" section when present. A run without baseline shots gets the older Ticket vs verified layout. Every image is embedded, so one file opens anywhere with no server and no copied paths, and prints JSON with `html` (Linux path) and `wslPath` (`\\wsl.localhost\<distro>\...`, distro from `WSL_DISTRO_NAME`, default `Ubuntu`). Put both paths in the message next to the raw `shots/` path, as in the Checklist line above. The `wslPath` pastes into the Windows Explorer or browser address bar; the Linux path is for a WSL shell or editor. Copy the paths from the tool's output. Do not type them. When the tool fails, give the raw `shots/` path alone and say in one clause that the page was not built.
 
 ## Ticket conflicts
 

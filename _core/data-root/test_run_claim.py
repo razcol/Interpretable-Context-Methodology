@@ -464,6 +464,215 @@ class MaintenanceTests(ClaimSandbox):
         self.assertEqual(self.git(self.data, "status", "--porcelain", "--untracked-files=all"), "")
 
 
+class MultiBaseAndLabelTests(ClaimSandbox):
+    def run_meta(self, run_id, ws=WS, data=None):
+        return (data or self.data) / "workspaces" / ws / "runs" / run_id / "run.json"
+
+    def test_two_unlabeled_bases_live_with_own_folders_ports_and_targets(self):
+        a, b = self.fake_owner(), self.fake_owner()
+        root = self.tmp / "repo"
+        r1 = self.claim("ABC-1", a, WS, 0, "--base", "master")
+        r2 = self.claim("ABC-1", b, WS, 0, "--base", "dev")
+        self.assertEqual((r1["runId"], r1["jira"], r1["base"]), ("ABC-1", "ABC-1", "master"))
+        self.assertNotIn("label", r1)
+        self.assertEqual((r2["runId"], r2["jira"], r2["base"]), ("ABC-1--dev", "ABC-1", "dev"))
+        self.assertNotIn("label", r2)
+        self.assertEqual(json.loads(self.run_meta("ABC-1").read_text()),
+                         {"jira": "ABC-1", "base": "master", "runId": "ABC-1"})
+        self.assertEqual(json.loads(self.run_meta("ABC-1--dev").read_text()),
+                         {"jira": "ABC-1", "base": "dev", "runId": "ABC-1--dev"})
+        p1, p2 = self.port("ABC-1", "dev")["port"], self.port("ABC-1--dev", "dev")["port"]
+        self.assertNotEqual(p1, p2)
+        self.rc("target", "--ws", WS, "--key", "ABC-1", "--path", str(root / ".worktrees/ABC-1"),
+                "--root", str(root), "--branch", "ABC-1-work")
+        self.rc("target", "--ws", WS, "--key", "ABC-1--dev", "--path", str(root / ".worktrees/ABC-1--dev"),
+                "--root", str(root), "--branch", "ABC-1-work--dev")
+        listed = self.rc("list", "--ws", WS)
+        self.assertEqual(listed["running"], 2)
+        by_key = {r["key"]: r for r in listed["runs"]}
+        self.assertEqual(by_key["ABC-1"]["base"], "master")
+        self.assertEqual(by_key["ABC-1--dev"]["base"], "dev")
+
+    def test_origin_prefix_and_case_reuse_same_unlabeled_slot(self):
+        a, b = self.fake_owner(), self.fake_owner()
+        self.claim("ABC-1", a, WS, 0, "--base", "master")
+        r = self.claim("ABC-1", b, WS, 0, "--base", "origin/dev")
+        self.assertEqual((r["runId"], r["base"]), ("ABC-1--dev", "dev"))
+        self.rc("end", "--ws", WS, "--key", "ABC-1--dev", "--claim-id", r["claimId"])
+        r2 = self.claim("ABC-1", b, WS, 0, "--base", "Dev")
+        self.assertEqual((r2["runId"], r2["base"]), ("ABC-1--dev", "dev"))
+        self.assertEqual(json.loads(self.run_meta("ABC-1--dev").read_text())["base"], "dev")
+
+    def test_two_labeled_runs_beside_unlabeled_same_base(self):
+        o0, o1, o2, o3 = [self.fake_owner() for _ in range(4)]
+        root = self.tmp / "repo"
+        r0 = self.claim("ABC-1", o0, WS, 0, "--base", "dev")
+        r1 = self.claim("ABC-1", o1, WS, 0, "--base", "dev", "--label", "shared-checkbox")
+        r2 = self.claim("ABC-1", o2, WS, 0, "--base", "dev", "--label", "article-meta")
+        self.assertEqual(r0["runId"], "ABC-1")
+        self.assertEqual((r1["runId"], r1["label"]), ("ABC-1--dev--shared-checkbox", "shared-checkbox"))
+        self.assertEqual((r2["runId"], r2["label"]), ("ABC-1--dev--article-meta", "article-meta"))
+        ids = [r0["runId"], r1["runId"], r2["runId"]]
+        devs = {self.port(rid, "dev")["port"] for rid in ids}
+        cdps = {self.port(rid, "cdp")["port"] for rid in ids}
+        self.assertEqual((len(devs), len(cdps)), (3, 3))
+        for i, rid in enumerate(ids):
+            self.rc("target", "--ws", WS, "--key", rid, "--path", str(root / f".worktrees/{rid}"),
+                    "--root", str(root), "--branch", f"branch-{i}")
+        # second target on the same branch exits 3
+        dup_branch = self.rc("target", "--ws", WS, "--key", r2["runId"],
+                             "--path", str(root / ".worktrees/other"), "--root", str(root),
+                             "--branch", "branch-1", code=3)
+        self.assertIn("branch-1", dup_branch["error"])
+        # second live claim of the same base and label exits 3 and names that run id; other label stays
+        dup = self.claim("ABC-1", o3, WS, 3, "--base", "Dev", "--label", "shared-checkbox")
+        self.assertIn("ABC-1--dev--shared-checkbox", dup["error"])
+        self.assertEqual(dup["heldBy"]["label"], "shared-checkbox")
+        self.assertEqual(json.loads(self.run_meta(r1["runId"]).read_text())["base"], "dev")
+        # end of one label drops only that id's port and target locks
+        self.rc("end", "--ws", WS, "--key", r1["runId"], "--claim-id", r1["claimId"])
+        listed = self.rc("list", "--ws", WS)
+        self.assertEqual(listed["running"], 2)
+        self.assertEqual({r["key"] for r in listed["runs"]}, {r0["runId"], r2["runId"]})
+        self.assertTrue(all(s["key"] != r1["runId"] for s in listed["shared"]))
+        self.assertEqual(len([s for s in listed["shared"] if s["type"] == "port"]), 4)
+        self.assertEqual(len([s for s in listed["shared"] if s["type"] == "target"]), 2)
+
+    def test_commit_stages_only_one_run_id_including_run_json(self):
+        a, b = self.fake_owner(), self.fake_owner()
+        r1 = self.claim("ABC-1", a, WS, 0, "--base", "dev", "--label", "try-a")["runId"]
+        r2 = self.claim("ABC-1", b, WS, 0, "--base", "dev", "--label", "try-b")["runId"]
+        self.write(self.data / "workspaces" / WS / "runs" / r1 / "01-intake/intake.md", "version: 1\n")
+        self.write(self.data / "workspaces" / WS / "runs" / r2 / "01-intake/intake.md", "version: 1\n")
+        self.rc("commit", "--ws", WS, "--key", r1, "--stage", "01-intake")
+        committed = set(self.git(self.data, "show", "--name-only", "--format=", "HEAD").splitlines())
+        self.assertEqual(committed, {
+            f"workspaces/{WS}/runs/{r1}/run.json",
+            f"workspaces/{WS}/runs/{r1}/01-intake/intake.md",
+        })
+        left = self.git(self.data, "status", "--porcelain", "--untracked-files=all")
+        self.assertIn(f"runs/{r2}/run.json", left)
+        self.assertNotIn("claim.lock", left)
+
+    def test_labeled_claim_leaves_primary_untouched_even_when_mixed(self):
+        pri = self.data / "workspaces" / WS / "runs" / "ABC-1"
+        self.write(pri / "01-intake/intake.md", "version: 1\n- base: master\n")
+        self.write(pri / "06-handoff/handoff.md", "version: 1\nDiff against origin/dev\n")
+        owner = self.fake_owner()
+        r = self.claim("ABC-1", owner, WS, 0, "--base", "dev", "--label", "shared-checkbox")
+        self.assertEqual(r["runId"], "ABC-1--dev--shared-checkbox")
+        self.assertFalse((pri / "run.json").exists())
+        self.assertFalse((pri / "claim.lock").exists())
+
+    def test_stale_primary_continued_and_unlabeled_primary_adopted(self):
+        dead, nxt = self.fake_owner(), self.fake_owner()
+        self.claim("ABC-1", dead, WS, 0, "--base", "master")
+        dead.kill()
+        dead.wait()
+        r = self.claim("ABC-1", nxt, WS, 0, "--base", "master")
+        self.assertEqual(r["runId"], "ABC-1")
+        self.assertIn("staleCleared", r)
+        # primary without run.json and healthy records adopts on matching base
+        pri2 = self.data / "workspaces" / WS / "runs" / "XYZ-2"
+        self.write(pri2 / "01-intake/intake.md", "version: 1\n- base: master\n")
+        self.write(pri2 / "02-research/research.md", "version: 1\nmentions origin/dev in prose\n")
+        self.write(pri2 / "04-implement/implement-record.md",
+                   "version: 1\n- branch: hotfix/XYZ-2-x (created from origin/master abc123)\n")
+        self.write(pri2 / "06-handoff/handoff.md", "version: 1\nDiff against origin/master\n")
+        r2 = self.claim("XYZ-2", nxt, WS, 0, "--base", "master")
+        self.assertEqual(r2["runId"], "XYZ-2")
+        meta = json.loads(self.run_meta("XYZ-2").read_text())
+        self.assertEqual(meta, {"jira": "XYZ-2", "base": "master", "runId": "XYZ-2"})
+        self.assertNotIn("label", meta)
+
+    def test_mixed_primary_blocks_every_unlabeled_claim(self):
+        pri = self.data / "workspaces" / WS / "runs" / "ABC-1"
+        self.write(pri / "01-intake/intake.md", "version: 1\n- base: master\n")
+        self.write(pri / "06-handoff/handoff.md", "version: 1\nDiff against origin/dev\n")
+        owner = self.fake_owner()
+        for base in ("master", "dev"):
+            res = self.claim("ABC-1", owner, WS, 2, "--base", base)
+            self.assertIn("mixed bases in runs/ABC-1", res["error"])
+            self.assertFalse((pri / "run.json").exists())
+        # also catches backticked `Diff vs \`origin/dev\``
+        self.write(pri / "06-handoff/handoff.md", "version: 1\nDiff vs `origin/dev`:\n")
+        res = self.claim("ABC-1", owner, WS, 2, "--base", "master")
+        self.assertIn("mixed bases in runs/ABC-1", res["error"])
+
+    def test_mismatched_run_json_and_suffixed_without_run_json_exit_2(self):
+        owner = self.fake_owner()
+        pri = self.data / "workspaces" / WS / "runs" / "ABC-1"
+        self.write(pri / "run.json", json.dumps({"jira": "ABC-1", "base": "master", "runId": "ABC-1"}) + "\n")
+        self.write(pri / "01-intake/intake.md", "version: 1\n- base: dev\n")
+        res = self.claim("ABC-1", owner, WS, 2, "--base", "master")
+        self.assertIn("differs from intake.md", res["error"])
+        suf = self.data / "workspaces" / WS / "runs" / "XYZ-2--dev"
+        suf.mkdir(parents=True)
+        res = self.claim("XYZ-2", owner, WS, 2, "--base", "dev")
+        self.assertIn("run.json", res["error"])
+
+    def test_concurrent_claims_on_empty_primary_and_parallel_labels(self):
+        o1, o2 = self.fake_owner(), self.fake_owner()
+        out = {}
+
+        def go(name, base, label=None, key="ABC-1"):
+            extra = ["--base", base] + (["--label", label] if label else [])
+            out[name] = self.claim(key, o1 if name.endswith("1") else o2, WS, 0, *extra)["runId"]
+
+        t1 = threading.Thread(target=go, args=("u1", "master"))
+        t2 = threading.Thread(target=go, args=("u2", "dev"))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+        self.assertIn("ABC-1", (out["u1"], out["u2"]))
+        self.assertEqual(len({out["u1"], out["u2"]}), 2)
+        other = out["u2"] if out["u1"] == "ABC-1" else out["u1"]
+        self.assertIn(other, ("ABC-1--dev", "ABC-1--master"))
+
+        out2 = {}
+        t3 = threading.Thread(target=lambda: out2.setdefault("a", self.claim("XYZ-9", o1, WS, 0, "--base", "dev", "--label", "try-a")["runId"]))
+        t4 = threading.Thread(target=lambda: out2.setdefault("b", self.claim("XYZ-9", o2, WS, 0, "--base", "dev", "--label", "try-b")["runId"]))
+        t3.start()
+        t4.start()
+        t3.join()
+        t4.join()
+        self.assertEqual(out2, {"a": "XYZ-9--dev--try-a", "b": "XYZ-9--dev--try-b"})
+        self.assertFalse((self.data / "workspaces" / WS / "runs" / "XYZ-9").exists())
+
+    def test_release_slash_base_validation_limits_and_reclaim_after_end(self):
+        owner = self.fake_owner()
+        r = self.claim("ABC-1", owner, WS, 0, "--base", "release/1.2", "--label", "try-a")
+        self.assertEqual((r["runId"], r["base"], r["label"]), ("ABC-1--release-1-2--try-a", "release/1.2", "try-a"))
+        self.assertEqual(json.loads(self.run_meta(r["runId"]).read_text()),
+                         {"jira": "ABC-1", "base": "release/1.2", "label": "try-a", "runId": "ABC-1--release-1-2--try-a"})
+        # profile > 41 chars exits 2
+        self.claim("ABC-1", owner, WS, 2, "--base", "dev", "--label", "a" * 35)
+        # --key already suffixed with --base exits 2
+        self.claim("ABC-1--dev--try-a", owner, WS, 2, "--base", "dev", "--label", "try-a")
+        # --label without --base exits 2
+        self.claim("ABC-1", owner, WS, 2, "--label", "try-a")
+        # after end, reclaim with --base --label OR directly with --key <runId> without --base
+        self.rc("end", "--ws", WS, "--key", r["runId"], "--claim-id", r["claimId"])
+        r2 = self.claim("ABC-1", owner, WS, 0, "--base", "release/1.2", "--label", "try-a")
+        self.assertEqual(r2["runId"], "ABC-1--release-1-2--try-a")
+        self.rc("end", "--ws", WS, "--key", r2["runId"], "--claim-id", r2["claimId"])
+        r3 = self.claim("ABC-1--release-1-2--try-a", owner, WS, 0)
+        self.assertEqual(r3["runId"], "ABC-1--release-1-2--try-a")
+        self.assertNotIn("jira", r3)
+        self.assertNotIn("base", r3)
+        self.assertNotIn("label", r3)
+
+    def test_claim_without_base_writes_no_run_json_or_extra_fields(self):
+        owner = self.fake_owner()
+        r = self.claim("ABC-1", owner)
+        self.assertEqual(r["runId"], "ABC-1")
+        for field in ("jira", "base", "label"):
+            self.assertNotIn(field, r)
+            self.assertNotIn(field, r["claim"])
+        self.assertFalse(self.run_meta("ABC-1").exists())
+
+
 class RepoTextTests(unittest.TestCase):
     def test_no_tracked_file_tells_a_run_to_write_a_run_lock(self):
         repo = HERE.parent.parent
